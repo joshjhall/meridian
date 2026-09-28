@@ -1,0 +1,36 @@
+# rumdl configuration — markdown linting and formatting.
+#
+# Adapted from joshjhall/containers via librarian: default rule set, minus
+# rules that are opinionated or need project-specific data.
+
+respect-gitignore = true
+
+exclude = [
+  "containers/**",
+  "node_modules/**",
+  ".git/**",
+  ".vscode/**",
+  ".devcontainer/**",
+  # Material received from Meridian; kept verbatim, never reformatted.
+  "reference/**",
+  "sample_claims/**",
+  # Append-only history (see AGENTS.md working agreements); reformatting
+  # existing entries would rewrite it.
+  "memory/**",
+]
+
+disable = [
+  # Prose is written one paragraph per line; wrapping is left to the editor.
+  "MD013",
+  "MD036", # bold labels as sub-section captions (e.g. team lists)
+  "MD043", # required heading structure (needs a template)
+  "MD044", # proper names capitalization (needs a names list)
+  "MD054", # link/image style — redundant with MD048-MD050
+  "MD059", # link text should be descriptive
+  "MD060", # table column alignment
+  "MD061", # forbidden terms (needs a term list)
+  "MD063", # heading capitalization
+  "MD072", # frontmatter keys alphabetical
+  "MD073", # TOC matches document headings (needs a TOC)
+  "MD074", # MkDocs nav entries (we don't use MkDocs)
+]

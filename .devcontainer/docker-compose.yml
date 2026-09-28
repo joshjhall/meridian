@@ -1,0 +1,73 @@
+services:
+  devcontainer:
+    build:
+      # Build from inside the pinned containers submodule.
+      context: ../containers
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: mcr.microsoft.com/devcontainers/base:trixie
+        PROJECT_NAME: meridian
+        USERNAME: vscode
+        WORKING_DIR: /workspace/meridian
+        # Command-scoped passwordless sudo: the entrypoint runs as vscode and
+        # needs sudo only for startup reconciliation (bindfs overlay, /cache
+        # chowns, docker-socket group setup), not arbitrary root.
+        ENABLE_PASSWORDLESS_SUDO: "scoped"
+        # dprint, shellcheck, lefthook, gitleaks, rumdl, typos, just, Claude Code CLI, etc.
+        INCLUDE_DEV_TOOLS: "true"
+        INCLUDE_OP: "true"
+        INCLUDE_HOST_EVENTS: "true"
+        INCLUDE_NODE: "true"
+        # Pinned to 24: Node 25+ dropped the bundled corepack binary, which the
+        # containers node feature calls unconditionally (build exits 127).
+        # Revisit once joshjhall/containers ships the fix.
+        NODE_VERSION: "24"
+        # Docker CLI + docker group; talks to the host daemon via the socket
+        # mounted below (not docker-in-docker). Mounting the socket without
+        # this flag leaves it present but unusable.
+        INCLUDE_DOCKER: "true"
+      cache_from:
+        - type=local,src=/tmp/.buildx-cache
+      cache_to:
+        - type=local,dest=/tmp/.buildx-cache,mode=max
+    volumes:
+      - ..:/workspace/meridian
+      # Host Docker daemon. Grants full host-daemon access to anything running
+      # in this container; acceptable for a local dev box.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # codegraph index: <project>/.codegraph is symlinked here by the dev-tools
+      # first-startup hook, so the index lives on this volume (out of the git
+      # tree, droppable to force a clean re-index).
+      - meridian-codegraph:/cache/codegraph
+    tmpfs:
+      # 1Password cache is kept in memory. No uid=/gid=: paths under /cache are
+      # aligned to the runtime user by fix_cache_permissions.
+      - /cache/1password/secrets:size=8m,mode=0700
+    # Optional: .env is gitignored local state and absent in fresh worktrees.
+    # Secrets (OP_SERVICE_ACCOUNT_TOKEN) belong in .env.secrets, which is loaded
+    # at shell init so `docker compose config` never prints them.
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      CLAUDE_MCPS: "filesystem,codegraph"
+    init: true
+    # CAP_SYS_ADMIN + /dev/fuse are the minimum for the bindfs FUSE overlay that
+    # fixes macOS VirtioFS ownership on the workspace bind mount. It degrades to
+    # a no-op when /dev/fuse is absent.
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    command: ["sleep", "infinity"]
+    networks:
+      - meridian-network
+
+networks:
+  meridian-network:
+    driver: bridge
+
+volumes:
+  # codegraph index at /cache/codegraph; survives rebuilds. The /cache prefix
+  # is load-bearing: fix_cache_permissions aligns it to the runtime user.
+  meridian-codegraph:

@@ -1,0 +1,12 @@
+{
+  // NOTE: deliberately no `lsp.*` binary.path overrides here. Those binaries
+  // live at /usr/local/bin/* inside the devcontainer but elsewhere on the host,
+  // so pinning them in repo settings breaks the LSP when opened locally. The
+  // container-side overrides are written to ~/.config/zed/settings.json by the
+  // containers dev-tools feature.
+  "languages": {
+    "YAML": {
+      "tab_size": 2
+    }
+  }
+}

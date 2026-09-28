@@ -1,0 +1,8 @@
+# ShellCheck configuration.
+# See https://github.com/koalaman/shellcheck/wiki/Directive for details.
+
+severity=info
+shell=bash
+
+# SC1090/SC1091: can't follow non-constant source paths.
+disable=SC1090,SC1091

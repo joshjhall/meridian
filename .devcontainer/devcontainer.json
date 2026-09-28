@@ -1,0 +1,42 @@
+{
+  "name": "Meridian Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace/meridian",
+
+  // Use the container's ENTRYPOINT instead of VS Code's "sleep infinity" so
+  // its permission/mount reconciliation runs.
+  "overrideCommand": false,
+
+  // Lifecycle commands use the ARRAY (exec) form, never a string: Zed double-
+  // wraps a string command in `sh -c`, so `bash <path>` runs with the script as
+  // $0, reads empty stdin, and silently does nothing.
+  "postCreateCommand": ["bash", "/workspace/meridian/.devcontainer/post-create.sh"],
+  "postStartCommand": ["bash", "/workspace/meridian/.devcontainer/post-start.sh"],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.vscode-yaml",
+        "dprint.dprint",
+        "tekumara.typos-vscode",
+        "ms-azuretools.vscode-docker",
+        "usernamehw.errorlens",
+        "bierner.markdown-mermaid",
+        "Anthropic.claude-code"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "[yaml]": { "editor.defaultFormatter": "dprint.dprint" },
+        "[json]": { "editor.defaultFormatter": "dprint.dprint" },
+        "[jsonc]": { "editor.defaultFormatter": "dprint.dprint" },
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": { "path": "/bin/bash", "args": ["-l"] }
+        }
+      }
+    }
+  },
+
+  "remoteUser": "vscode"
+}

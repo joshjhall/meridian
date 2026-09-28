@@ -1,0 +1,107 @@
+# Lefthook configuration
+# Install hooks: lefthook install
+# Run manually:  lefthook run pre-commit [--all-files]
+#
+# Tooling is provided by the containers devcontainer (dev-tools feature).
+# Every tool skips gracefully when run on a host that lacks it.
+
+# ============================================================================
+# Pre-commit stage: runs on `git commit`
+# ============================================================================
+pre-commit:
+  parallel: true
+  commands:
+    check-merge-conflict:
+      run: |
+        if /usr/bin/grep -lE '^(<{7} |>{7} |={7}$)' {staged_files} 2>/dev/null; then
+          echo "ERROR: merge conflict markers found in the above file(s)"
+          exit 1
+        fi
+
+    # --- Markdown linting (rumdl) — lint-only; run `rumdl fmt` to rewrite ---
+    # Excludes (client material, append-only memory) live in .rumdl.toml.
+
+    rumdl:
+      glob: "*.md"
+      skip:
+        - run: "! command -v rumdl >/dev/null 2>&1"
+      run: rumdl check {staged_files}
+
+    # --- YAML / JSON formatting (dprint) ---
+
+    dprint:
+      glob: "*.{yml,yaml,json}"
+      exclude:
+        - ".vscode/**"
+        - ".devcontainer/**"
+        - "containers/**"
+      skip:
+        - run: "! command -v dprint >/dev/null 2>&1"
+      run: dprint fmt {staged_files}
+      stage_fixed: true
+
+    # --- TOML formatting (taplo) ---
+
+    taplo:
+      glob: "*.toml"
+      exclude:
+        - "containers/**"
+      skip:
+        - run: "! command -v taplo >/dev/null 2>&1"
+      run: taplo fmt {staged_files}
+      stage_fixed: true
+
+    # --- Shell (devcontainer lifecycle scripts, future tooling) ---
+
+    shellcheck:
+      glob: "*.sh"
+      skip:
+        - run: "! command -v shellcheck >/dev/null 2>&1"
+      run: shellcheck --severity=warning {staged_files}
+
+    shfmt:
+      glob: "*.sh"
+      skip:
+        - run: "! command -v shfmt >/dev/null 2>&1"
+      run: shfmt -w -i 4 -ci {staged_files}
+      stage_fixed: true
+
+    # --- Security ---
+
+    gitleaks:
+      skip:
+        - run: "! command -v gitleaks >/dev/null 2>&1"
+      run: gitleaks protect --staged --verbose --redact
+
+# ============================================================================
+# commit-msg stage
+# ============================================================================
+commit-msg:
+  commands:
+    conform:
+      skip:
+        - run: "! command -v conform >/dev/null 2>&1"
+      run: conform enforce --commit-msg-file {1}
+
+# ============================================================================
+# Pre-push stage
+# ============================================================================
+pre-push:
+  parallel: true
+  commands:
+    typos:
+      skip:
+        - run: "! command -v typos >/dev/null 2>&1"
+      run: typos
+
+    rumdl-check:
+      glob: "*.md"
+      skip:
+        - run: "! command -v rumdl >/dev/null 2>&1"
+      run: rumdl check .
+
+    dprint-check:
+      glob: "*.{yml,yaml,json}"
+      skip:
+        - run: "! command -v dprint >/dev/null 2>&1"
+      run: dprint check

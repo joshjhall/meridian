@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "Anthropic.claude-code",
+    "bierner.markdown-mermaid",
+    "dprint.dprint",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode-remote.remote-containers",
+    "tekumara.typos-vscode",
+    "usernamehw.errorlens"
+  ]
+}

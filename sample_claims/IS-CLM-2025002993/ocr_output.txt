@@ -1,0 +1,49 @@
+--- ClaimsPro OCR extract | source: inbound fax | claim IS-CLM-2025002993 | conf 0.69 ---
+
+--- fax cover / claimant block ---
+* * * FACS1M1LE TRANSM1TTAL * * * 1NLANO AUTO B0DY -- F0NTANA CA
+T0 Meridian C1aims 1ntake FR0M R Sa1ced0 1n1and Aut0 B0dy FAX (877) 555-OlOO
+RE New c1aim -- P0licy CA-CA-88l23-l8 DATE O9/O8/2O25 PAGES 7 inc1 c0ver
+Estimate + supp1ement for the ab0ve c1aim Damage ph0t0s t0 f0110w under separate c0ver
+C1AIMANT G10RIA MENDEZ  D0L O9/O________  CLA1MANT C0NTACT ____________ [scan edge]
+P0L1CYH0LDER PAC1F1C FRE1GHT PARTNERS 1NC P0L1CY CA-CA-88l23-l8
+
+--- estimate p.1 vehicle / claim ---
+1NLANO AUTO B0DY 1155 S Cucam0nga Ave F0ntana CA 92337 (9O9) 555-Ol73 BAR AB-2O4471
+VEH1CLE REPA1R EST1MATE Estimate # 1AB-993O Written 2O25-O9-O5 C1aim # pend1ng ass1gnment
+Adjuster -- Estimat0r R Sa1ced0 Type 0rigina1 1nsured Pacific Freight Partners 1nc
+P0licy CA-CA-88l23-l8 C1aimant G10ria Mendez b0di1y injury c1aim
+Vehic1e 2Ol8 Freight1iner M2 lO6 Medium Duty Unit PFP-ll4 0d0meter l28,54O L0ss rear impact
+
+--- estimate p.2 damage assessment ---
+DAMAGE ASSESSMENT P0int 0f impact rear 6 0'c10ck 0ffset right 1nspecti0n in-sh0p unit 0n gr0und
+Rear bumper c0ver def0rmed and t0rn at RH m0unt reinf0rcement bar t0 be R&I and inspected
+RH carg0 door skin creased hinge a1ignment 0ff door t0 be rep1aced RH tai1 1amp 1ens cracked
+h0using separated rep1ace assemb1y N0TE rear quarter sh0ws c0rr0si0n and pri0r paint edges
+n0t c0nsistent with a fresh impact f1agged f0r adjuster review ph0t0graphs 0n fi1e
+rear bumper rear quarter carg0 door
+
+--- estimate p.3 line items ---
+LN DESCR1PTI0N 0PER HRS AM0UNT l Bumper c0ver rear R&R 1,B00.00 2 Carg0 door rear RH R&R 64O.OO
+3 Tai1 1amp assemb1y RH R&R 288.5O Paint & materia1s -- l2O.OO 4 R&I rear bumper reinf B0DY l.5
+93.OO 5 R&R carg0 door rear RH B0DY 2.5 l55.OO 6 A1ign fit rear b0dy B0DY 2.O l24.OO
+7 Refinish rear pane1 d0or REFN 3.O l86.OO Parts & materia1s 2,848.5O Lab0r 558.OO
+
+--- estimate p.4 parts detail ---
+PARTS DETA1L LN DESCR1PTI0N PART N0 QTY PR1CE l Bumper c0ver rear A66-ll288-OOO l
+2 Carg0 door rear RH Al8-6634l-OO2 l 64O.OO 3 Tai1 1amp assemb1y RH A66-O6327-OOl l 288.5O
+0EM parts via Freight1iner Daim1er dea1er feed part numbers per unit V1N bui1d
+
+--- estimate p.5 labor + materials ---
+LAB0R 0PERAT10NS LN DESCR1PTI0N 0PER HRS RATE AM0UNT 4 R&I rear bumper reinf B0DY l.5 62.OO 93.OO
+5 R&R carg0 door rear RH B0DY 2.5 62.OO l55.OO 6 A1ign fit rear b0dy B0DY 2.O 62.OO l24.OO
+7 Refinish rear pane1 d0or REFN 3.O 62.OO l86.OO B0dy 6.O hr Refinish 3.O hr Lab0r t0ta1 558.OO
+PA1NT & MATER1ALS C010r base c0at 48.OO C1earc0at 3O.OO Primer sea1er 22.OO
+Hazard0us waste disp0sa1 l2.OO Masking fine 1ine 8.OO Paint & materia1s t0ta1 l2O.OO
+
+--- estimate p.6 recap ---
+EST1MATE RECAP Parts 2,728.5O Paint & materia1s l2O.OO Lab0r 558.OO Sa1es tax 8.75% 249.24
+VEH1CLE T0TAL 3,655.74 Vehic1e damage 0n1y B0di1y injury medica1 hand1ed separate1y
+Estimat0r R Sa1ced0 Sh0p 1n1and Aut0 B0dy BAR AB-2O4471 Date 2O25-O9-O5
+
+--- end OCR extract ---

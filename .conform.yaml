@@ -1,0 +1,32 @@
+# conform configuration — enforces conventional-commit format.
+#
+# Run locally:  conform enforce --commit-msg-file <path>
+# Run on PR:    conform enforce --base-branch origin/main
+policies:
+  - type: commit
+    spec:
+      header:
+        length: 89
+        invalidLastCharacters: .
+      body:
+        required: false
+      dco: false
+      gpg:
+        required: false
+      conventional:
+        types:
+          - add
+          - build
+          - chore
+          - ci
+          - docs
+          - feat
+          - fix
+          - perf
+          - refactor
+          - revert
+          - style
+          - test
+        # Scopes are left open until the build is decomposed. When adding a
+        # list, note entries are unanchored Go regexes: write `^name$`.
+        descriptionLength: 72
