@@ -1,6 +1,14 @@
 {
   "editor.formatOnSave": true,
 
+  // The containers submodule is devcontainer build tooling, not project content.
+  "search.exclude": {
+    "containers/**": true
+  },
+  "files.watcherExclude": {
+    "containers/**": true
+  },
+
   "[json]": {
     "editor.defaultFormatter": "dprint.dprint"
   },

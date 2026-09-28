@@ -1,0 +1,4 @@
+# Search-tool ignore file (ripgrep, fd, and Claude Code's Grep/Glob honour it).
+# The containers submodule is devcontainer build tooling, not project content;
+# keep it out of searches. Search it explicitly with `rg --no-ignore-dot`.
+containers/
