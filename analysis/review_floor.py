@@ -217,6 +217,32 @@ def main():
           f"{annual * complex_share / n:,.0f} complex claims/yr for 16 seniors and leads "
           f"= {annual * complex_share / n / 16 / 250:.0f} per senior per working day")
 
+    print("\n== 9. Review floor under the rule as stated in the clarification call ==")
+    print("Stated rule: requires_human_by_regulation = claim over $10K in one of the listed states.")
+
+    def stated(r):
+        return r["state"] in inferred and amount(r) > THRESHOLD
+
+    by_rule = sum(stated(r) for r in rows)
+    disagree = [r for r in rows if yes(r, "requires_human_by_regulation") != stated(r)]
+    print(f"Floor under the stated rule: {by_rule}/{n} = {pct(by_rule, n):.1f}% "
+          f"(as labeled in the extract: {pct(reg, n):.1f}%)")
+    print(f"Claims where the label disagrees with the rule: {len(disagree)}, "
+          f"all outside the threshold states: {all(r['state'] not in inferred for r in disagree)}")
+    print(f"Rule-regulated but not flagged for review: "
+          f"{sum(stated(r) and not yes(r, 'flagged_for_human_review') for r in rows)}")
+    any_review = sum(stated(r) or yes(r, "flagged_for_human_review") for r in rows)
+    print(f"Claims reaching a human today (rule-regulated OR flagged): {pct(any_review, n):.1f}%")
+    perfect = sum(yes(r, "review_actually_needed") or stated(r) for r in cal)
+    print(f"Perfect flag under the rule (needed OR rule-regulated), calibration: "
+          f"{perfect}/{m} = {pct(perfect, m):.1f}% (±{ci95(perfect, m):.1f})")
+    free = [r for r in cal if not stated(r)]
+    print(f"Second opinions actually needed on claims the rule doesn't cover: "
+          f"{share(free, 'review_actually_needed')}")
+    discretionary = sum(yes(r, "flagged_for_human_review") and not stated(r) for r in rows)
+    print(f"Discretionary flags today (flagged, not rule-regulated): {pct(discretionary, n):.1f}%; "
+          f"room left under a 20% total: {20 - pct(by_rule, n):.1f} pts")
+
 
 if __name__ == "__main__":
     main()

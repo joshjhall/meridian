@@ -8,6 +8,60 @@ IDs are stable so answers can be referenced from `memory/decisions.md`.
 
 Transcript shorthand: **Kickoff** = `memory/calltranscripts/w1-mon-meridian-kickoff.md`, **Ops** = `memory/calltranscripts/w1-tue-sandra-ops-walkthrough.md`, **Systems** = `memory/calltranscripts/w1-thu-michael-systems.md`. Timestamps are the speaker markers in the transcript.
 
+## Answered in the clarification call
+
+A call with the case owner (Trevor Noon, Tribe) answered several questions. Recorded here so the answers travel with the questions; everything below this section is kept as asked, with each answered item marked **Answered**.
+
+| Question | Answer | What it changes |
+|---|---|---|
+| F1: what the two flags mean | `requires_human_by_regulation` is set by the rules engine: claim over $10,000 in one of the listed states. It routes to a human queue even if the human only clicks confirm. `flagged_for_human_review` is a second-opinion signal, from a human (escalation, want to revisit) or from AI low confidence, set above or below the threshold. | The regulation field in the extract doesn't match this rule (see "Review floor, revised" below). |
+| I1: SaaS? | Yes, SaaS on a paid license, typical legacy constraints. | Path 5 (browser overlay) is viable. |
+| I2: SDK or embedding? | No SDK. What we build is separate from ClaimsPro; the two talk to each other. | Path 2 closed. Focus on 4 and 5. |
+| I3: custom fields? | Yes, custom fields exist. | Path 4 can write structured outputs, not just notes. |
+| I5: claim ID and user from the page? | Assume engineering can work it out; reading and writing field values is fine. | Overlay design can assume it knows the open claim and user. |
+| I6: browser management | Assume IT can force-install extensions. | Overlay deployment is not a blocker. |
+| V1, V4, V5: is the sample representative? | Trust the data as representative. Gaps and odd patterns are partly intentional: call them out in the presentation. | Treat findings as real; present anomalies explicitly. |
+| C1, R5: is <20% realistic? | Some flaws in the goals were planted on purpose. Expect the panel to ask whether the goals are realistic, and answer proactively. | Present the review-floor analysis as a finding. |
+| M3: are regulated-but-unflagged claims reaching a human? | They should be; "that feels like an error". A possible reason the <20% metric is wrong. | See "Review floor, revised". |
+
+**New prompt from the call: the learning loop.** When a human or AI acts and later learns whether it was right, how does that improve the next cycle without a human clicking through 100 claims one by one? Example given: claims that should be flagged for review under the threshold and state rule but aren't. See L1 below.
+
+## Review floor, revised after the clarification call
+
+Trevor's definition of `requires_human_by_regulation` (over $10K in a listed state) matches the extract in the 12 threshold states exactly. It does **not** match in the other 8 states, where 628 claims (~30%) are labeled regulated below the threshold and without any rule that explains them (`analysis/review_floor.py` section 9). Two readings:
+
+| Reading | Regulatory floor | <20% reachable? |
+|---|---|---|
+| **A. The rule is as stated; the 628 are data errors** (Trevor: gaps are partly intentional) | **12.9%** | **Yes, narrowly.** 7.1 points are left for second opinions. |
+| **B. The labels are right; some rule we weren't told drives the 628** | 25.4% | No |
+
+**Reading A is the one to present**, since it takes the stated rule at face value. Under it:
+
+- **Total human review today is 47.3%**: 12.9% rule-regulated, plus flags on claims the rule doesn't cover (34.4%).
+- **85 rule-regulated claims were not flagged** for review. The regulation flag _is_ set on all 85; it's the review flag that's missing. If routing to a human uses only the review flag, those claims missed a legally required review. The earlier count of 437 included the 352 questionable labels outside the threshold states.
+- **Second opinions are the lever.** In the calibration sample, reviewers judged 26.3% of claims outside the rule actually needed one. Today 34.4% of all claims get one. A perfect second-opinion flag puts total review at **39.0% (±4.3)**. Hitting 20% means cutting needed second opinions too, not just unneeded ones: better prepared claims (a brief that resolves the uncertainty) and routing hard claims to the right adjuster first.
+
+**Why the 628 labels exist: three readings.** All plausible; the uniformity of the ~30% across the 8 states (chi-square 1.7 on 7 degrees of freedom, _less_ spread than chance) shifts the odds:
+
+1. **Legacy rules still running** that people think were disabled. **Fits best:** one leftover rule applied to a set of states gives one shared rate unrelated to any field we can see.
+2. **More rules than the simple one** (other state regulations). **Weakened by uniformity:** eight independent state rules wouldn't each land on ~30%. A single shared rule, such as a carrier-client requirement, is a variant that fits.
+3. **Conflicting rules** in a rules engine that isn't logically consistent. **Fits least:** conflicts usually leave patterns tied to the conditions they test (amount bands, claim types), and there are none.
+
+Common thread for the presentation: **nobody can currently say why this flag is set on 30% of claims in 8 states.** That's the case for showing _why_ a claim is marked regulated, so people can spot a rule that shouldn't fire.
+
+So the honest answer to "is <20% realistic?" is: **possible under the stated rule, but only by reducing the _need_ for second opinions, not just the false alarms**. The data as labeled says otherwise, and the gap between the two is itself a finding to present.
+
+## Quick win: route on both review flags
+
+If ClaimsPro routes to a human queue using only `flagged_for_human_review`, claims with `requires_human_by_regulation = Yes` and no review flag skip a legally required review. The case owner's answer on this was that such claims "should be routed to a human… that feels like an error."
+
+- **Size:** 85 claims in the extract under the stated rule (1.7%, ~6,800 a year at 400K claims). On the labels as they stand, 437 (8.7%, ~35,000 a year).
+- **Fix:** route when _either_ flag is set: a one-condition change in the routing rule's filter. It closes a regulatory gap Meridian may not know it has, before any AI is built.
+- **Order:** route on both flags first; over-reviewing is compliant, under-reviewing isn't. Then investigate the 628 questionable labels (readings above) and tighten.
+- **Tensions to name:** the fix _raises_ the flag-based review rate (45.6% → 47.3% under the stated rule, 54.3% on the labels), moving the SOW metric the wrong way. That's more evidence the metric is wrong (C1, R5). And the change is Meridian's to make: probably rules-engine configuration in a legacy SaaS system, possibly needing the vendor, and it goes through CAB (`docs/project/presales_notes.md:35`). Compliance may also want to review past claims that missed the step.
+- **Handling:** raise privately with Michael first; it's a gap in his system, and it's the kind of evidence he said would make him a champion (Systems, 37:45).
+- **Engineering question:** M14.
+
 ## Tomorrow morning: the short list
 
 The questions that decide the demo's direction, in asking order. Full context for each is below.
@@ -24,7 +78,7 @@ The questions that decide the demo's direction, in asking order. Full context fo
 
 ## F1: What the two review flags mean (ask first)
 
-- **F1 [pre-workshop] — For `flagged_for_human_review` and `requires_human_by_regulation`: what does each mean, who or what sets it and when, and what does it do to the claim's routing?** Walk both through ClaimsPro with Michael's team and one of Sandra's adjusters.
+- **F1 [pre-workshop] (Answered, see top) — For `flagged_for_human_review` and `requires_human_by_regulation`: what does each mean, who or what sets it and when, and what does it do to the claim's routing?** Walk both through ClaimsPro with Michael's team and one of Sandra's adjusters.
   - **Meaning:** In plain terms, what is each flag asserting? What does "human review" mean here, given every claim is already worked by an adjuster?
   - **Who sets it, and when:** A rule at intake? Recalculated later? Can an adjuster set or clear it by hand, for example to ask for a second opinion? Is there an audit trail of who set it?
   - **Routing:** Where does a flagged claim go that an unflagged one doesn't: a different queue, a senior or supervisor, a QA step, a sign-off before payment? Does `requires_human_by_regulation` route anything on its own, or does it only record the requirement?
@@ -107,22 +161,22 @@ Paths 4 and 5 combine well. The note (4) is the durable, auditable record that s
 
 UI automation (bots driving the ClaimsPro screens) is rejected: it breaks on every vendor UI change, and it would be a way around the deliberate decisioning gap.
 
-- **I1 [pre-workshop] — Is ClaimsPro SaaS (hosted by Veritas) or installed by Meridian, and is the adjuster client a web app?**
+- **I1 [pre-workshop] (Answered: SaaS) — Is ClaimsPro SaaS (hosted by Veritas) or installed by Meridian, and is the adjuster client a web app?**
   - _Why:_ Everything in path 5 assumes a browser-based UI. If it's a desktop or Citrix-delivered client, a browser extension can't reach it, and path 4 becomes the only way in. Hosting also decides who controls upgrades and how often the UI changes under us.
   - _Sources:_ Systems, 2:40 (line 53, "Third-party, licensed from Veritas"); `AGENTS.md:37`. The repo never says whether it's hosted or browser-based.
-- **I2 [pre-workshop] — Beyond the REST and SOAP APIs, does ClaimsPro offer any extension or plugin SDK, embeddable panels or widgets, UI customization, or a vendor app marketplace?**
+- **I2 [pre-workshop] (Answered: no SDK) — Beyond the REST and SOAP APIs, does ClaimsPro offer any extension or plugin SDK, embeddable panels or widgets, UI customization, or a vendor app marketplace?**
   - _Why:_ It's the only way to put our UI _inside_ ClaimsPro (path 2). We expect "no", but it's cheap to ask and changes everything if the answer is yes.
   - _Sources:_ Systems, 4:40 (line 64); Ops, 86:20 (line 241, "Don't build us an eighth screen").
-- **I3 [pre-scope] — Does ClaimsPro support custom fields, and can they be read and written through the APIs and shown on the adjuster's screens?**
+- **I3 [pre-scope] (Answered: yes) — Does ClaimsPro support custom fields, and can they be read and written through the APIs and shown on the adjuster's screens?**
   - _Why:_ Custom fields would let structured outputs sit in the adjuster's normal view, such as a review-lane indicator, extraction confidence, or brief status. Without them, the notes field carries everything.
   - _Sources:_ Systems, 4:40 (line 64, SOAP writes: notes, status, documents, workflow).
 - **I4 [pre-scope] — What are the notes field's limits: length, formatting (plain text or rich), visibility to adjusters and in correspondence, and can notes be edited or superseded?**
   - _Why:_ If the prepared brief is written as a note, its size and format limit how useful it is. Notes that are visible externally or can't be edited would change what goes in them.
   - _Sources:_ `sample_claims/*/adjuster_notes.md` (note style today); Systems, 4:40 (line 64).
-- **I5 [pre-workshop] — Does the ClaimsPro URL for an open claim include the claim ID (as a path segment or query parameter)? Is the signed-in user identifiable from the page?**
+- **I5 [pre-workshop] (Answered: assume solvable) — Does the ClaimsPro URL for an open claim include the claim ID (as a path segment or query parameter)? Is the signed-in user identifiable from the page?**
   - _Why:_ Path 5 depends on the extension knowing which claim is open and who is looking at it. A URL is the most robust source; reading the page contents is fragile. If it's a single-page app, we also need to know whether the URL changes as the adjuster moves between claims and screens.
   - _Sources:_ Ops, 42:05 (line 169, seven screens per claim, all of which need to resolve to the same claim).
-- **I6 [pre-workshop] — Which browsers, and which versions, do adjusters use? Is the browser centrally managed, and can IT force-install an extension?**
+- **I6 [pre-workshop] (Partly answered: IT can force-install; browser and version not given) — Which browsers, and which versions, do adjusters use? Is the browser centrally managed, and can IT force-install an extension?**
   - _Why:_ An extension ships per browser engine. Chromium-based browsers (Chrome, Edge) share one build; Firefox needs a separate one; Safari is out. Central management decides whether deployment is a policy push or a per-seat install, and whether security allows extensions at all.
   - _Sources:_ no repo source; not covered in week 1.
 - **I7 [pre-scope] — How do adjusters sign in to ClaimsPro (SSO provider)? Can our overlay's backend use the same identity?**
@@ -136,7 +190,7 @@ UI automation (bots driving the ClaimsPro screens) is rejected: it breaks on eve
 
 Our analysis rests on the 5,000-claim extract. Before the workshop quotes numbers from it, confirm we're reading it the way Meridian's team built it. The extract is internally consistent: cycle time always equals wait plus handling, denial reasons appear only on denials, and there are no duplicate IDs (`analysis/review_floor.py` section 5). The open questions are about how it was sampled and what it leaves out.
 
-- **V1 [pre-workshop] — How was the extract stratified, and what is the real volume split by state?**
+- **V1 [pre-workshop] (Answered: treat as representative) — How was the extract stratified, and what is the real volume split by state?**
   - _Why:_ The extract has 222–292 claims in each of 20 states, far more even than real volume usually is. The regulatory floor ranges from ~22% to ~30% depending on the state mix (finding 4), so the real split sets the number we quote.
   - _Sources:_ `reference/analytics_memo.md` header ("a stratified 5,000-claim extract"); `reference/data_dictionary.md` (`state`, "20 states represented"); `analysis/review_floor.py` section 5.
 - **V2 [pre-workshop] — Does Meridian operate in states beyond these 20?**
@@ -191,9 +245,12 @@ Our analysis rests on the 5,000-claim extract. Before the workshop quotes number
     - **Policy or claimant attributes** such as the policyholder's fleet size, a litigation or attorney-represented flag, or out-of-state claimants.
   - If it's a contract term or claimant attribute, it's reproducible from data we can request. If it's a masked field, the extract can never predict it and the design must read it from ClaimsPro per claim. **Whatever the answer, it does not reopen automation:** we assume no consent anywhere (M4).
   - _Sources:_ `analysis/review_floor.py` section 7; `reference/data_dictionary.md:78`–`81`; Systems, 20:05 (line 121).
-- **M3 [pre-workshop] — Where did the 437 regulated-but-unflagged claims get their required review?** Can his team pull those claim IDs and show the review step in each status history?
+- **M3 [pre-workshop] (Answered: should reach a human; likely an error, now 85 under the stated rule) — Where did the 437 regulated-but-unflagged claims get their required review?** Can his team pull those claim IDs and show the review step in each status history?
   - _Why:_ The rules engine didn't flag them, but all 437 were worked by an adjuster and 66 were denied (always a human decision). Whether that's compliant depends on what the regulation requires (V3). Ask V3 first. 352 of the 437 are in the 8 non-threshold states, which suggests the engine applies the $10K rule but not the other states' rule (M2). Raise privately, framed as "help us read these fields", not "we found a gap".
   - _Sources:_ `analysis/review_floor.py` sections 4 and 6; `reference/data_dictionary.md:72`–`73`, `:78`–`81`.
+- **M14 [pre-workshop] — Does routing to a human queue filter on `flagged_for_human_review` alone, or on either flag?**
+  - _Why:_ If it uses only the review flag, 85 claims in the extract (~6,800 a year) skipped a legally required review, and the fix is one added condition. Either answer is useful: it confirms the gap or rules it out. See "Quick win" at the top.
+  - _Sources:_ the clarification call; `analysis/review_floor.py` section 9; `reference/data_dictionary.md:72`–`81`.
 - **M4 [pre-scope] — Which 8 states require consent for automated adjudication, and can consent ever be tracked?**
   - _Why:_ Consent "isn't cleanly tracked … assume you can't rely on it" (Systems, 20:05, line 121), and we don't know which 8 states have the rule. **Working assumption: no policyholder has consented, in any state**, so nothing is fully automated and every decision gets a human confirmation, including the fast lane. This holds even if M2 turns out to be consent-related: data Michael calls untrustworthy can't unlock automation.
   - _Scope of the assumption:_ no consent bans _fully automated_ adjudication; it does not require the extra review tier. Counting every no-consent claim as regulated would overstate the floor. If the consent states are the 8 non-threshold states, the floor would jump from 25.4% to ~54.6% (12.9% threshold-state claims over $10K, plus all 41.7% of claims in the other 8). Keep consent out of the floor numbers unless Compliance says the rule requires review (C1).
@@ -291,9 +348,16 @@ Turnaround per `docs/project/presales_notes.md:23`.
 - **R4 [pre-scope] — What matters most at month 3?**
   - _Sources:_ `docs/project/sow.md:29`; Kickoff, 38:22 (line 153).
 
+## Learning loop (raised in the clarification call)
+
+- **L1 [pre-workshop] — How does a correction improve the next cycle?** When an adjuster finds that a flag, extraction, or routing call was wrong, how does that feedback change the system for the next claims, without the adjuster fixing 100 claims one at a time?
+  - _Why:_ Trevor raised it unprompted as something the panel looks for. It also answers attempt one's failure (the 2021 score drifted with no feedback loop) and Michael's "keep showing me it's right" (Systems, 21:40, line 127).
+  - _Example from the call:_ claims that meet the $10K-and-state rule but aren't flagged (85 in the extract). Rather than 85 one-off fixes, one correction should update the rule and find the rest in bulk.
+  - _Sources:_ the clarification call; Kickoff, 5:20; `analysis/review_floor.py` section 9.
+
 ## Tribe internal (Laura, Priya)
 
-- **T1 [pre-workshop] — Framing the review-rate finding.** Lead with it in the workshop, or take it to Carlos and Michael beforehand? M3 in particular shouldn't surprise Michael in front of his peers.
+- **T1 [pre-workshop] — Framing the review-rate finding.** Decided: raise it early in the presentation, proactively, before the panel asks. Open on the quick win (route on both flags), then the realism of <20%. Take the routing gap (M3, M14) to Michael privately first so it doesn't surprise him in front of his peers.
   - _Sources:_ the section at the top; Kickoff, 24:37 (line 117).
 - **T2 [pre-workshop] — Auto-approve stance.** Confirm we drop auto-approval in favor of a one-click fast lane, pending M4 and C3.
   - _Sources:_ Systems, 11:40 (line 88), 20:05 (line 121).
