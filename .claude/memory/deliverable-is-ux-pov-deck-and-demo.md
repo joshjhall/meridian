@@ -8,7 +8,8 @@ The repo is a Staff UX Designer exercise (`README.md`, "What this is" / "What to
 
 - **Short context deck:** the experience point of view; who the users are and what changes for them; where a human stays in the loop and what the handoff looks like; the 2–3 design decisions that matter most, with what was considered and rejected.
 - **A demo that runs**, not a static mock. Most of the time goes here. `sample_claims/` are the suggested inputs.
-- Budget: 4–6 hours total.
+- Budget: 4–6 hours total. The session is Monday at 4pm; see [panel guidance](/interview-panel-and-case-owner-guidance.md).
+- Current plan: [demo plan](/demo-plan-routing-pipeline-and-overlay.md), [next steps](/next-steps-before-monday.md).
 
 Explicitly **not** asked for: product strategy, business case, delivery plan (the PM's half), exhaustive data analysis, pixel polish.
 

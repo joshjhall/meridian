@@ -10,3 +10,4 @@ The workspace is a bindfs FUSE overlay on a VirtioFS mount (`mount | grep worksp
 - **A newly created symlink** can report `Too many levels of symbolic links` on first access. It resolves on retry; `readlink -f` confirms the target.
 - **`rg` with no path argument** in a backgrounded or non-TTY shell reads stdin and hangs. Always pass a path (`rg pattern .`) and `</dev/null`.
 - `.codegraph` is a committed symlink to the `/cache/codegraph` named volume. `codegraph.json` excludes the `containers/` submodule. Only a few files are indexed, since the repo is mostly markdown and data.
+- **`rumdl check` without `--no-cache`** reported a file clean that the commit hook then rejected (117 list-indent errors). Use `rumdl check --no-cache`, or trust the lefthook run. `rumdl fmt` fixes these safely: only leading whitespace changes, and it converts `*emphasis*` to `_emphasis_`.
