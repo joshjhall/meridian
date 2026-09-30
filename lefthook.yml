@@ -27,6 +27,28 @@ pre-commit:
         - run: "! command -v rumdl >/dev/null 2>&1"
       run: rumdl check {staged_files}
 
+    # --- Agent memory bundle: OKF conformance (librarian) ---
+    # The validator exits 0 with findings on stdout, so fail on any output.
+    # Checks the whole bundle, not just staged files, so orphan and index
+    # checks see every concept.
+
+    okf-conformance:
+      glob:
+        - ".claude/memory/*.md"
+        - ".claude/memory/**/*.md"
+      skip:
+        - run: "! test -x /opt/librarian/plugins/review-audit/skills/check-okf-conformance/patterns.sh"
+      run: |
+        list=$(mktemp)
+        find .claude/memory -name '*.md' -not -path '*/tmp/*' > "$list"
+        out=$(bash /opt/librarian/plugins/review-audit/skills/check-okf-conformance/patterns.sh "$list" </dev/null)
+        rm -f "$list"
+        if [ -n "$out" ]; then
+          printf '%s\n' "$out"
+          echo "ERROR: OKF findings in .claude/memory (see above)"
+          exit 1
+        fi
+
     # --- YAML / JSON formatting (dprint) ---
 
     dprint:

@@ -43,3 +43,7 @@ Thumbs.db
 # Added by devcontainer health check
 # Claude Code local state
 .claude/memory/tmp/
+
+# Python bytecode
+__pycache__/
+*.pyc

@@ -2,7 +2,12 @@
 # Docs: https://github.com/crate-ci/typos/blob/master/docs/reference.md
 
 [files]
+# Hidden paths are skipped by default; .claude/memory/ is agent context that
+# should be spell-checked like any other doc. .git and other dot-dirs are
+# covered by .gitignore or excluded below.
+ignore-hidden = false
 extend-exclude = [
+  ".git/**",
   # The containers submodule has its own typos policy.
   "containers/**",
   "node_modules/**",
