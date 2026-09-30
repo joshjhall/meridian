@@ -23,7 +23,7 @@ Across all three: the five-field audit record, a human-readable rationale, drift
 - **Moving fax to the portal is a component, not the answer.** It saves ≤8.8% of blended cost even at 100% (extract).
 - The AI never recommends a denial. It may surface evidence for a human to judge (pending open question C4).
 
-**Integration path (the user's five-path framing):** 1 (replace the UI, ClaimsPro as backend) and 3 (replace ClaimsPro) are rejected; 2 (vendor extension SDK) is unlikely but being asked. Prototype focus is **4 (write into existing fields: notes, custom fields) + 5 (browser-extension overlay keyed on the claim ID in the URL)**. Deciding questions: I1–I8 in `docs/discovery/open_questions.md`.
+**Integration path (the user's five-path framing):** 1 (replace the UI, ClaimsPro as backend) and 3 (replace ClaimsPro) are rejected; 2 (vendor extension SDK) is closed: no SDK, confirmed in the clarification call. Prototype focus is **4 (write into existing fields: notes, custom fields, which exist) + 5 (browser-extension overlay keyed on the claim ID; IT can force-install)**. ClaimsPro is SaaS. Deciding questions: I1–I8 in `docs/discovery/open_questions.md`.
 
 **Why:** Future sessions should build on these positions rather than re-derive or contradict them.
 

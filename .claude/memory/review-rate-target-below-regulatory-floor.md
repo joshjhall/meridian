@@ -1,19 +1,20 @@
 ---
 type: project
-title: The <20% review-rate target is below the regulatory floor
-description: 25.4% of claims need human review by regulation; a perfect flag still sends ~44% to review.
-stale_check: "re-run python3 analysis/review_floor.py; figures change only if reference/claims_processing.csv changes"
+title: The <20% review-rate target depends on which regulation data you trust
+description: Reachable under the stated $10K-and-state rule (floor 12.9%), not as the extract labels it (25.4%).
+stale_check: "re-run python3 analysis/review_floor.py; sections 1-4 use the labels, section 9 the stated rule"
 ---
 
-The SOW's review-rate target (45% → <20%, `docs/project/sow.md:18`) is not reachable as written:
+The SOW's review-rate target (45% → <20%, `docs/project/sow.md:18`) has two answers, depending on the regulation data:
 
-- **25.4%** of claims are `requires_human_by_regulation` (extract).
-- The $10K human-review rule matches **12 states** in the data: the 8 Michael named plus MA, MD, MI, VA. The other 8 states show ~30% regulated regardless of amount, from a rule nobody has explained.
-- In the 500-claim calibration sample, a *perfect* flag (needed OR regulated) still flags **~44%**, against 47.4% today.
-- 437 regulation-required claims were **not** flagged. Raise privately with Michael first.
+- **Stated rule** (case owner, clarification call): `requires_human_by_regulation` = over $10K in one of 12 states. Floor **12.9%**, so <20% is reachable only by cutting the *need* for second opinions. A perfect second-opinion flag still puts total review at ~39%.
+- **As labeled in the extract:** floor **25.4%**. It matches the rule in the 12 states but adds 628 unexplained regulated claims (~30%) in the other 8. Likely planted or an artifact; present it as a finding.
+- **85 claims** meet the stated rule and have the regulation flag set, but not the review flag. If routing uses only the review flag, they skipped a required review. The case owner called this "an error".
+- **Quick win to open with:** route on either flag. It closes a regulatory gap before any AI is built, but it *raises* the flag rate. It's Meridian's change to make (legacy SaaS, CAB); take it to Michael privately first. Engineering must confirm how routing filters (M14).
+- **The 628 unexplained labels:** readings ranked by fit are legacy rules still running, then one shared unstated rule, then conflicting rules. The ~30% is uniform across all 8 states.
 
-Full argument, caveats, and sources: the top section of `docs/discovery/open_questions.md`. Reproduce with `python3 analysis/review_floor.py`.
+Full argument and caveats: "Review floor, revised" in `docs/discovery/open_questions.md`.
 
-**Why:** It reframes the design problem. The number of claims a human touches barely falls, so the value is in making each touch cheaper: a prepared brief plus one-click confirmation (see [working positions](/working-positions-from-discovery-read.md)).
+**Why:** The panel expects the candidate to say whether the goals are realistic, unprompted. The honest answer is "possible under the rule you gave us, but not by removing false alarms alone, and your data disagrees with your rule."
 
-**How to apply:** Don't design toward "fewer humans in the loop." Design the human touch to be fast and well-informed. Quote the script's output rather than restating numbers from memory.
+**How to apply:** Raise it early in the presentation, unprompted: open on the quick win, then realism. The user's view: <20% was set to be near-impossible, with a narrow theoretical path that isn't realistic in six months on a legacy system. Lead with reading A (the stated rule) and show the data gap as a finding. Frame the design goal as fewer *needed* second opinions: better-prepared claims plus right-first-time routing. Quote the script's output rather than restating numbers from memory.
