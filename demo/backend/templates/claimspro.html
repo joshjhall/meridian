@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}ClaimsPro — {{ claim.claim_id }}{% endblock %}
+{% block content %}
+{# Placeholder: the mock ClaimsPro screen is #10. #}
+<h1>ClaimsPro — {{ claim.claim_id }}</h1>
+<p>
+  {{ claim.claim_type }} · {{ claim.state }} · ${{ "{:,.2f}".format(claim.claim_amount_usd) }} ·
+  SLA due {{ claim.sla_due_at.isoformat() }}
+</p>
+{% endblock %}

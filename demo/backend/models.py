@@ -1,11 +1,12 @@
 """Shared data contracts for the demo.
 
-These Pydantic models are the source of truth. `demo/web/src/types.ts` mirrors
-them field for field, and `tests/test_types_parity.py` enforces that.
+These Pydantic models are the only schema: the API, the Jinja templates and
+the LangGraph pipeline all use them directly. Don't define a local claim,
+event or audit shape elsewhere.
 
 Skill, Tier and Stage are enums: code that needs "all tiers" iterates the enum
 rather than listing members, so adding a tier (e.g. T4, T5) means editing this
-file and types.ts only.
+file only.
 """
 
 from datetime import date, datetime, timedelta

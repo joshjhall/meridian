@@ -4,46 +4,52 @@ A running demo of the claims pre-processing and routing pipeline, an admin monit
 
 ## Run
 
-Prerequisites: [uv](https://docs.astral.sh/uv/), Node 20+, and pnpm.
+Prerequisite: [uv](https://docs.astral.sh/uv/). It installs Python 3.12+ if needed.
 
 ```bash
 cd demo
-make dev    # backend on :8000, web on :5173 (proxies /api); Ctrl-C stops both
-make test   # pytest (fixtures, roster, type parity, API) + tsc
+make dev    # API and pages on http://localhost:8000
+make test   # pytest: fixtures, roster, API, pages
 make data   # regenerate claim fixtures and roster
 ```
 
 Then open:
 
-- <http://localhost:5173/admin>: admin monitor (#6, #7, #8, #9)
-- <http://localhost:5173/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10)
-- <http://localhost:5173/panel?claim=IS-CLM-2025004222>: side panel (#11)
+- <http://localhost:8000/admin>: admin monitor (#6, #7, #8, #9)
+- <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10)
+- <http://localhost:8000/panel?claim=IS-CLM-2025004222>: side panel (#11)
 
 ## Stack
 
+One language, Python, end to end. The only JavaScript is the extension glue and small browser libraries loaded from a CDN.
+
 | Piece | Tech | Where |
 |---|---|---|
-| Backend | Python 3.12+, FastAPI, Pydantic; uv | `backend/` |
-| Web | React, Vite, TypeScript, react-router; pnpm | `web/` |
-| Extension | Chrome MV3, `chrome.sidePanel` | `extension/` |
-| Streams | Server-sent events | `backend/` (from #5) |
+| API and pages | Python 3.12+, FastAPI, Pydantic, Jinja2; uv | `backend/` |
+| Interactivity | HTMX, server-sent events, CSS transitions | `backend/templates/`, `backend/static/` |
+| Charts | D3, from a CDN, fed JSON by the API | `backend/static/` (from #8) |
+| Pipeline | LangGraph: one node per stage, each emitting a `PipelineEvent` | `backend/` (from #3) |
+| Extension | Chrome MV3, `chrome.sidePanel`; embeds `/panel` | `extension/` |
+
+Why Python: Meridian's ML platform is Databricks with MLflow, which can trace LangGraph runs and log a graph as a model, so the demo pipeline is the shape a production one would take. LangGraph's Python library is its primary implementation. One language also means one schema: the Pydantic models are used directly by the API, the templates and the pipeline.
 
 ## Layout
 
-- `backend/models.py`: shared contracts and **the source of truth**: `Claim`, `Skill`, `Tier`, `Stage`, `Adjuster`, `PipelineEvent`, `AuditRecord`, `PanelSummary`.
-- `web/src/types.ts`: a hand-written TypeScript mirror. `backend/tests/test_types_parity.py` fails if a field or enum value drifts.
+- `backend/models.py`: the shared contracts and **the only schema**: `Claim`, `Skill`, `Tier`, `Stage`, `Adjuster`, `PipelineEvent`, `AuditRecord`, `PanelSummary`.
 - `backend/fixtures.py`: `load_claim_fixtures()` and `load_roster()`, validated through the models.
-- `backend/app.py`: API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`).
-- `data/claims/*.json`: the six side-panel claims. Each is a `ClaimFixture`: the `claim` plus an `expected` block (skills, tier, regulated, routing reason, SLA state) from the spec for the pipeline to test against.
+- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`) and the pages (`/admin`, `/claimspro/{id}`, `/panel`).
+- `backend/templates/` and `backend/static/`: Jinja templates and CSS.
+- `data/claims/*.json`: the six side-panel claims. Each is a `ClaimFixture`: the `claim` plus an `expected` block (skills, tier, regulated, routing reason, SLA state) from the spec, for the pipeline to test against.
 - `data/build_claims.py`: builds the fixtures. Numbers come from `reference/claims_processing.csv`; intake details and stories come from an overlay in the script.
 - `data/roster.json` and `data/gen_roster.py`: the seeded roster.
-- `extension/`: MV3 manifest stub.
+- `extension/`: the MV3 side panel. It embeds the backend's `/panel` page.
 
 ## Contracts and conventions
 
-- Add new shared shapes to `models.py` first, then mirror them in `types.ts`. Don't invent a local claim, event or audit shape.
-- Skill, Tier and Stage are enums. Iterate them instead of listing members, so a fourth or fifth tier means editing only `models.py` and `types.ts`.
+- Add new shared shapes to `models.py`. Don't define a local claim, event or audit shape anywhere else.
+- Skill, Tier and Stage are enums. Iterate them instead of listing members, so a fourth or fifth tier means editing only `models.py`.
 - ClaimsPro custom fields (`skills`, `tier`, `routing_reason`, `review_lane`, `brief_status`) are empty in the fixtures; the pipeline (#3) fills them. `sla_due_at` is computed: `received_at` + 24h.
+- Pages are server-rendered. Reach for HTMX or a small script before adding a JavaScript framework.
 
 ## Assumptions
 

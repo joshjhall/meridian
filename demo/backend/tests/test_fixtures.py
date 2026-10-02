@@ -121,8 +121,29 @@ def test_invalid_fixture_is_rejected():
         ClaimFixture.model_validate(payload)
 
 
-def test_cors_allows_only_the_vite_origin():
-    allowed = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
-    assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
+def test_cors_allows_only_extension_origins():
+    ext = "chrome-extension://" + "a" * 32
+    allowed = client.get("/api/health", headers={"Origin": ext})
+    assert allowed.headers["access-control-allow-origin"] == ext
     other = client.get("/api/health", headers={"Origin": "http://evil.example"})
     assert "access-control-allow-origin" not in other.headers
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/", "Meridian demo"),
+        ("/admin", "received → validated"),
+        ("/claimspro/IS-CLM-2025004222", "Bodily Injury"),
+        ("/panel?claim=IS-CLM-2025004222", "IS-CLM-2025004222"),
+    ],
+)
+def test_pages_render(path, expected):
+    response = client.get(path)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert expected in response.text
+
+
+def test_claimspro_page_unknown_claim_is_404():
+    assert client.get("/claimspro/IS-CLM-0000000000").status_code == 404
