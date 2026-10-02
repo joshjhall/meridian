@@ -90,10 +90,11 @@
     source = null;
   };
 
+  // A paused feed stays paused; connect() reads the new speed on restart.
   speed?.addEventListener("change", () => {
+    if (!source) return;
     disconnect();
     connect();
-    if (pause) pause.textContent = "Pause feed";
   });
 
   pause?.addEventListener("click", () => {

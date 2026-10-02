@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app import app, render_card
 from fixtures import load_claim_fixtures
-from models import ExceptionReason, Stage
+from models import ExceptionReason, Skill, Stage, Tier
 
 client = TestClient(app)
 
@@ -66,6 +66,42 @@ def test_counters_track_open_exceptions_and_routed_claims():
     assert CLAIM_2993 not in state.routed_to_review
     assert "IS-CLM-2025000375" in state.routed_to_review
     assert "IS-CLM-2025000300" not in state.routed_to_review
+
+
+@pytest.mark.parametrize(
+    ("state", "amount", "tier", "regulated", "lane"),
+    [
+        ("CA", 10_000.00, "T1", False, "fast_lane"),
+        ("CA", 10_000.01, "T1", True, "regulatory_review"),
+        ("TX", 50_000.00, "T2", False, "standard_review"),
+        ("NY", 50_000.00, "T2", True, "regulatory_review"),
+        ("TX", 500.00, "T3", False, "senior_review"),
+    ],
+)
+def test_regulated_threshold_and_review_lane(state, amount, tier, regulated, lane):
+    spec = monitor._Spec(
+        claim_id="IS-CLM-2025000001",
+        state=state,
+        channel="Phone",
+        amount=amount,
+        skills=[Skill.COLLISION],
+        tier=Tier(tier),
+        sla="on_track",
+        routing_reason="test",
+    )
+    assert spec.regulated is regulated
+    assert spec.review_lane == lane
+
+
+def test_failed_write_recovers_and_clears_its_reason():
+    state = monitor.replay()
+    retried = [v for v in state.claims.values() if any(e.payload.get("retried") for e in v.trace)]
+    assert retried
+    for view in retried:
+        assert Stage.EXCEPTION in [e.stage for e in view.trace]
+        assert view.stage is Stage.WITH_ADJUSTER
+        assert "reason" not in view.facts
+        assert view.facts["adjuster"]
 
 
 def test_routed_claim_is_counted_once():
