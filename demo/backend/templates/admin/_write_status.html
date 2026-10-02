@@ -11,7 +11,11 @@
     <span class="badge text-xs">Confirmed in ClaimsPro</span>
   {% else %}
     <div class="alert-destructive text-xs" role="alert">
-      <h4>Failed after {{ progress.attempt }} attempts. Engineering and client IT notified.</h4>
+      {% if progress.attempt %}
+        <h4>Failed after {{ progress.attempt }} attempts. Engineering and client IT notified.</h4>
+      {% else %}
+        <h4>Not sent: ClaimsPro would reject this move.</h4>
+      {% endif %}
       {% if progress.reason %}<section>{{ progress.reason }}</section>{% endif %}
     </div>
   {% endif %}

@@ -6,6 +6,7 @@ validates it here first, so a blocked move never reaches ClaimsPro.
 
 import threading
 import uuid
+import weakref
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -17,9 +18,10 @@ import monitor
 
 from claimspro_sim import ClaimsProSim, reliable_write
 from claimspro_sim.faults import SoapOperation
+from claimspro_sim.reliable import SIM_VERSION
 from claimspro_sim.store import seed_claims
 from fixtures import load_claim_fixtures, load_roster
-from models import TIER_LABELS, Adjuster, Claim, SlaState, Tier
+from models import TIER_LABELS, Adjuster, Claim, PipelineEvent, SlaState, Stage, Tier
 
 TRANSFER: SoapOperation = "TransferWorkItem"
 MAX_ATTEMPTS = 3
@@ -89,7 +91,8 @@ class TransferBlocked(Exception):
         self.reason = reason
 
 
-_in_flight: set[tuple[int, str]] = set()  # (id(sim), claim_id) with a move not yet settled
+# Claims with a move not yet settled, per simulator; weak so a discarded sim takes its set along.
+_in_flight: weakref.WeakKeyDictionary[ClaimsProSim, set[str]] = weakref.WeakKeyDictionary()
 _in_flight_lock = threading.Lock()
 
 
@@ -101,18 +104,18 @@ def start_transfer(
     Returns the key to poll its status by. The check and the in-flight mark happen
     under one lock, so two quick drops of the same claim can't both go out.
     """
-    slot = (id(sim), claim_id)
     with _in_flight_lock:
+        busy = _in_flight.setdefault(sim, set())
         claim = sim.store.get(claim_id)
         if claim is None:
             raise KeyError(claim_id)
         reason = (
-            "A ClaimsPro write for this claim is still in flight." if slot in _in_flight else None
+            "A ClaimsPro write for this claim is still in flight." if claim_id in busy else None
         )
         reason = reason or block_reason(claim, target)
         if reason is not None or target is None:
             raise TransferBlocked(reason or "Unknown adjuster.")
-        _in_flight.add(slot)
+        busy.add(claim_id)
 
     key = str(uuid.uuid4())
     to_adjuster_id = target.id
@@ -127,15 +130,35 @@ def start_transfer(
                 idempotency_key=key,
                 max_attempts=MAX_ATTEMPTS,
             )
+        except Exception as e:
+            # reliable_write rejects some requests before its first event; without one
+            # for this key the board would poll "pending" forever.
+            if not any(ev.payload.get("idempotency_key") == key for ev in sim.events(claim_id)):
+                sim.record_event(
+                    PipelineEvent(
+                        claim_id=claim_id,
+                        stage=Stage.ASSIGNED,
+                        timestamp=sim.now(),
+                        pipeline_version=SIM_VERSION,
+                        payload={
+                            "operation": TRANSFER,
+                            "write_status": "failed",
+                            "attempt": 0,
+                            "idempotency_key": key,
+                            "reason": f"rejected before sending: {e}",
+                        },
+                    )
+                )
+            raise
         finally:
             with _in_flight_lock:
-                _in_flight.discard(slot)
+                busy.discard(claim_id)
 
     try:
         run(job)
     except BaseException:
         with _in_flight_lock:
-            _in_flight.discard(slot)
+            busy.discard(claim_id)
         raise
     return key
 

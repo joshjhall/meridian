@@ -2,6 +2,8 @@
 
 import random
 import re
+import threading
+import time
 from datetime import timedelta
 
 import pytest
@@ -338,3 +340,69 @@ def test_fault_toggle_is_admin_only(client: TestClient, sim: ClaimsProSim):
 def test_managers_can_move_work(client: TestClient, sim: ClaimsProSim):
     to = adjuster(Tier.T1, skip=owner(sim, SIMPLE))
     assert transfer(client, SIMPLE, to, view="manager").status_code == 200
+
+
+def test_early_rejection_settles_the_chip(client: TestClient, sim: ClaimsProSim):
+    # The claim leaves the store after the route's check but before the write runs.
+    held: list = []
+    app.dependency_overrides[transfer_runner] = lambda: held.append
+    res = transfer(client, SIMPLE, adjuster(Tier.T1, skip=owner(sim, SIMPLE)))
+    key = re.search(r"key=([0-9a-f-]+)", res.text)
+    assert key is not None
+    del sim.store._claims[SIMPLE]
+    with pytest.raises(Exception, match="unknown claim"):
+        held.pop()()
+    progress = queues.write_progress(sim, SIMPLE, key[1])
+    assert progress["write_status"] == "failed"
+    chip = client.get(f"/admin/queues/claims/{SIMPLE}/write-status", params={"key": key[1]})
+    assert "Not sent" in chip.text
+    assert "hx-trigger" not in chip.text
+    assert sim.alerts() == []
+
+
+def test_concurrent_moves_of_one_claim_send_only_one(sim: ClaimsProSim):
+    src = owner(sim, SIMPLE)
+    targets = [ROSTER[a.id] for a in ROSTER.values() if Tier.T1 in a.tiers and a.id != src][:8]
+    barrier = threading.Barrier(len(targets))
+    sent: list[str] = []
+    blocked: list[str] = []
+    lock = threading.Lock()
+
+    def attempt(target):
+        barrier.wait()
+        try:
+            queues.start_transfer(sim, SIMPLE, target, lambda _job: None)  # never settles
+            with lock:
+                sent.append(target.id)
+        except queues.TransferBlocked:
+            with lock:
+                blocked.append(target.id)
+
+    threads = [threading.Thread(target=attempt, args=(t,)) for t in targets]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(sent) == 1
+    assert len(blocked) == len(targets) - 1
+
+
+def test_default_runner_settles_on_a_background_thread(sim: ClaimsProSim):
+    target = ROSTER[adjuster(Tier.T1, skip=owner(sim, SIMPLE))]
+    key = queues.start_transfer(sim, SIMPLE, target)  # real run_in_thread
+    deadline = time.monotonic() + 5
+    while queues.write_progress(sim, SIMPLE, key)["write_status"] in ("pending", "retrying"):
+        assert time.monotonic() < deadline, "write never settled"
+        time.sleep(0.01)
+    assert queues.write_progress(sim, SIMPLE, key)["write_status"] == "confirmed"
+    assert owner(sim, SIMPLE) == target.id
+    # The thread frees the slot just after its last event, so allow it a moment.
+    back = ROSTER[adjuster(Tier.T1, skip=target.id)]
+    while True:
+        try:
+            queues.start_transfer(sim, SIMPLE, back, lambda job: job())
+            break
+        except queues.TransferBlocked:
+            assert time.monotonic() < deadline, "slot never freed"
+            time.sleep(0.01)
+    assert owner(sim, SIMPLE) == back.id
