@@ -58,6 +58,9 @@ ReviewLane = Literal["fast_lane", "standard_review", "regulatory_review", "senio
 BriefStatus = Literal["pending", "ready", "failed"]
 AdjusterRole = Literal["adjuster", "senior", "lead"]
 SlaState = Literal["on_track", "at_risk", "breached"]
+# A reliable write's progress (pipeline events) and its outcome stored on the claim.
+WriteStatus = Literal["pending", "retrying", "confirmed", "failed"]
+ClaimWriteStatus = Literal["pending", "confirmed", "write_failed"]
 
 
 class Claim(BaseModel):
@@ -95,6 +98,8 @@ class Claim(BaseModel):
     routing_reason: str | None = None
     review_lane: ReviewLane | None = None
     brief_status: BriefStatus | None = None
+    # Outcome of the latest reliable write (#2); "pending" means not yet saved.
+    write_status: ClaimWriteStatus | None = None
 
     @computed_field  # type: ignore[prop-decorator]  # Pydantic's documented pattern
     @property
@@ -142,6 +147,24 @@ class PipelineEvent(BaseModel):
     timestamp: datetime
     payload: dict[str, Any] = {}
     pipeline_version: str
+
+
+class ClaimNote(BaseModel):
+    text: str
+    author: str
+    idempotency_key: str
+    at: datetime
+
+
+class Alert(BaseModel):
+    """Raised when a ClaimsPro write still fails after every retry."""
+
+    claim_id: str
+    operation: str
+    idempotency_key: str
+    recipients: list[str]
+    message: str
+    raised_at: datetime
 
 
 class ReviewInterval(BaseModel):
