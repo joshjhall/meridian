@@ -136,7 +136,7 @@ def documents(claim: Claim) -> dict[str, str]:
         path = (REPO / rel).resolve()
         # Only text files inside sample_claims/, whatever the source path says.
         if path.is_relative_to(SAMPLES) and path.suffix in {".md", ".txt"} and path.exists():
-            docs[path.name] = path.read_text()
+            docs[path.name] = path.read_text(encoding="utf-8")
     if not docs:
         story = {k: claim.details[k] for k in STORY_FIELDS if k in claim.details}
         docs["claim_details.txt"] = "\n".join(f"{k}: {v}" for k, v in _flatten(story))
@@ -301,7 +301,8 @@ def masked_documents(claim: Claim) -> dict[str, str]:
     return docs
 
 
-CLOSE_TAG = re.compile(r"</\s*(document)", re.IGNORECASE)
+# Any document tag inside document text, opening or closing, in any case or spacing.
+DOC_TAG = re.compile(r"<(/?)(\s*document)", re.IGNORECASE)
 
 
 def prompt(claim: Claim, docs: dict[str, str]) -> str:
@@ -309,10 +310,10 @@ def prompt(claim: Claim, docs: dict[str, str]) -> str:
         f"Claim type: {claim.claim_type}\nLoss state: {claim.state}\n"
         f"Intake channel: {claim.intake_channel}\nComplexity: {claim.complexity}"
     )
-    # Document text is data: no "</document>" inside it, in any case or spacing, can
-    # close the wrapper early.
+    # Document text is data: a tag inside it can neither close its wrapper early nor
+    # open a fake one under another file name.
     body = "\n\n".join(
-        f'<document name="{n}">\n{CLOSE_TAG.sub(r"<\\/\1", t)}\n</document>'
+        f'<document name="{n}">\n{DOC_TAG.sub(r"&lt;\1\2", t)}\n</document>'
         for n, t in docs.items()
     )
     return f"{fields}\n\n{body}\n\nList the complexity signals in these documents."
@@ -379,7 +380,7 @@ def recorded(claim_id: str) -> Recorded | None:
     path = RECORDED_DIR / f"{claim_id}.json"
     if not path.exists():
         return None
-    return Recorded.model_validate_json(path.read_text())
+    return Recorded.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def from_recorded(claim: Claim) -> Signals:
@@ -393,7 +394,7 @@ def from_recorded(claim: Claim) -> Signals:
         if saved is None:
             return Signals(source="rules")
         docs = masked_documents(claim)
-    except (ValidationError, MaskingError) as e:
+    except (ValidationError, MaskingError, OSError, UnicodeDecodeError) as e:
         log.warning("recorded signals for %s unusable: %s", claim.claim_id, _reason(e))
         return Signals(source="rules", confidence=0.0, fallback_reason=_reason(e))
     return to_signals(saved.response, docs, source="recorded", llm_model=saved.model)
@@ -478,6 +479,8 @@ def _reason(e: Exception) -> str:
             return f"masking incomplete ({e}); not sent"
         case ValidationError():
             return f"recorded response invalid ({e.error_count()} errors)"
+        case OSError() | UnicodeDecodeError():
+            return f"could not read a source file ({type(e).__name__})"
         case TypeError() if "authentication" in str(e):
             return "no credentials"
         case _:
@@ -498,8 +501,8 @@ def run_live(claim: Claim, client: Any = None) -> Signals:
         log.warning("complexity signals for %s fell back: %s", claim.claim_id, reason)
         try:
             saved = recorded(claim.claim_id)
-        except ValidationError:
-            saved = None  # a corrupt recording is no better than none
+        except ValidationError, OSError, UnicodeDecodeError:
+            saved = None  # an unreadable recording is no better than none
         meta: dict[str, Any] = {
             "source": "llm_fallback",
             "fallback": True,
