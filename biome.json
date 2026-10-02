@@ -2,7 +2,13 @@
   "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["demo/**/*.js", "demo/**/*.css", "!demo/backend/static/app.css", "!biome.json"]
+    "includes": [
+      "demo/**/*.js",
+      "demo/**/*.css",
+      "!demo/backend/static/app.css",
+      "!demo/backend/static/vendor",
+      "!biome.json"
+    ]
   },
   "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
   "linter": { "rules": { "preset": "recommended" } },

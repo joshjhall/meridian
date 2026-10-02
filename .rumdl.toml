@@ -17,6 +17,8 @@ exclude = [
   # Append-only history (see AGENTS.md working agreements); reformatting
   # existing entries would rewrite it.
   "memory/**",
+  # Upstream licence text, shipped verbatim with the vendored build.
+  "demo/backend/static/vendor/basecoat/LICENSE.md",
 ]
 
 disable = [

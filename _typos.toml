@@ -15,4 +15,6 @@ extend-exclude = [
   # deliberate source errors); spell-checking it would flag the data itself.
   "reference/**",
   "sample_claims/**",
+  # Vendored third-party builds (minified; see its README).
+  "demo/backend/static/vendor/**",
 ]

@@ -111,11 +111,10 @@ def test_admin_page_includes_learning_charts():
     assert 'id="learning-loop"' in html
     assert "Illustrative history" in html
     assert "/static/learning.js" in html
-    # D3 comes from a CDN: pin it with Subresource Integrity.
-    d3_tag = re.search(r"<script[^>]*d3@7[^>]*>", html)
+    # D3 is vendored (#55) and still pinned with Subresource Integrity.
+    d3_tag = re.search(r'<script[^>]*src="/static/vendor/d3/d3\.min\.js"[^>]*>', html)
     assert d3_tag
     assert re.search(r'integrity="sha384-[A-Za-z0-9+/=]+"', d3_tag.group())
-    assert 'crossorigin="anonymous"' in d3_tag.group()
     assert 'data-chart="routing"' in html
     assert 'data-chart="intake"' in html
 
