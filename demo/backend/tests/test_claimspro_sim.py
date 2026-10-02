@@ -368,3 +368,23 @@ def test_fault_reset_and_event_filter_over_http(client, sim):
     other = "IS-CLM-2025004222"
     assert client.get("/api/sim/events", params={"claim_id": other}).json() == []
     assert len(client.get("/api/sim/events", params={"claim_id": CLAIM}).json()) == 2
+
+
+def test_key_reused_with_a_different_payload_is_rejected(sim):
+    first = reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"})
+    with pytest.raises(IdempotencyKeyConflict):
+        reliable_write(
+            sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-152"},
+            idempotency_key=first.idempotency_key,
+        )  # fmt: skip
+    assert sim.store.get(CLAIM).adjuster_id == "ADJ-151"  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("max_attempts", [0, -1])
+def test_max_attempts_below_one_is_rejected_before_any_state_change(sim, max_attempts):
+    with pytest.raises(ValueError, match="max_attempts"):
+        reliable_write(
+            sim, "AddNote", CLAIM, {"text": "x", "author": "p"}, max_attempts=max_attempts
+        )
+    assert sim.store.get(CLAIM).write_status is None  # type: ignore[union-attr]
+    assert sim.events() == []

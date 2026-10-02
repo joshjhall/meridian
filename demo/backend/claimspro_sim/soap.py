@@ -6,6 +6,7 @@ enter ClaimsPro through its UI or batch file only, and AI never denies a claim
 only the pipeline's custom fields, so it can't be used to set a disposition either.
 """
 
+import json
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -23,6 +24,11 @@ PAYLOAD_KEYS: dict[str, frozenset[str]] = {
     "AddNote": frozenset({"text", "author"}),
 }
 CUSTOM_FIELDS = frozenset({"skills", "tier", "routing_reason", "review_lane", "brief_status"})
+
+
+def intent(op: SoapOperation, claim_id: str, payload: dict[str, Any]) -> str:
+    """Canonical description of one change, bound to its idempotency key."""
+    return json.dumps([op, claim_id, payload], sort_keys=True, default=str)
 
 
 class SoapResponse(BaseModel):
@@ -61,14 +67,20 @@ class ClaimsProSoapClient:
         return self._call(
             "UpdateCustomFields",
             lambda: self._store.update_claim(
-                idempotency_key, "UpdateCustomFields", claim_id, change
+                idempotency_key,
+                intent("UpdateCustomFields", claim_id, {"fields": fields}),
+                claim_id,
+                change,
             ),
         )
 
     def AddNote(self, claim_id: str, text: str, author: str, idempotency_key: str) -> SoapResponse:
         self._require_claim(claim_id)
         note = ClaimNote(text=text, author=author, idempotency_key=idempotency_key, at=self._now())
-        return self._call("AddNote", lambda: self._store.add_note(idempotency_key, claim_id, note))
+        key_intent = intent("AddNote", claim_id, {"text": text, "author": author})
+        return self._call(
+            "AddNote", lambda: self._store.add_note(idempotency_key, key_intent, claim_id, note)
+        )
 
     def TransferWorkItem(
         self, claim_id: str, to_adjuster_id: str, idempotency_key: str
@@ -81,7 +93,12 @@ class ClaimsProSoapClient:
 
         return self._call(
             "TransferWorkItem",
-            lambda: self._store.update_claim(idempotency_key, "TransferWorkItem", claim_id, change),
+            lambda: self._store.update_claim(
+                idempotency_key,
+                intent("TransferWorkItem", claim_id, {"to_adjuster_id": to_adjuster_id}),
+                claim_id,
+                change,
+            ),
         )
 
     # --- Dispatch by operation name, request checks, and the verify read for each ---

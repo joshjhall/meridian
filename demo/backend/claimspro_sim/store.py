@@ -42,7 +42,7 @@ class ClaimsProStore:
         source = seed_claims() if claims is None else claims
         self._claims = {c.claim_id: c.model_copy(deep=True) for c in source}
         self._notes: defaultdict[str, list[ClaimNote]] = defaultdict(list)
-        self._applied_keys: dict[str, tuple[str, str]] = {}
+        self._applied_keys: dict[str, str] = {}
 
     # --- Reads (what the REST endpoints return; snapshots, never live objects) ---
 
@@ -65,45 +65,39 @@ class ClaimsProStore:
 
     # --- Writes (only the SOAP operations and the reliable-write wrapper call these) ---
 
-    def apply(
-        self, idempotency_key: str, operation: str, claim_id: str, change: Callable[[], None]
-    ) -> bool:
+    def apply(self, idempotency_key: str, intent: str, change: Callable[[], None]) -> bool:
         """Run `change` once per key. Returns False when the key was already applied.
 
-        A key reused for a different claim or operation is a caller bug, so it raises
-        rather than silently dropping the second change.
+        `intent` describes the change (operation, claim and payload). A key reused for a
+        different intent is a caller bug, so it raises rather than silently dropping it.
         """
         with self._lock:
-            if self._key_seen(idempotency_key, operation, claim_id):
+            if self._key_seen(idempotency_key, intent):
                 return False
             change()
-            self._applied_keys[idempotency_key] = (claim_id, operation)
+            self._applied_keys[idempotency_key] = intent
             return True
 
-    def check_key(self, idempotency_key: str, operation: str, claim_id: str) -> None:
+    def check_key(self, idempotency_key: str, intent: str) -> None:
         """Raise IdempotencyKeyConflict if the key was already used for a different change."""
         with self._lock:
-            self._key_seen(idempotency_key, operation, claim_id)
+            self._key_seen(idempotency_key, intent)
 
-    def _key_seen(self, idempotency_key: str, operation: str, claim_id: str) -> bool:
+    def _key_seen(self, idempotency_key: str, intent: str) -> bool:
         seen = self._applied_keys.get(idempotency_key)
-        if seen is not None and seen != (claim_id, operation):
+        if seen is not None and seen != intent:
             raise IdempotencyKeyConflict(
                 f"idempotency key {idempotency_key} already used for {seen}"
             )
         return seen is not None
 
     def update_claim(
-        self, idempotency_key: str, operation: str, claim_id: str, change: Callable[[Claim], None]
+        self, idempotency_key: str, intent: str, claim_id: str, change: Callable[[Claim], None]
     ) -> bool:
-        return self.apply(
-            idempotency_key, operation, claim_id, lambda: change(self._claims[claim_id])
-        )
+        return self.apply(idempotency_key, intent, lambda: change(self._claims[claim_id]))
 
-    def add_note(self, idempotency_key: str, claim_id: str, note: ClaimNote) -> bool:
-        return self.apply(
-            idempotency_key, "AddNote", claim_id, lambda: self._notes[claim_id].append(note)
-        )
+    def add_note(self, idempotency_key: str, intent: str, claim_id: str, note: ClaimNote) -> bool:
+        return self.apply(idempotency_key, intent, lambda: self._notes[claim_id].append(note))
 
     def set_write_status(self, claim_id: str, status: ClaimWriteStatus) -> None:
         # Demo shortcut: in production this status lives on our side, not in ClaimsPro.

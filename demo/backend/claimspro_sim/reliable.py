@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from claimspro_sim.faults import SoapOperation
 from claimspro_sim.sim import ClaimsProSim
+from claimspro_sim.soap import intent
 from models import Alert, PipelineEvent, Stage, WriteStatus
 
 ALERT_RECIPIENTS = ["tribe-engineering", "client-it"]
@@ -40,9 +41,11 @@ def reliable_write(
 ) -> WriteResult:
     """Apply one intended change. Pass the same key to replay a change already sent."""
     # Rejected requests raise here, before any state change, and are never retried.
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
     sim.soap.check(op, claim_id, payload)
     key = idempotency_key or str(uuid.uuid4())
-    sim.store.check_key(key, op, claim_id)
+    sim.store.check_key(key, intent(op, claim_id, payload))
 
     def emit(status: WriteStatus, attempt: int, reason: str | None = None) -> None:
         sim.record_event(
