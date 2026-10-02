@@ -30,6 +30,7 @@ from models import (
     AttentionItem,
     AuditRecord,
     Claim,
+    ExceptionReason,
     PipelineEvent,
     Regulation,
     ReviewLane,
@@ -118,11 +119,33 @@ def _validate(state: ClaimState) -> ClaimState:
     if claim is None:
         return {
             "issues": issues,
-            "events": [_event(claim_id, Stage.EXCEPTION, state["now"], issues=issues)],
+            "events": [
+                _event(
+                    claim_id,
+                    Stage.EXCEPTION,
+                    state["now"],
+                    reason=ExceptionReason.MISSING_FIELDS.value,
+                    issues=issues,
+                )
+            ],
         }
     attention = intake.intake_gaps(claim)
-    event = _event(claim_id, Stage.VALIDATED, state["now"], missing=[a.label for a in attention])
-    return {"claim": claim, "attention": attention, "issues": [], "events": [event]}
+    received = _event(
+        claim_id,
+        Stage.RECEIVED,
+        state["now"],
+        state=claim.state,
+        channel=claim.intake_channel,
+        amount=claim.claim_amount_usd,
+    )
+    validated = _event(
+        claim_id,
+        Stage.VALIDATED,
+        state["now"],
+        fields_complete=not attention,
+        missing=[a.label for a in attention],
+    )
+    return {"claim": claim, "attention": attention, "issues": [], "events": [received, validated]}
 
 
 def _ocr_check(state: ClaimState) -> ClaimState:
@@ -163,7 +186,7 @@ def _regulatory(state: ClaimState) -> ClaimState:
         step="regulatory",
         regulated=regulation.regulated,
         review_required=regulation.review_required,
-        reason=regulation.reason,
+        regulation_reason=regulation.reason,
         lane=lane,
     )
     return {"regulation": regulation, "lane": lane, "events": [event]}
@@ -214,6 +237,7 @@ def build_route_graph(loads: Loads, sim: ClaimsProSim | None):
             state["claim"].claim_id,
             Stage.ASSIGNED,
             state["now"],
+            adjuster=f"{adjuster.name} ({adjuster.id})" if adjuster else "unassigned",
             adjuster_id=adjuster.id if adjuster else None,
             matched_on=how,
             lane=state["lane"],
@@ -233,7 +257,13 @@ def build_route_graph(loads: Loads, sim: ClaimsProSim | None):
         )
         if not issues:
             return {"issues": []}
-        event = _event(state["claim"].claim_id, Stage.EXCEPTION, state["now"], issues=issues)
+        event = _event(
+            state["claim"].claim_id,
+            Stage.EXCEPTION,
+            state["now"],
+            reason=ExceptionReason.UNKNOWN_RULE.value,
+            issues=issues,
+        )
         return {"issues": issues, "events": [event]}
 
     def audit_write(state: ClaimState) -> ClaimState:
@@ -325,8 +355,12 @@ def build_pipeline(roster: Iterable[Adjuster], sim: ClaimsProSim | None = None):
                 Stage.PRIORITIZED,
                 state["now"],
                 position=i,
+                tier=c["tier"].value,
+                regulated=c["regulation"].regulated,
+                review_lane=c["lane"],
+                sla=c["claim"].sla_state(state["now"]),
                 sla_due_at=c["claim"].sla_due_at.isoformat(),
-                sla_state=c["claim"].sla_state(state["now"]),
+                routing_reason=_decision(c)[1],
             )
             for i, c in enumerate(queue, start=1)
         ]

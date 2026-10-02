@@ -130,3 +130,18 @@ def test_full_extract_keeps_every_regulated_claim_with_a_person():
         a = r.audit
         assert a.claim_id and a.input_data_ref and a.model_version and a.output
         assert 0 <= a.confidence <= 1 and a.human_reviewed is False
+
+
+def test_pipeline_events_drive_the_admin_monitor():
+    from monitor import MonitorState
+
+    claims = [f.claim for f in FIXTURES.values()]
+    bad_row = next(extract_rows()) | {"state": None, "claim_id": "IS-CLM-2025999999"}
+    result = run_pipeline([*claims, bad_row], load_roster(), now=NOW)
+    board = MonitorState()
+    for event in result.events:
+        board.apply(event)
+    assert {v.stage for cid, v in board.claims.items() if cid in FIXTURES} == {Stage.WITH_ADJUSTER}
+    assert board.claims["IS-CLM-2025999999"].reason_label == "Missing fields"
+    assert board.claims["IS-CLM-2025000375"].facts["review_lane"] == "regulatory_review"
+    assert board.claims["IS-CLM-2025002993"].facts["adjuster"].endswith(")")
