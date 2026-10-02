@@ -119,9 +119,10 @@ def test_failed_write_raises_an_alert_not_a_silent_drop():
     assert audit.human_reviewed is False
 
 
-def test_a_claim_stopped_after_matching_gives_its_adjuster_back():
-    # Two identical adjusters; the first claim's write is rejected (unknown to ClaimsPro),
-    # so its adjuster must be free again and the second claim goes to that same adjuster.
+@pytest.mark.parametrize("failure", ["rejected", "retries_exhausted"])
+def test_a_claim_stopped_after_matching_gives_its_adjuster_back(failure):
+    # Two identical adjusters. The first claim's write fails (ClaimsPro doesn't know the
+    # claim, or every retry fails), so its adjuster must be free again for the second.
     template = load_roster()[0]
     roster = [
         template.model_copy(
@@ -130,10 +131,16 @@ def test_a_claim_stopped_after_matching_gives_its_adjuster_back():
         for i in ("ADJ-001", "ADJ-002")
     ]
     kept = FIXTURES["IS-CLM-2025000300"].claim
-    rejected = kept.model_copy(update={"claim_id": "IS-CLM-2025999997"})
-    sim = ClaimsProSim([kept], sleep=lambda _s: None, now=lambda: NOW)
-    routed = run_pipeline([rejected, kept], roster, now=NOW, sim=sim).by_id()
-    assert routed[rejected.claim_id].stage == Stage.EXCEPTION
+    failed = kept.model_copy(update={"claim_id": "IS-CLM-2025999997"})
+    known = [kept] if failure == "rejected" else [kept, failed]
+    sim = ClaimsProSim(known, sleep=lambda _s: None, now=lambda: NOW)
+    if failure == "retries_exhausted":
+        # Fail exactly the first claim's three attempts, then let writes through.
+        sim.faults.set(
+            {"UpdateCustomFields": FaultConfig(failure_rate=1.0, mode="fault", max_failures=3)}
+        )
+    routed = run_pipeline([failed, kept], roster, now=NOW, sim=sim).by_id()
+    assert routed[failed.claim_id].stage == Stage.EXCEPTION
     assert routed[kept.claim_id].adjuster_id == "ADJ-001"
 
 

@@ -1,5 +1,7 @@
 import random
 
+import pytest
+
 from claimspro_sim import ClaimsProSim
 from fixtures import load_claim_fixtures, load_roster
 from models import Adjuster, AdjusterRole, Signals, Skill, Tier
@@ -112,3 +114,12 @@ def test_complexity_signals_recorded_for_fixtures_and_empty_otherwise():
     assert recorded.injury and recorded.confidence == 0.69
     plain = complexity_signals(CLAIM)
     assert (plain.source, plain.secondary_skills, plain.confidence) == ("rules", [], 1.0)
+
+
+def test_release_undoes_take_and_refuses_an_unmatched_release():
+    loads = Loads([_adj("ADJ-001", [Skill.COLLISION], [Tier.T1], load=0)])
+    loads.take("ADJ-001")
+    loads.release("ADJ-001")
+    assert loads["ADJ-001"] == 0
+    with pytest.raises(ValueError, match="release without take"):
+        loads.release("ADJ-001")

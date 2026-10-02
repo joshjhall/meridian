@@ -23,6 +23,8 @@ class Loads:
 
     def release(self, adjuster_id: str) -> None:
         """A claim that stopped for a person after matching never reached this adjuster."""
+        if self._load[adjuster_id] <= 0:
+            raise ValueError(f"release without take for {adjuster_id}")
         self._load[adjuster_id] -= 1
 
 
