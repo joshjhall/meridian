@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+{# Mock of Meridian's ClaimsPro (vendor system), #10. Deliberately unstyled HTML:
+   it must read as a stand-in for another system, not part of the demo UI. Does not
+   extend base.html and loads no stylesheet, so no Basecoat or Tailwind. Every
+   screen renders stacked on one page; the tab row and the side panel's Contents
+   links jump to them by anchor (#loss, #documents/medical-summary). #}
+{% from "claimspro/_custom_fields.html" import custom_fields %}
+{% macro value(v) -%}
+  {%- if v is mapping -%}
+    <table border="1" cellpadding="2" cellspacing="0">
+      {%- for k, item in v.items() %}
+        <tr>
+          <th align="left">{{ k | replace('_', ' ') | capitalize }}</th>
+          <td>{{ value(item) }}</td>
+        </tr>
+      {%- endfor %}
+    </table>
+  {%- elif v is string -%}
+    {{ v }}
+  {%- elif v is sameas true -%}Yes
+  {%- elif v is sameas false -%}No
+  {%- elif v is iterable -%}
+    <ul>{% for item in v %}<li>{{ value(item) }}</li>{% endfor %}</ul>
+  {%- elif v is none -%}&nbsp;
+  {%- else -%}
+    {{ v }}
+  {%- endif -%}
+{%- endmacro %}
+{% macro row(label, v) -%}
+  <tr>
+    <th align="left" width="200" bgcolor="#dddddd">{{ label }}</th>
+    <td>{{ value(v) }}</td>
+  </tr>
+{%- endmacro %}
+{% macro detail_rows(items) -%}
+  {% for k, v in items.items() %}{{ row(k | replace("_", " ") | capitalize, v) }}{% endfor %}
+{%- endmacro %}
+{% macro screen(anchor, title) -%}
+  <fieldset id="{{ anchor }}">
+    <legend><b>{{ title }}</b> &nbsp;<small><a href="#top">[top]</a></small></legend>
+    {{ caller() }}
+  </fieldset>
+  <br />
+{%- endmacro %}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ClaimsPro - {{ claim.claim_id }}</title>
+  </head>
+  <body bgcolor="#ece9d8">
+    <table id="top"
+           border="0"
+           cellpadding="3"
+           cellspacing="0"
+           width="100%"
+           bgcolor="#a6caf0">
+      <tr>
+        <td><b>ClaimsPro 7.4</b> &nbsp;|&nbsp; Veritas Systems &nbsp;|&nbsp; Claim {{ claim.claim_id }}</td>
+        <td align="right">
+          <form method="get" action="/claimspro">
+            <a href="/claimspro/{{ prev_id }}">« Prev</a>
+            <select name="claim">
+              {% for cid in claim_ids %}
+                <option value="{{ cid }}"{% if cid == claim.claim_id %} selected{% endif %}>{{ cid }}</option>
+              {% endfor %}
+            </select>
+            <input type="submit" value="Go" />
+            <a href="/claimspro/{{ next_id }}">Next »</a>
+          </form>
+        </td>
+      </tr>
+    </table>
+    <table border="1" cellpadding="3" cellspacing="0" bgcolor="#d4d0c8">
+      <tr>
+        {% for anchor, label in screens %}
+          <td><a href="#{{ anchor }}">{{ loop.index }}. {{ label }}</a></td>
+        {% endfor %}
+      </tr>
+    </table>
+    {% if claim.synthetic %}
+      <p><i>Demo claim: numbers from the claims extract; story and documents written for the demo.</i></p>
+    {% endif %}
+    <br />
+    {% call screen("summary", "1. Summary") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        {{ row("Claim type", claim.claim_type) }}
+        {{ row("Loss state", claim.state) }}
+        {{ row("Claim amount", "$" ~ "{:,.2f}".format(claim.claim_amount_usd)) }}
+        {{ row("Complexity", claim.complexity) }}
+        {{ row("Intake channel", claim.intake_channel) }}
+        {{ row("Filed", claim.filed_date.strftime("%m/%d/%Y")) }}
+        {{ row("Received", claim.received_at.strftime("%m/%d/%Y %H:%M")) }}
+        {{ row("Assigned adjuster", claim.adjuster_id) }}
+        {{ row("Status", claim.disposition) }}
+        {{ row("Flagged for human review", claim.flagged_for_human_review) }}
+        {{ row("Human review required by regulation", claim.requires_human_by_regulation) }}
+        {{ row("Automation eligibility (2021 score)", claim.automation_eligibility_score) }}
+        {{ row("Documents on file", claim.document_count) }}
+      </table>
+      <br />
+      {{ custom_fields(custom_field_rows) }}
+    {% endcall %}
+    {% call screen("policy", "2. Policy") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        {{ detail_rows(details.policy) if details.policy else row("Policy", "See carrier file") }}
+      </table>
+    {% endcall %}
+    {% call screen("parties", "3. Parties") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        {{ detail_rows(details.parties) if details.parties else row("Parties", "No parties recorded") }}
+      </table>
+    {% endcall %}
+    {% call screen("loss", "4. Loss") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        {{ row("Loss state", claim.state) }}
+        {{ detail_rows(details.loss) }}
+      </table>
+    {% endcall %}
+    {% call screen("documents", "5. Documents") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        <tr bgcolor="#dddddd">
+          <th align="left">#</th>
+          <th align="left">Document</th>
+          <th align="left">Type</th>
+        </tr>
+        {% for doc in documents %}
+          {% set transcribed = details.documents.get(doc.slug | replace("-", "_")) %}
+          <tr id="{{ doc.anchor }}">
+            <td>{{ loop.index }}</td>
+            <td>{{ doc.name }}{% if transcribed %}{{ value(transcribed) }}{% endif %}</td>
+            <td>{{ doc.kind }}</td>
+          </tr>
+        {% endfor %}
+        {% if claim.document_count > documents | length %}
+          <tr>
+            <td colspan="3"><i>+{{ claim.document_count - documents | length }} more on file (not in demo set)</i></td>
+          </tr>
+        {% endif %}
+      </table>
+    {% endcall %}
+    {% call screen("notes", "6. Notes") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        <tr bgcolor="#dddddd">
+          <th align="left">Date</th>
+          <th align="left">Author</th>
+          <th align="left">Note</th>
+        </tr>
+        {% for note in notes %}
+          <tr>
+            <td>{{ note.at.strftime("%m/%d/%Y %H:%M") }}</td>
+            <td>{{ note.author }}</td>
+            <td>{{ note.text }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="3"><i>No notes.</i></td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endcall %}
+    {% call screen("payments", "7. Payments") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        {{ row("Claim amount", "$" ~ "{:,.2f}".format(claim.claim_amount_usd)) }}
+        {{ detail_rows(details.payments) }}
+      </table>
+    {% endcall %}
+    {% call screen("history", "8. History") %}
+      <table border="1" cellpadding="2" cellspacing="0" width="100%">
+        <tr bgcolor="#dddddd">
+          <th align="left">Time</th>
+          <th align="left">Stage</th>
+          <th align="left">By</th>
+        </tr>
+        {% for event in events %}
+          <tr>
+            <td>{{ event.timestamp.strftime("%m/%d/%Y %H:%M") }}</td>
+            <td>{{ event.stage }}</td>
+            <td>{{ event.pipeline_version }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="3"><i>No pipeline activity.</i></td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endcall %}
+  </body>
+</html>

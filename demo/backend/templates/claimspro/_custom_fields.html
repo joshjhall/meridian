@@ -1,0 +1,15 @@
+{# The pipeline's ClaimsPro custom fields. In v1 these are fields inside ClaimsPro,
+   not new UI, so they are exactly as plain as the rest of the mock. #}
+{% macro custom_fields(rows) %}
+  <fieldset id="custom-fields">
+    <legend><b>Custom Fields (Meridian)</b></legend>
+    <table border="1" cellpadding="2" cellspacing="0" width="100%">
+      {% for label, value in rows %}
+        <tr>
+          <th align="left" width="160" bgcolor="#dddddd">{{ label }}</th>
+          <td>{{ value }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </fieldset>
+{% endmacro %}
