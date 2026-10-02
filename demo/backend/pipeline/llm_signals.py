@@ -431,9 +431,10 @@ def base_url_host() -> str:
     Host and port only: credentials embedded in the URL never reach a log, an audit
     record or a response.
     """
-    url = urlsplit(os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL)
-    host = url.hostname or ""
-    return f"{host}:{url.port}" if url.port else host
+    netloc = urlsplit(os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL).netloc
+    # Drop "user:token@"; keep the host exactly as written (IPv6 brackets, any port).
+    # Never parses the port, so a malformed URL can't turn a fallback into a crash.
+    return netloc.rpartition("@")[2]
 
 
 def live_available() -> bool:

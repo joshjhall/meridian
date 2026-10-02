@@ -700,6 +700,8 @@ def test_endpoint_json_carries_a_full_audit_record(monkeypatch):
         ("https://user:s3cret@gateway.example/anthropic", "gateway.example"),
         ("http://user:s3cret@127.0.0.1:8080/x", "127.0.0.1:8080"),
         ("https://bifrost.stoic.studio/anthropic", "bifrost.stoic.studio"),
+        ("http://user:s3cret@[::1]:8080/x", "[::1]:8080"),
+        ("http://user:s3cret@gw:notaport/x", "gw:notaport"),
     ],
 )
 def test_the_recorded_host_never_carries_credentials(monkeypatch, url, host):
@@ -718,7 +720,14 @@ def test_regenerate_works_from_the_admin_drawer_too(monkeypatch):
         f"/claims/{C4222.claim_id}/signals",
         headers={"X-Meridian-Board": "1", "HX-Request": "true"},
     )
-    assert """hx-headers='{"X-Meridian-Panel": "1"}'""" in r.text
+    sent = re.search(r"hx-headers='([^']+)'", r.text)
+    assert sent
+    # Replaying exactly what the button sends, from inside the drawer, is accepted.
+    again = client.post(
+        f"/claims/{C4222.claim_id}/signals",
+        headers={**json.loads(sent.group(1)), "HX-Request": "true"},
+    )
+    assert again.status_code == 200 and 'id="signals-IS-CLM-2025004222"' in again.text
 
 
 def test_endpoint_rejects_a_malformed_claim_id():
