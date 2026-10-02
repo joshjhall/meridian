@@ -138,5 +138,11 @@
     if (e.detail.target.id === "trace-body" && !trace.open) trace.showModal();
   });
 
+  // Demo cards load their audit record (#9) the same way, into the side drawer.
+  const audit = document.getElementById("audit");
+  document.body.addEventListener("htmx:afterSwap", (e) => {
+    if (e.detail.target.id === "audit-body" && !audit.open) audit.showModal();
+  });
+
   connect();
 })();

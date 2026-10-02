@@ -6,6 +6,9 @@ their panel examples, and an empty signal for everything else.
 
 from models import Claim, Signals, Skill
 
+# The prompt #4 will send; matches the latest signals-prompt release in data/history.json.
+PROMPT_VERSION = "signals-prompt v1.2"
+
 RECORDED: dict[str, Signals] = {
     # Rear-end collision with a claimed injury: vehicle damage is a second skill.
     "IS-CLM-2025002993": Signals(

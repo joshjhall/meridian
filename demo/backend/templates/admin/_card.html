@@ -7,9 +7,8 @@
           class="claim{% if view.pinned %} claim--pinned{% endif %}"
           data-stage="{{ view.stage }}"
           data-sla="{{ f.sla or '' }}"
-          hx-get="/admin/claims/{{ view.claim_id }}/trace?upto={{ view.trace | length }}"
-          hx-target="#trace-body"
-          aria-label="Trace for {{ view.claim_id }}">
+          {# Demo claims open their audit record (#9); background traffic keeps the trace. #}
+          {% if view.pinned %} hx-get="/admin/claims/{{ view.claim_id }}/audit" hx-target="#audit-body" aria-label="Audit record for {{ view.claim_id }}" {% else %} hx-get="/admin/claims/{{ view.claim_id }}/trace?upto={{ view.trace | length }}" hx-target="#trace-body" aria-label="Trace for {{ view.claim_id }}" {% endif %}>
     <span class="claim__head">
       <span class="claim__id">{{ view.claim_id }}</span>
       {% if f.tier %}<span class="claim__tier">{{ f.tier }}</span>{% endif %}

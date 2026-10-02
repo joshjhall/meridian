@@ -1,0 +1,182 @@
+{# The expanded audit record (#9), loaded into the audit drawer from a demo card.
+   The same data is JSON at /api/claims/{id}/audit. #}
+{% set r = audit.record %}
+<header class="trace__head">
+  <h2 id="audit-title">{{ r.claim_id }}</h2>
+  {% if story %}<p>Demo claim: {{ story | lower }}</p>{% endif %}
+</header>
+<section class="audit__section" aria-labelledby="audit-required">
+  <h3 id="audit-required">Required record</h3>
+  <p class="audit__note">The five fields kept 7 years for every AI-assisted decision.</p>
+  <dl class="audit__fields">
+    <dt>Input data</dt>
+    <dd>
+      <code>{{ r.input_data_ref }}</code>
+    </dd>
+    <dt>Model version</dt>
+    <dd>
+      <code>{{ r.model_version }}</code>
+    </dd>
+    <dt>Output</dt>
+    <dd>
+      <table class="table audit__output">
+        <tbody>
+          {% for key, value in r.output.items() %}
+            <tr>
+              <th scope="row">{{ key.replace('_', ' ') | capitalize }}</th>
+              <td>
+                {% if value is sameas none %}
+                  none
+                {% elif value is string %}
+                  {{ value }}
+                {% elif value is iterable %}
+                  {{ value | join(", ") or "none" }}
+                {% else %}
+                  {{ value | lower }}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </dd>
+    <dt>Confidence</dt>
+    <dd>
+      {{ "{:.0%}".format(r.confidence) }}
+    </dd>
+    <dt>Human reviewed</dt>
+    <dd>
+      {% if r.human_reviewed %}
+        <span class="badge">Yes</span>
+      {% else %}
+        <span class="badge-secondary">Not yet</span>
+      {% endif %}
+    </dd>
+  </dl>
+</section>
+<section class="audit__section" aria-labelledby="audit-why">
+  <h3 id="audit-why">Why this route</h3>
+  <p>{{ sentence(r.rationale) }}</p>
+</section>
+<section class="audit__section" aria-labelledby="audit-timeline">
+  <h3 id="audit-timeline">Timeline</h3>
+  <div class="timeline"
+       role="img"
+       aria-label="Timeline; the table below lists every entry">
+    {% for actor, marks in timeline.rows.items() %}
+      <div class="timeline__row" data-actor="{{ actor }}">
+        <span class="timeline__actor">{{ actor }}</span>
+        {# SVG takes per-mark percentages as attributes, so no inline styles. #}
+        <svg class="timeline__track" aria-hidden="true">
+          {% for m in marks %}
+            {% if m.width is defined %}
+              <rect class="timeline__bar" data-kind="{{ m.kind }}" x="{{ m.left }}%" y="2" width="{{ m.width }}%" height="12" rx="2">
+              <title>{{ m.label }} {{ m.start.strftime("%H:%M") }}–{{ m.end.strftime("%H:%M") }}</title>
+              </rect>
+            {% elif m.kind == "event" %}
+              <circle class="timeline__tick" data-kind="event" cx="{{ m.left }}%" cy="8" r="4">
+              <title>{{ m.label }} {{ m.start.strftime("%H:%M") }}</title>
+              </circle>
+            {% else %}
+              <rect class="timeline__tick" data-kind="{{ m.kind }}" x="{{ m.left }}%" y="2" width="2" height="12">
+              <title>{{ m.label }} {{ m.start.strftime("%H:%M") }}</title>
+              </rect>
+            {% endif %}
+          {% endfor %}
+        </svg>
+      </div>
+    {% endfor %}
+  </div>
+  <table class="table audit__times">
+    <thead>
+      <tr>
+        <th>What</th>
+        <th>Who</th>
+        <th>From</th>
+        <th>To</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in audit.timeline %}
+        <tr data-kind="{{ t.kind }}">
+          <td>{{ t.label }}</td>
+          <td>{{ t.actor or "" }}</td>
+          <td>
+            <time datetime="{{ t.start.isoformat() }}">{{ t.start.strftime("%a %H:%M") }}</time>
+          </td>
+          <td>
+            {% if t.end %}
+              <time datetime="{{ t.end.isoformat() }}">{{ t.end.strftime("%a %H:%M") }}</time>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not r.review_intervals %}<p class="audit__note">Not reviewed yet.</p>{% endif %}
+</section>
+<section class="audit__section" aria-labelledby="audit-routing">
+  <h3 id="audit-routing">Routing</h3>
+  <dl class="audit__fields">
+    <dt>Skills</dt>
+    <dd>
+      {% for s in r.skills %}<span class="badge-outline">{{ s }}</span>{% endfor %}
+    </dd>
+    <dt>Tier</dt>
+    <dd>
+      {% if r.tier %}<span class="badge-outline">{{ r.tier }}</span>{% endif %}
+    </dd>
+    <dt>Adjuster</dt>
+    <dd>
+      {{ audit.adjuster_id or "unassigned" }}
+    </dd>
+    <dt>Pipeline version</dt>
+    <dd>
+      <code data-version="pipeline">{{ audit.pipeline_version }}</code>
+    </dd>
+    <dt>Prompt version</dt>
+    <dd>
+      <code data-version="prompt">{{ audit.prompt_version or "none" }}</code>
+    </dd>
+  </dl>
+</section>
+<section class="audit__section" aria-labelledby="audit-writes">
+  <h3 id="audit-writes">Writes to ClaimsPro</h3>
+  <p class="audit__note">Each write is checked with a verify read and retried before people are alerted.</p>
+  {% for w in audit.writes %}
+    <details class="audit__write" data-write-status="{{ w.status }}">
+      <summary>
+        <span>{{ w.operation }}</span>
+        {% if w.status == "confirmed" %}
+          <span class="badge">Confirmed</span>
+        {% elif w.status == "failed" %}
+          <span class="badge-destructive">Failed</span>
+        {% else %}
+          <span class="badge-secondary">{{ w.status | capitalize }}</span>
+        {% endif %}
+        <span class="audit__note">{{ w.attempts[-1].payload.attempt }} attempt{{ "s" if w.attempts[-1].payload.attempt != 1 }}</span>
+      </summary>
+      <ol class="audit__attempts">
+        {% for a in w.attempts %}
+          <li data-write-status="{{ a.payload.write_status }}">
+            <time datetime="{{ a.timestamp.isoformat() }}">{{ a.timestamp.strftime("%H:%M:%S") }}</time>
+            Attempt {{ a.payload.attempt }}: {{ a.payload.write_status }}
+            {% if a.payload.reason %}<span class="audit__note">({{ a.payload.reason }})</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+      <p class="audit__note">
+        Key <code>{{ w.idempotency_key }}</code>
+      </p>
+    </details>
+  {% else %}
+    <p class="audit__note">No writes yet.</p>
+  {% endfor %}
+</section>
+<section class="audit__section audit__placeholder"
+         aria-labelledby="audit-chat">
+  <h3 id="audit-chat">Chat history (P2)</h3>
+  <p class="audit__note">
+    Not in v1. If chat is added, its history belongs to the claim, is visibly shared with everyone who works it, and falls under the same 7-year retention as this record.
+  </p>
+</section>

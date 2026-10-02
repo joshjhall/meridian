@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app import app, render_card
 from clock import DEMO_START
 from models import EXCEPTION_LABELS, ExceptionReason, PipelineEvent, Stage
+from pipeline.audit import PIPELINE_VERSION
 
 client = TestClient(app)  # no lifespan: the replay only moves when a test steps it
 
@@ -90,8 +91,11 @@ def test_trace_lists_every_step_a_live_card_has_seen(replay):
     view = replay.board.claims[CLAIM_300]
     html = client.get(f"/admin/claims/{CLAIM_300}/trace").text
     assert html.count('class="trace__step') == len(view.trace)
-    assert "pipeline-0.1" in html
-    assert f"/trace?upto={len(view.trace)}" in render_card(view)
+    assert PIPELINE_VERSION in html
+    # Demo cards open the audit record (#9); the rest link the trace at the steps seen.
+    assert f"/admin/claims/{CLAIM_300}/audit" in render_card(view)
+    other = next(v for v in replay.board.claims.values() if not v.pinned)
+    assert f"/trace?upto={len(other.trace)}" in render_card(other)
 
 
 def test_trace_stops_where_the_card_is(replay):

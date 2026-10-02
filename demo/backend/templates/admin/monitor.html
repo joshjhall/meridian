@@ -112,4 +112,18 @@
       </footer>
     </div>
   </dialog>
+  <dialog id="audit"
+          class="dialog audit-drawer"
+          aria-labelledby="audit-title"
+          onclick="if (event.target === this) this.close()">
+    <div>
+      <section id="audit-body">
+      </section>
+      <footer>
+        <button type="button"
+                class="btn-outline"
+                onclick="this.closest('dialog').close()">Close</button>
+      </footer>
+    </div>
+  </dialog>
 {% endblock %}
