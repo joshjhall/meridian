@@ -21,6 +21,10 @@ class Loads:
     def take(self, adjuster_id: str) -> None:
         self._load[adjuster_id] += 1
 
+    def release(self, adjuster_id: str) -> None:
+        """A claim that stopped for a person after matching never reached this adjuster."""
+        self._load[adjuster_id] -= 1
+
 
 def match(
     skills: list[Skill], tier: Tier, lane: ReviewLane, loads: Loads

@@ -305,6 +305,18 @@ def build_route_graph(loads: Loads, sim: ClaimsProSim | None):
             return {"claim": claim, "issues": issues, "events": [event]}
         if written is not None:
             claim = claim.model_copy(update={"write_status": written.status})
+        if claim.write_status == "write_failed":
+            # Retries exhausted and an alert raised; ClaimsPro doesn't show this routing,
+            # so the claim waits for a person rather than reading as with the adjuster.
+            issues = ["ClaimsPro write failed after retries; routing not saved"]
+            event = _event(
+                claim.claim_id,
+                Stage.EXCEPTION,
+                state["now"],
+                reason=ExceptionReason.FAILED_WRITE.value,
+                issues=issues,
+            )
+            return {"claim": claim, "issues": issues, "events": [event]}
         event = _event(
             claim.claim_id,
             Stage.WITH_ADJUSTER,
@@ -356,7 +368,8 @@ def _exception_audit(state: ClaimState) -> AuditRecord:
 def build_pipeline(roster: Iterable[Adjuster], sim: ClaimsProSim | None = None):
     """One pipeline run. Build a fresh one per run: adjuster loads and checkpoints are per run."""
     enrich_graph = build_enrich_graph()
-    route_graph = build_route_graph(Loads(roster), sim)
+    loads = Loads(roster)
+    route_graph = build_route_graph(loads, sim)
 
     def run(graph, state: ClaimState, n: int) -> ClaimState:
         # n is the claim's input position, so even a repeated claim ID gets its own thread.
@@ -416,6 +429,8 @@ def build_pipeline(roster: Iterable[Adjuster], sim: ClaimsProSim | None = None):
         events: list[PipelineEvent] = []
         for position, c in enumerate(state["queue"], start=1):
             done = run(route_graph, {**c, "events": []}, position)
+            if done.get("issues") and "adjuster" in done:
+                loads.release(done["adjuster"].id)
             events += done.get("events", [])
             results.append(_routed(done, position))
         for c in state["enriched"]:

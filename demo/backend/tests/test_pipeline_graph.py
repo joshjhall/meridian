@@ -6,7 +6,7 @@ import pytest
 import clock
 from claimspro_sim import ClaimsProSim, FaultConfig
 from fixtures import extract_rows, load_claim_fixtures, load_roster
-from models import Stage
+from models import Skill, Stage, Tier
 from pipeline import PIPELINE_VERSION, run_pipeline
 from pipeline.rules import REVIEW_LANES
 
@@ -109,6 +109,32 @@ def test_failed_write_raises_an_alert_not_a_silent_drop():
     (routed,) = result.routed
     assert routed.write_status == "write_failed"
     assert [a.claim_id for a in sim.alerts()] == [routed.claim_id]
+    assert routed.stage == Stage.EXCEPTION
+    assert routed.adjuster_id is None
+    assert result.events[-1].payload["reason"] == "failed_write"
+    audit = routed.audit
+    assert audit.input_data_ref.startswith(f"claimspro:{routed.claim_id}@sha256:")
+    assert audit.model_version == f"{PIPELINE_VERSION}+signals:rules"
+    assert audit.output["issues"] and audit.output["review_lane"] == "fast_lane"
+    assert audit.human_reviewed is False
+
+
+def test_a_claim_stopped_after_matching_gives_its_adjuster_back():
+    # Two identical adjusters; the first claim's write is rejected (unknown to ClaimsPro),
+    # so its adjuster must be free again and the second claim goes to that same adjuster.
+    template = load_roster()[0]
+    roster = [
+        template.model_copy(
+            update={"id": i, "skills": [Skill.COLLISION], "tiers": [Tier.T1], "current_load": 0}
+        )
+        for i in ("ADJ-001", "ADJ-002")
+    ]
+    kept = FIXTURES["IS-CLM-2025000300"].claim
+    rejected = kept.model_copy(update={"claim_id": "IS-CLM-2025999997"})
+    sim = ClaimsProSim([kept], sleep=lambda _s: None, now=lambda: NOW)
+    routed = run_pipeline([rejected, kept], roster, now=NOW, sim=sim).by_id()
+    assert routed[rejected.claim_id].stage == Stage.EXCEPTION
+    assert routed[kept.claim_id].adjuster_id == "ADJ-001"
 
 
 def test_full_extract_keeps_every_regulated_claim_with_a_person():
