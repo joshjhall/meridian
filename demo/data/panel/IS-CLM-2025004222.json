@@ -1,0 +1,271 @@
+{
+  "what_matters": [
+    {
+      "text": "Symptom onset reported on the day; first treatment 3 days later.",
+      "source": {
+        "label": "Medical summary",
+        "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+        "anchor": "documents/medical-summary"
+      },
+      "unusual": true
+    },
+    {
+      "text": "Causation documents are partial: MRI ordered, no imaging on file yet.",
+      "source": {
+        "label": "Medical summary",
+        "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+        "anchor": "documents/medical-summary"
+      }
+    },
+    {
+      "text": "Liability looks clear: rear-ended while stopped. NYSP report on file.",
+      "source": {
+        "label": "Call transcript",
+        "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+        "anchor": "documents/call-excerpt"
+      }
+    },
+    {
+      "text": "Caller says he's out of work; he drives commercially.",
+      "source": {
+        "label": "Call transcript",
+        "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+        "anchor": "documents/call-excerpt"
+      }
+    }
+  ],
+  "key_facts": [
+    {
+      "label": "Injured parties",
+      "value": "1: Raymond Ellison (driver, belted)",
+      "sources": [
+        {
+          "label": "Call transcript",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        }
+      ]
+    },
+    {
+      "label": "Treatment status",
+      "value": "PT 3x/week for 6 weeks; MRI ordered; re-evaluation in 4 weeks",
+      "sources": [
+        {
+          "label": "Medical summary",
+          "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+          "anchor": "documents/medical-summary"
+        }
+      ]
+    },
+    {
+      "label": "Causation documents",
+      "value": "Partial: orthopedic visit only, imaging pending",
+      "sources": [
+        {
+          "label": "Medical summary",
+          "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+          "anchor": "documents/medical-summary"
+        }
+      ],
+      "unusual": true
+    },
+    {
+      "label": "Liability",
+      "value": "Rear-end, claimant stopped in traffic",
+      "sources": [
+        {
+          "label": "Call transcript",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        },
+        {
+          "label": "NYSP report (on file)",
+          "path": "ClaimsPro",
+          "anchor": "loss"
+        }
+      ]
+    },
+    {
+      "label": "Work status",
+      "value": "Out of work; no commercial driving until cleared",
+      "sources": [
+        {
+          "label": "Medical summary",
+          "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+          "anchor": "documents/medical-summary"
+        },
+        {
+          "label": "Call transcript",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        }
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "when": "Fri 9/19",
+      "event": "Date of loss: rear-ended on I-90 eastbound",
+      "source": {
+        "label": "Call transcript",
+        "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+        "anchor": "documents/call-excerpt"
+      }
+    },
+    {
+      "when": "Fri 9/19",
+      "event": "Neck and lower-back pain from that day (caller)",
+      "source": {
+        "label": "Call transcript",
+        "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+        "anchor": "documents/call-excerpt"
+      }
+    },
+    {
+      "when": "Mon 9/22",
+      "event": "First treatment: orthopedic visit, X-rays; cervical and lumbar strain",
+      "source": {
+        "label": "Medical summary",
+        "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+        "anchor": "documents/medical-summary"
+      }
+    },
+    {
+      "when": "9/22",
+      "event": "MRI ordered to rule out disc involvement",
+      "source": {
+        "label": "Medical summary",
+        "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+        "anchor": "documents/medical-summary"
+      }
+    },
+    {
+      "when": "Thu 9/25",
+      "event": "Claim reported by phone",
+      "source": {
+        "label": "Call transcript",
+        "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+        "anchor": "documents/call-excerpt"
+      }
+    }
+  ],
+  "needs_attention": [
+    {
+      "kind": "conflict",
+      "label": "Cross street",
+      "sources": [
+        {
+          "label": "Call transcript, line 28",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        },
+        {
+          "label": "NYSP report (on file)",
+          "path": "ClaimsPro",
+          "anchor": "loss"
+        }
+      ],
+      "values": [
+        "transcript: “Delford Avenue”",
+        "caller: “I think it's Delaware”"
+      ],
+      "suggested": "Delaware Avenue (check the NYSP report)"
+    },
+    {
+      "kind": "low_confidence",
+      "label": "“I ninety”",
+      "sources": [
+        {
+          "label": "Call transcript, line 22",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        }
+      ],
+      "values": [
+        "ASR marked [*]; confirm against the recording REC-2025004222-01"
+      ]
+    },
+    {
+      "kind": "low_confidence",
+      "label": "“Kensington express way”",
+      "sources": [
+        {
+          "label": "Call transcript, line 23",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        }
+      ],
+      "values": [
+        "ASR marked [*]; confirm against the recording REC-2025004222-01"
+      ]
+    },
+    {
+      "kind": "low_confidence",
+      "label": "“Delford”",
+      "sources": [
+        {
+          "label": "Call transcript, line 28",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        }
+      ],
+      "values": [
+        "ASR marked [*]; confirm against the recording REC-2025004222-01"
+      ]
+    },
+    {
+      "kind": "low_confidence",
+      "label": "“Jenner See”",
+      "sources": [
+        {
+          "label": "Call transcript, line 29",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        }
+      ],
+      "values": [
+        "ASR marked [*]; confirm against the recording REC-2025004222-01"
+      ]
+    },
+    {
+      "kind": "low_confidence",
+      "label": "“a good [*] while”",
+      "sources": [
+        {
+          "label": "Call transcript, line 50",
+          "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+          "anchor": "documents/call-excerpt"
+        }
+      ],
+      "values": [
+        "ASR marked [*]; confirm against the recording REC-2025004222-01"
+      ]
+    }
+  ],
+  "contents": [
+    {
+      "fact": "Injury timeline",
+      "location": {
+        "label": "Call transcript",
+        "path": "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+        "anchor": "documents/call-excerpt"
+      }
+    },
+    {
+      "fact": "Diagnosis and plan",
+      "location": {
+        "label": "Medical summary",
+        "path": "sample_claims/IS-CLM-2025004222/medical_summary.pdf",
+        "anchor": "documents/medical-summary"
+      }
+    },
+    {
+      "fact": "Police report",
+      "location": {
+        "label": "NYSP report (on file)",
+        "path": "ClaimsPro",
+        "anchor": "loss"
+      }
+    }
+  ]
+}

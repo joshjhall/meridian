@@ -38,6 +38,11 @@ Then open:
 - <http://localhost:8000/admin/queues>: every adjuster's queue, with drag-to-move and ClaimsPro write status (#7). Like the rest of the demo it is unauthenticated: `?view=admin` only gates the fault toggle for the demo. The move and toggle POSTs need an `X-Meridian-Board` header, which blocks cross-site requests, but that is not authentication, so run it locally only.
 - <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10), deliberately unstyled
 - <http://localhost:8000/panel?claim=IS-CLM-2025004222>: side panel (#11)
+- <http://localhost:8000/claimspro/IS-CLM-2025004222?panel=docked>: mock ClaimsPro with the panel docked beside it, a safety net for when the extension isn't loaded
+
+### Side panel extension
+
+In Chrome, open `chrome://extensions`, turn on Developer mode, choose **Load unpacked** and pick `demo/extension/`. With `just serve` running, open a claim at `http://localhost:8000/claimspro/{claim_id}` and click the extension's toolbar button. The panel follows the claim in the active tab, and its Contents links scroll the ClaimsPro tab to the matching screen or document. The extension has no content script: it never touches the ClaimsPro page.
 
 ## Stack
 
@@ -67,7 +72,8 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 - `data/build_claims.py`: builds the fixtures. Numbers come from `reference/claims_processing.csv`; intake details and stories come from an overlay in the script.
 - `data/roster.json` and `data/gen_roster.py`: the seeded roster.
 - `data/history.json`: the mocked learning-loop history behind `/admin`'s charts (#8): weekly series from kickoff, release flags, one rollback. Week-0 values carry their sources and `tests/test_history.py` checks them; end points are targets. Illustrative, not measured.
-- `extension/`: the MV3 side panel. It embeds the backend's `/panel` page.
+- `backend/panel.py` and `data/panel/*.json`: the side panel's view data. The header and the pipeline's "Needs attention" items are computed; each claim's points, key facts and contents are written in its JSON file, every point linked to its source. "This is wrong", confirm and request clicks go to an in-memory correction log (`GET /api/corrections`); nothing is written to ClaimsPro.
+- `extension/`: the MV3 side panel. `panel.html` iframes the backend's `/panel` page; `panel.js` reads the claim ID from the active tab's URL and navigates the tab when the panel asks.
 
 ## Contracts and conventions
 

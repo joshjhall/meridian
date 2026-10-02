@@ -1,0 +1,105 @@
+{
+  "what_matters": [
+    {
+      "text": "No repair estimate or invoice on file. The amount is the owner's verbal figure.",
+      "source": {
+        "label": "Owner's phone report",
+        "path": "ClaimsPro",
+        "anchor": "documents/intake-call"
+      },
+      "unusual": true
+    },
+    {
+      "text": "Property owner is a third party (gas station); contact on file.",
+      "source": {
+        "label": "Parties",
+        "path": "ClaimsPro",
+        "anchor": "parties"
+      }
+    }
+  ],
+  "key_facts": [
+    {
+      "label": "Property owner",
+      "value": "Gas station (third party)",
+      "sources": [
+        {
+          "label": "Parties",
+          "path": "ClaimsPro",
+          "anchor": "parties"
+        }
+      ]
+    },
+    {
+      "label": "Property type",
+      "value": "Canopy column",
+      "sources": [
+        {
+          "label": "Owner's phone report",
+          "path": "ClaimsPro",
+          "anchor": "documents/intake-call"
+        }
+      ]
+    },
+    {
+      "label": "Damage description",
+      "value": "Insured's delivery truck backed into the column",
+      "sources": [
+        {
+          "label": "Owner's phone report",
+          "path": "ClaimsPro",
+          "anchor": "documents/intake-call"
+        }
+      ]
+    },
+    {
+      "label": "Estimate or invoice",
+      "value": "None; verbal figure only",
+      "sources": [
+        {
+          "label": "Owner's phone report",
+          "path": "ClaimsPro",
+          "anchor": "documents/intake-call"
+        }
+      ],
+      "unusual": true
+    },
+    {
+      "label": "Insured driver's account",
+      "value": "Not on file",
+      "sources": [
+        {
+          "label": "Owner's phone report",
+          "path": "ClaimsPro",
+          "anchor": "documents/intake-call"
+        }
+      ]
+    }
+  ],
+  "contents": [
+    {
+      "fact": "Owner's report",
+      "location": {
+        "label": "Owner's phone report",
+        "path": "ClaimsPro",
+        "anchor": "documents/intake-call"
+      }
+    },
+    {
+      "fact": "Owner contact",
+      "location": {
+        "label": "Parties",
+        "path": "ClaimsPro",
+        "anchor": "parties"
+      }
+    },
+    {
+      "fact": "Amount basis",
+      "location": {
+        "label": "Payments",
+        "path": "ClaimsPro",
+        "anchor": "payments"
+      }
+    }
+  ]
+}

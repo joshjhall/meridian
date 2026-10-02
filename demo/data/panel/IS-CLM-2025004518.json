@@ -1,0 +1,148 @@
+{
+  "what_matters": [
+    {
+      "text": "Accounts conflict on the signal. Police report: no fault assigned.",
+      "source": {
+        "label": "Police report",
+        "path": "ClaimsPro",
+        "anchor": "documents/police-report"
+      },
+      "unusual": true
+    },
+    {
+      "text": "One independent witness statement on file.",
+      "source": {
+        "label": "Witness statement",
+        "path": "ClaimsPro",
+        "anchor": "documents/witness-statement"
+      }
+    },
+    {
+      "text": "Third-party demand from the other driver's carrier: response due 10/24.",
+      "source": {
+        "label": "Third-party demand",
+        "path": "ClaimsPro",
+        "anchor": "documents/third-party-demand"
+      }
+    }
+  ],
+  "key_facts": [
+    {
+      "label": "Parties",
+      "value": "Insured driver; claimant (other carrier)",
+      "sources": [
+        {
+          "label": "Insured driver call",
+          "path": "ClaimsPro",
+          "anchor": "documents/call-transcript"
+        },
+        {
+          "label": "Claimant statement",
+          "path": "ClaimsPro",
+          "anchor": "documents/claimant-statement"
+        }
+      ]
+    },
+    {
+      "label": "Fault evidence",
+      "value": "Police report (no fault), 1 witness",
+      "sources": [
+        {
+          "label": "Police report",
+          "path": "ClaimsPro",
+          "anchor": "documents/police-report"
+        },
+        {
+          "label": "Witness statement",
+          "path": "ClaimsPro",
+          "anchor": "documents/witness-statement"
+        }
+      ]
+    },
+    {
+      "label": "Third-party demand",
+      "value": "Yes, response due 10/24",
+      "sources": [
+        {
+          "label": "Third-party demand",
+          "path": "ClaimsPro",
+          "anchor": "documents/third-party-demand"
+        }
+      ],
+      "unusual": true
+    },
+    {
+      "label": "Policy limits",
+      "value": "On the Policy screen",
+      "sources": [
+        {
+          "label": "Policy",
+          "path": "ClaimsPro",
+          "anchor": "policy"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "party": "Insured driver",
+      "says": "The other driver ran the red light.",
+      "source": {
+        "label": "Insured driver call",
+        "path": "ClaimsPro",
+        "anchor": "documents/call-transcript"
+      }
+    },
+    {
+      "party": "Claimant",
+      "says": "The insured driver ran the red light.",
+      "source": {
+        "label": "Claimant statement",
+        "path": "ClaimsPro",
+        "anchor": "documents/claimant-statement"
+      }
+    }
+  ],
+  "contents": [
+    {
+      "fact": "Insured driver's account",
+      "location": {
+        "label": "Insured driver call",
+        "path": "ClaimsPro",
+        "anchor": "documents/call-transcript"
+      }
+    },
+    {
+      "fact": "Claimant's account",
+      "location": {
+        "label": "Claimant statement",
+        "path": "ClaimsPro",
+        "anchor": "documents/claimant-statement"
+      }
+    },
+    {
+      "fact": "Police report",
+      "location": {
+        "label": "Police report",
+        "path": "ClaimsPro",
+        "anchor": "documents/police-report"
+      }
+    },
+    {
+      "fact": "Witness statement",
+      "location": {
+        "label": "Witness statement",
+        "path": "ClaimsPro",
+        "anchor": "documents/witness-statement"
+      }
+    },
+    {
+      "fact": "Third-party demand",
+      "location": {
+        "label": "Third-party demand",
+        "path": "ClaimsPro",
+        "anchor": "documents/third-party-demand"
+      }
+    }
+  ]
+}

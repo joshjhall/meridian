@@ -254,8 +254,11 @@ class PanelHeader(BaseModel):
     skills: list[Skill]
     tier: Tier
     sla_due_at: datetime
+    sla_state: SlaState
     regulated: bool
     routing_reason: str
+    adjuster_id: str | None = None
+    synthetic: bool = False
 
 
 class WhatMattersPoint(BaseModel):
@@ -267,13 +270,59 @@ class WhatMattersPoint(BaseModel):
 class KeyFact(BaseModel):
     label: str
     value: str
+    unusual: bool = False
     sources: list[SourceRef] = []
+
+
+class TimelineEntry(BaseModel):
+    """One step of an injury timeline (Bodily Injury key facts)."""
+
+    when: str
+    event: str
+    source: SourceRef
+
+
+class Account(BaseModel):
+    """One party's version of events, shown side by side with the others (Liability)."""
+
+    party: str
+    says: str
+    source: SourceRef
+
+
+class OcrWord(BaseModel):
+    raw: str
+    corrected: str
+    negation: bool = False
+
+    @property
+    def changed(self) -> bool:
+        return self.raw != self.corrected
+
+
+class OcrCheck(BaseModel):
+    """A raw OCR passage and its proposed correction, as written in panel content."""
+
+    label: str
+    raw: str
+    corrected: str
+    source: SourceRef
+
+
+class OcrDiff(BaseModel):
+    """Raw OCR next to its correction, word for word, with negations called out."""
+
+    source: SourceRef
+    words: list[OcrWord]
+    verdict: CorrectionVerdict
 
 
 class KeyFacts(BaseModel):
     template: Skill
     facts: list[KeyFact]
     collapsed: bool = True
+    timeline: list[TimelineEntry] = []
+    accounts: list[Account] = []
 
 
 class AttentionItem(BaseModel):
@@ -282,6 +331,7 @@ class AttentionItem(BaseModel):
     sources: list[SourceRef] = []
     values: list[str] = []
     suggested: str | None = None
+    ocr_diff: OcrDiff | None = None
 
 
 class ContentsEntry(BaseModel):
@@ -297,6 +347,7 @@ class FooterTouch(BaseModel):
 class PanelFooter(BaseModel):
     touches: list[FooterTouch] = []
     pipeline_version: str
+    note: str | None = None
 
 
 class PanelSummary(BaseModel):
@@ -306,6 +357,41 @@ class PanelSummary(BaseModel):
     needs_attention: list[AttentionItem] = []
     contents: list[ContentsEntry] = []
     footer: PanelFooter
+    fast_lane: bool = False
+
+    @property
+    def leads_with_attention(self) -> bool:
+        """A thin file: when everything to show is what's missing, show that first."""
+        kinds = {item.kind for item in self.needs_attention}
+        return len(self.needs_attention) > 1 and kinds == {"missing"}
+
+
+class PanelContent(BaseModel):
+    """The written part of a claim's panel (demo/data/panel/{claim_id}.json).
+
+    The header and the pipeline's attention items are computed; this carries the
+    rest, worded for the claim, with every point linked to its source.
+    """
+
+    what_matters: list[WhatMattersPoint] = Field(max_length=4)
+    key_facts: list[KeyFact]
+    timeline: list[TimelineEntry] = []
+    accounts: list[Account] = []
+    needs_attention: list[AttentionItem] = []
+    ocr_check: OcrCheck | None = None
+    contents: list[ContentsEntry] = []
+    footer_note: str | None = None
+
+
+class CorrectionLogEntry(BaseModel):
+    """A person's confirm, correction or "this is wrong" flag from the panel."""
+
+    claim_id: str
+    section: str
+    action: Literal["confirm", "correct", "request", "flag"]
+    item: str | None = None
+    note: str | None = None
+    at: datetime
 
 
 # --- Learning-loop history (admin view, #8) ---

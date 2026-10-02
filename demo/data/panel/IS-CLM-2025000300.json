@@ -1,0 +1,117 @@
+{
+  "what_matters": [
+    {
+      "text": "Complete at intake: every E-Portal field filled, estimate and photos attached.",
+      "source": {
+        "label": "E-Portal intake",
+        "path": "sample_claims/IS-CLM-2025000300/intake.md",
+        "anchor": "documents/intake"
+      }
+    },
+    {
+      "text": "Estimate matches the photos: front-left bumper, LH headlamp, fender. Nothing to chase.",
+      "source": {
+        "label": "Adjuster notes",
+        "path": "sample_claims/IS-CLM-2025000300/adjuster_notes.md",
+        "anchor": "documents/adjuster-notes"
+      },
+      "unusual": true
+    }
+  ],
+  "key_facts": [
+    {
+      "label": "Vehicles involved",
+      "value": "1 (2013 Acura TSX)",
+      "sources": [
+        {
+          "label": "E-Portal intake",
+          "path": "sample_claims/IS-CLM-2025000300/intake.md",
+          "anchor": "documents/intake"
+        }
+      ]
+    },
+    {
+      "label": "Point of impact",
+      "value": "Front left, low speed, parking bollard",
+      "sources": [
+        {
+          "label": "E-Portal intake",
+          "path": "sample_claims/IS-CLM-2025000300/intake.md",
+          "anchor": "documents/intake"
+        }
+      ]
+    },
+    {
+      "label": "Injuries",
+      "value": "No",
+      "sources": [
+        {
+          "label": "E-Portal intake",
+          "path": "sample_claims/IS-CLM-2025000300/intake.md",
+          "anchor": "documents/intake"
+        }
+      ]
+    },
+    {
+      "label": "Third party",
+      "value": "No",
+      "sources": [
+        {
+          "label": "E-Portal intake",
+          "path": "sample_claims/IS-CLM-2025000300/intake.md",
+          "anchor": "documents/intake"
+        }
+      ]
+    },
+    {
+      "label": "Estimate consistent with photos",
+      "value": "Yes, $2,825.07",
+      "sources": [
+        {
+          "label": "Repair estimate GC-24418",
+          "path": "sample_claims/IS-CLM-2025000300/repair_estimate.pdf",
+          "anchor": "documents/repair-estimate"
+        },
+        {
+          "label": "Photos (2)",
+          "path": "sample_claims/IS-CLM-2025000300/photos/IMG_0071.jpg",
+          "anchor": "documents/img-0071"
+        }
+      ]
+    }
+  ],
+  "contents": [
+    {
+      "fact": "Loss description",
+      "location": {
+        "label": "Loss",
+        "path": "sample_claims/IS-CLM-2025000300/intake.md",
+        "anchor": "loss"
+      }
+    },
+    {
+      "fact": "Policy and vehicle",
+      "location": {
+        "label": "Policy",
+        "path": "sample_claims/IS-CLM-2025000300/intake.md",
+        "anchor": "policy"
+      }
+    },
+    {
+      "fact": "Repair estimate",
+      "location": {
+        "label": "Repair estimate GC-24418",
+        "path": "sample_claims/IS-CLM-2025000300/repair_estimate.pdf",
+        "anchor": "documents/repair-estimate"
+      }
+    },
+    {
+      "fact": "Damage photos",
+      "location": {
+        "label": "Photos (2)",
+        "path": "sample_claims/IS-CLM-2025000300/photos/IMG_0071.jpg",
+        "anchor": "documents/img-0071"
+      }
+    }
+  ]
+}

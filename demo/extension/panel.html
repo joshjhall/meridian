@@ -8,7 +8,8 @@
     </style>
   </head>
   <body>
-    <!-- Placeholder: #11 adds the script that follows the active tab's claim ID. -->
-    <iframe src="http://localhost:8000/panel" title="Claim panel"></iframe>
+    <!-- The panel lives in its own DOM: nothing is injected into the ClaimsPro page. -->
+    <iframe id="panel" src="http://localhost:8000/panel" title="Claim panel"></iframe>
+    <script src="panel.js"></script>
   </body>
 </html>

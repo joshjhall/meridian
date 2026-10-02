@@ -1,0 +1,118 @@
+{
+  "what_matters": [
+    {
+      "text": "Regulated (GA, over $10K): human review required. The review flag was missing and has been added.",
+      "source": {
+        "label": "Custom fields",
+        "path": "ClaimsPro",
+        "anchor": "summary"
+      },
+      "unusual": true
+    },
+    {
+      "text": "Weather data confirms hail at the depot ZIP on the date of loss.",
+      "source": {
+        "label": "Weather data (hail report)",
+        "path": "ClaimsPro",
+        "anchor": "loss"
+      }
+    },
+    {
+      "text": "Shop estimate and 5 photos on file.",
+      "source": {
+        "label": "Shop repair estimate",
+        "path": "ClaimsPro",
+        "anchor": "documents/repair-estimate"
+      }
+    },
+    {
+      "text": "Under the old routing this claim waited 269.7h, 11 days, in queue.",
+      "source": {
+        "label": "Custom fields",
+        "path": "ClaimsPro",
+        "anchor": "history"
+      }
+    }
+  ],
+  "key_facts": [
+    {
+      "label": "Peril",
+      "value": "Weather (hail)",
+      "sources": [
+        {
+          "label": "Weather data (hail report)",
+          "path": "ClaimsPro",
+          "anchor": "loss"
+        }
+      ]
+    },
+    {
+      "label": "Date and place",
+      "value": "Overnight, parked at the insured's depot",
+      "sources": [
+        {
+          "label": "Shop repair estimate",
+          "path": "ClaimsPro",
+          "anchor": "documents/repair-estimate"
+        }
+      ]
+    },
+    {
+      "label": "Corroboration",
+      "value": "Weather data: hail at the depot ZIP",
+      "sources": [
+        {
+          "label": "Weather data (hail report)",
+          "path": "ClaimsPro",
+          "anchor": "loss"
+        }
+      ]
+    },
+    {
+      "label": "Prior losses on the unit",
+      "value": "None on file",
+      "sources": [
+        {
+          "label": "Custom fields",
+          "path": "ClaimsPro",
+          "anchor": "summary"
+        }
+      ]
+    }
+  ],
+  "contents": [
+    {
+      "fact": "Routing and review flag",
+      "location": {
+        "label": "Custom fields",
+        "path": "ClaimsPro",
+        "anchor": "summary"
+      }
+    },
+    {
+      "fact": "Hail report",
+      "location": {
+        "label": "Weather data (hail report)",
+        "path": "ClaimsPro",
+        "anchor": "loss"
+      }
+    },
+    {
+      "fact": "Repair estimate",
+      "location": {
+        "label": "Shop repair estimate",
+        "path": "ClaimsPro",
+        "anchor": "documents/repair-estimate"
+      }
+    },
+    {
+      "fact": "Photos",
+      "location": {
+        "label": "Photos (5)",
+        "path": "ClaimsPro",
+        "anchor": "documents/photos"
+      }
+    }
+  ],
+  "footer_note": "In the calibration sample a reviewer marked this claim “review not needed”. Review is required by regulation here, so the rule applies, not a judgment call."
+}

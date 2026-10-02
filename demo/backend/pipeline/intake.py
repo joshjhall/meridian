@@ -21,6 +21,18 @@ from models import AttentionItem, Claim, CorrectionVerdict, SourceRef
 # but "not" and "now" do not.
 _FOLD = str.maketrans({"0": "o", "1": "l", "i": "l", "|": "l", "5": "s", "8": "b"})
 NEGATIONS = frozenset(w.translate(_FOLD) for w in ("no", "not", "never", "nor", "none", "without"))
+
+
+def fold(word: str) -> str:
+    """A word as the guard compares it: lowercase, OCR confusables folded."""
+    return word.lower().translate(_FOLD)
+
+
+def is_negation(word: str) -> bool:
+    w = fold(word).strip(".,;:")
+    return w in NEGATIONS or w.endswith("n't")
+
+
 # Characters OCR reads for a digit that can only be that digit; anything else is unreadable.
 _DIGIT_FOR = str.maketrans({"O": "0", "o": "0", "l": "1", "I": "1"})
 _AMOUNT = r"[0-9OolIB,]+\.[0-9OolIB]{2}"
@@ -58,8 +70,8 @@ def check_correction(raw: str, corrected: str) -> CorrectionVerdict:
     before = raw.split()
     after = corrected.split()
     matcher = difflib.SequenceMatcher(
-        a=[w.lower().translate(_FOLD) for w in before],
-        b=[w.lower().translate(_FOLD) for w in after],
+        a=[fold(w) for w in before],
+        b=[fold(w) for w in after],
         autojunk=False,
     )
     dropped: list[str] = []
@@ -70,8 +82,7 @@ def check_correction(raw: str, corrected: str) -> CorrectionVerdict:
             added += after[j1:j2]
     if not dropped and not added:
         return CorrectionVerdict(accepted=True, needs_person=False)
-    changed = [w.lower().translate(_FOLD).strip(".,;:") for w in dropped + added]
-    negation = any(w in NEGATIONS or w.endswith("n't") for w in changed)
+    negation = any(is_negation(w) for w in dropped + added)
     reason = "negation changed" if negation else "words changed"
     return CorrectionVerdict(
         accepted=False, needs_person=True, dropped=dropped, added=added, reason=reason
