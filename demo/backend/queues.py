@@ -78,21 +78,60 @@ def block_reason(claim: Claim, target: Adjuster | None) -> str | None:
     return None
 
 
+class TransferBlocked(Exception):
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+_in_flight: set[tuple[int, str]] = set()  # (id(sim), claim_id) with a move not yet settled
+_in_flight_lock = threading.Lock()
+
+
 def start_transfer(
-    sim: ClaimsProSim, claim_id: str, to_adjuster_id: str, run: Runner = run_in_thread
+    sim: ClaimsProSim, claim_id: str, target: Adjuster | None, run: Runner = run_in_thread
 ) -> str:
-    """Send the move to ClaimsPro in the background. Returns the key to poll its status by."""
-    key = str(uuid.uuid4())
-    run(
-        lambda: reliable_write(
-            sim,
-            TRANSFER,
-            claim_id,
-            {"to_adjuster_id": to_adjuster_id},
-            idempotency_key=key,
-            max_attempts=MAX_ATTEMPTS,
+    """Check the move and send it to ClaimsPro in the background, or raise TransferBlocked.
+
+    Returns the key to poll its status by. The check and the in-flight mark happen
+    under one lock, so two quick drops of the same claim can't both go out.
+    """
+    slot = (id(sim), claim_id)
+    with _in_flight_lock:
+        claim = sim.store.get(claim_id)
+        if claim is None:
+            raise KeyError(claim_id)
+        reason = (
+            "A ClaimsPro write for this claim is still in flight." if slot in _in_flight else None
         )
-    )
+        reason = reason or block_reason(claim, target)
+        if reason is not None or target is None:
+            raise TransferBlocked(reason or "Unknown adjuster.")
+        _in_flight.add(slot)
+
+    key = str(uuid.uuid4())
+    to_adjuster_id = target.id
+
+    def job() -> None:
+        try:
+            reliable_write(
+                sim,
+                TRANSFER,
+                claim_id,
+                {"to_adjuster_id": to_adjuster_id},
+                idempotency_key=key,
+                max_attempts=MAX_ATTEMPTS,
+            )
+        finally:
+            with _in_flight_lock:
+                _in_flight.discard(slot)
+
+    try:
+        run(job)
+    except BaseException:
+        with _in_flight_lock:
+            _in_flight.discard(slot)
+        raise
     return key
 
 

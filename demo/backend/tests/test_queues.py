@@ -100,9 +100,33 @@ def test_load_moves_with_a_transfer(client: TestClient, sim: ClaimsProSim):
     assert after[src] == max(0, before[src] - 1)
 
 
-def test_sla_time_left_reads_the_demo_clock():
-    assert queues.format_left(timedelta(hours=5, minutes=20)) == "5h 20m left"
-    assert queues.format_left(timedelta(days=-2, hours=-3)) == "breached 2d 3h ago"
+@pytest.mark.parametrize(
+    ("left", "text"),
+    [
+        (timedelta(hours=5, minutes=20), "5h 20m left"),
+        (timedelta(days=1, hours=2), "1d 2h left"),
+        (timedelta(0), "breached 0h 0m ago"),
+        (timedelta(days=-2, hours=-3), "breached 2d 3h ago"),
+    ],
+)
+def test_format_left(left: timedelta, text: str):
+    assert queues.format_left(left) == text
+
+
+def test_sla_time_left_follows_the_demo_clock(sim: ClaimsProSim):
+    def left_of(claim_id: str) -> timedelta:
+        groups = queues.board(sim, clock.now())
+        return next(
+            qc.left
+            for g in groups
+            for q in g.queues
+            for qc in q.claims
+            if qc.claim.claim_id == claim_id
+        )
+
+    before = left_of(SIMPLE)
+    clock.advance(timedelta(hours=2))
+    assert left_of(SIMPLE) == before - timedelta(hours=2)
 
 
 # --- Moves and write status ---
@@ -207,9 +231,6 @@ def test_regulated_non_t3_claim_moves_to_any_adjuster_with_its_tier(
 
 
 def test_regulated_t3_claim_needs_a_senior_or_lead(client: TestClient, sim: ClaimsProSim):
-    t3_adjusters = [a for a in ROSTER.values() if Tier.T3 in a.tiers and a.role == "adjuster"]
-    for a in t3_adjusters:  # none in today's roster; guards the rule if one is added
-        assert transfer(client, REGULATED_T3, a.id).status_code == 409
     assert transfer(client, REGULATED_T3, adjuster(Tier.T2, only=True)).status_code == 409
     to = adjuster(Tier.T3, role="senior", skip=owner(sim, REGULATED_T3))
     assert transfer(client, REGULATED_T3, to).status_code == 200
@@ -220,18 +241,69 @@ def test_block_reason_requires_role_for_t3(sim: ClaimsProSim):
     claim = sim.store.get(REGULATED_T3)
     assert claim is not None
     senior = ROSTER[adjuster(Tier.T3, role="senior", skip=claim.adjuster_id)]
-    junior = senior.model_copy(update={"role": "adjuster"})
+    t3_adjuster = senior.model_copy(update={"role": "adjuster"})
     assert queues.block_reason(claim, senior) is None
-    assert "senior or lead reviewer" in (queues.block_reason(claim, junior) or "")
+    assert "senior or lead reviewer" in (queues.block_reason(claim, t3_adjuster) or "")
 
 
 def test_regulated_claim_without_a_tier_is_held_to_t3(sim: ClaimsProSim):
-    claim = next(
-        c
-        for c in sim.store.list_claims()
-        if queues.is_regulated(c) and queues.claim_tier(c) is None
+    base = sim.store.get(SIMPLE)
+    assert base is not None
+    # Not a fixture ID, so no expected tier to fall back on.
+    claim = base.model_copy(
+        update={
+            "claim_id": "IS-CLM-9999999999",
+            "tier": None,
+            "requires_human_by_regulation": "Yes",
+        }
     )
+    assert queues.claim_tier(claim) is None
     assert queues.review_tier(claim) is Tier.T3
+    t2 = ROSTER[adjuster(Tier.T2, only=True, skip=claim.adjuster_id)]
+    senior = ROSTER[adjuster(Tier.T3, role="senior", skip=claim.adjuster_id)]
+    assert "no T3 review lane" in (queues.block_reason(claim, t2) or "")
+    assert queues.block_reason(claim, senior) is None
+
+
+@pytest.mark.parametrize(
+    ("flag", "state", "amount", "regulated"),
+    [
+        ("Yes", "TN", 500.0, True),  # the regulation flag alone is enough
+        ("No", "CA", 10_000.0, False),  # over $10K means strictly over
+        ("No", "CA", 10_000.01, True),
+        ("No", "TN", 90_000.0, False),  # not a named state
+    ],
+)
+def test_is_regulated(sim: ClaimsProSim, flag: str, state: str, amount: float, regulated: bool):
+    base = sim.store.get(SIMPLE)
+    assert base is not None
+    claim = base.model_copy(
+        update={"requires_human_by_regulation": flag, "state": state, "claim_amount_usd": amount}
+    )
+    assert queues.is_regulated(claim) is regulated
+
+
+def test_second_move_is_blocked_while_the_first_is_in_flight(client: TestClient, sim: ClaimsProSim):
+    held: list = []
+    app.dependency_overrides[transfer_runner] = lambda: held.append  # job waits until we run it
+    src = owner(sim, SIMPLE)
+    first = transfer(client, SIMPLE, adjuster(Tier.T1, skip=src))
+    assert first.status_code == 200
+    second = transfer(client, SIMPLE, adjuster(Tier.T2, skip=src))
+    assert second.status_code == 409
+    assert "still in flight" in second.text
+    assert len(held) == 1
+
+    held.pop()()  # the first write settles and frees the claim
+    assert transfer(client, SIMPLE, src).status_code == 200
+
+
+def test_pending_write_status_blocks_a_move(sim: ClaimsProSim):
+    claim = sim.store.get(SIMPLE)
+    assert claim is not None
+    claim.write_status = "pending"
+    reason = queues.block_reason(claim, ROSTER[adjuster(Tier.T1, skip=claim.adjuster_id)])
+    assert reason is not None and "still in flight" in reason
 
 
 def test_unknown_adjuster_and_same_queue_are_blocked(client: TestClient, sim: ClaimsProSim):

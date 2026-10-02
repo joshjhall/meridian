@@ -174,16 +174,14 @@ def admin_transfer(
     to: str,
     view: Viewer = "admin",
 ):
-    claim = sim.store.get(claim_id)
-    if claim is None:
-        raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
-    target = queues.roster_by_id().get(to)
-    reason = queues.block_reason(claim, target)
-    if reason is not None or target is None:
+    try:
+        key = queues.start_transfer(sim, claim_id, queues.roster_by_id().get(to), run)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}") from None
+    except queues.TransferBlocked as blocked:
         return templates.TemplateResponse(
-            request, "admin/_transfer_blocked.html", {"reason": reason}, status_code=409
+            request, "admin/_transfer_blocked.html", {"reason": blocked.reason}, status_code=409
         )
-    key = queues.start_transfer(sim, claim_id, target.id, run)
     return _write_status(request, sim, claim_id, key, view)
 
 
