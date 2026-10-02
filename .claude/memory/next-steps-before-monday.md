@@ -21,6 +21,8 @@ The user will move the slides into Keynote.
 - API key: none set; source it from 1Password like the other secrets.
 - Whether to add a before/after slide on the second-year adjuster's day, for Nikolina's user-journey questions. Slide 5 partly covers it.
 
+**Build issues filed** on GitHub (#1–#11; dependencies as `Blocked by #N` in each body): #1 foundation → #2 simulator, #3 pipeline, #8 learning charts, #10 mock ClaimsPro run in parallel → #4 LLM step (#3), #5 replay (#2, #3), #6 monitor (#1, then #5), #7 queues (#2, #6), #9 audit (#3, #6), #11 side panel (#1, #10). Stack defaults (FastAPI, React/Vite, MV3 `chrome.sidePanel`) are set in #1. The repo is public on purpose for a few days so reviewers can see it; don't raise it again.
+
 **Next:**
 
 1. Build the demo per [the demo plan](/demo-plan-routing-pipeline-and-overlay.md).
