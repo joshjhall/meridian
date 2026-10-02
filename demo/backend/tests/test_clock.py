@@ -51,7 +51,11 @@ def test_sla_state_boundaries():
 
 
 def test_no_backend_code_reads_the_wall_clock():
-    wall_clock = re.compile(r"datetime\.now\(|utcnow\(|time\.time\(|date\.today\(")
+    # No call parens required, so default_factory=datetime.now is caught too.
+    wall_clock = re.compile(
+        r"\bdatetime\.(now|utcnow|today)\b|\bdate\.today\b"
+        r"|\btime\.(time|time_ns|monotonic)\b|\bfrom time import\b"
+    )
     offenders = [
         str(p.relative_to(BACKEND))
         for p in BACKEND.rglob("*.py")
