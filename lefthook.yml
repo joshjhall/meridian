@@ -167,16 +167,19 @@ pre-push:
         - run: "! command -v dprint >/dev/null 2>&1"
       run: dprint check
 
+    # `--justfile justfile`: the macOS workspace mount is case-insensitive, so
+    # `just` can see a phantom `Justfile` beside `justfile` and refuse to pick.
+
     # Whole-project type check; too slow and cross-file for pre-commit.
     pyright:
       glob: "demo/**/*.py"
       skip:
         - run: "! command -v just >/dev/null 2>&1"
-      run: just lint-types
+      run: just --justfile justfile lint-types
 
     # Unstaged-safe full sweep of the demo's Python, templates, and web assets.
     demo-lint:
       glob: "demo/**/*.{py,html,jinja,css,js}"
       skip:
         - run: "! command -v just >/dev/null 2>&1"
-      run: just lint-py lint-templates lint-web
+      run: just --justfile justfile lint-py lint-templates lint-web
