@@ -1,0 +1,47 @@
+{# One claim on the monitor. Rendered on the server for every SSE frame, so the
+   card shown is always what the pipeline knows so far. #}
+{% macro card(view) %}
+  {% set f = view.facts %}
+  <button type="button"
+          id="card-{{ view.claim_id }}"
+          class="claim{% if view.pinned %} claim--pinned{% endif %}"
+          data-stage="{{ view.stage }}"
+          data-sla="{{ f.sla or '' }}"
+          hx-get="/admin/claims/{{ view.claim_id }}/trace?upto={{ view.trace | length }}"
+          hx-target="#trace-body"
+          aria-label="Trace for {{ view.claim_id }}">
+    <span class="claim__head">
+      <span class="claim__id">{{ view.claim_id }}</span>
+      {% if f.tier %}<span class="claim__tier">{{ f.tier }}</span>{% endif %}
+    </span>
+    {% if view.story %}<span class="claim__story">{{ view.story }}</span>{% endif %}
+    <span class="claim__meta">
+      {% if f.state %}<span>{{ f.state }}</span>{% endif %}
+      {% if f.amount %}<span>${{ "{:,.0f}".format(f.amount) }}</span>{% endif %}
+      {% if f.channel %}<span>{{ f.channel }}</span>{% endif %}
+    </span>
+    {% if f.skills %}
+      <span class="claim__skills">
+        {% for s in f.skills %}<span class="badge-outline">{{ s }}</span>{% endfor %}
+      </span>
+    {% endif %}
+    {% if f.regulated %}
+      <span class="claim__flag">
+        {% if f.review_lane in ("regulatory_review", "senior_review") %}
+          Regulated, routed to review
+        {% else %}
+          Regulated
+        {% endif %}
+      </span>
+    {% endif %}
+    {% if f.adjuster %}<span class="claim__who">{{ f.adjuster }}</span>{% endif %}
+    {% if view.reason_label %}
+      <span class="claim__reason">{{ view.reason_label }}</span>
+      {% if f.conflicts %}
+        <span class="claim__conflicts">
+          {% for c in f.conflicts %}<span>{{ c.field }}</span>{% endfor %}
+        </span>
+      {% endif %}
+    {% endif %}
+  </button>
+{% endmacro %}

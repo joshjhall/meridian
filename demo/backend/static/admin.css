@@ -1,0 +1,434 @@
+/* Admin pipeline monitor (#6). Commercial auto claims moving through lanes, so
+   the page borrows the road: a highway-sign header, lanes split by dashed
+   markings, and a hatched shoulder where claims pull over to wait for a
+   person. Cards stay quiet; the sign and the lane markings carry the look. */
+
+:root {
+  --sign: #00613f; /* highway guide-sign green */
+  --sign-ink: #ffffff;
+  --asphalt: #3c4043;
+  --pavement: #eceeec;
+  --marking: #f2f3f1;
+  --caution: #f5b301; /* work-zone amber */
+  --caution-ink: #3a2a00;
+  --pin: #0b57d0;
+  --late: #c5221f;
+  --face: "Overpass", system-ui, sans-serif;
+  --mono: "Overpass Mono", ui-monospace, monospace;
+}
+
+.monitor-body {
+  background: var(--pavement);
+  font-family: var(--face);
+  color: var(--asphalt);
+}
+
+.monitor {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  min-height: 100dvh;
+}
+
+/* --- The sign --- */
+
+.sign {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 2rem;
+  align-items: center;
+  padding: 1.25rem 2rem;
+  background: var(--sign);
+  color: var(--sign-ink);
+  border-bottom: 0.375rem solid var(--sign-ink);
+  box-shadow: 0 0.375rem 0 var(--sign);
+}
+
+.sign h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.sign__title p {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  opacity: 0.85;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-right: 0.75rem;
+  font-weight: 600;
+}
+
+.live::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--caution);
+}
+
+.live[data-state="live"]::before {
+  background: #7ee2a8;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.live[data-state="paused"]::before {
+  background: var(--sign-ink);
+  opacity: 0.5;
+}
+
+.sign__counters {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.counter {
+  display: flex;
+  flex-direction: column-reverse;
+  max-width: 11rem;
+}
+
+.counter dt {
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  opacity: 0.85;
+}
+
+.counter dd {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.counter--exceptions dd {
+  color: var(--caution);
+}
+
+.tick {
+  animation: tick 0.5s ease-out;
+}
+
+.sign__role {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid rgb(255 255 255 / 0.4);
+  border-radius: 0.5rem;
+}
+
+.sign__role a {
+  color: var(--sign-ink);
+}
+
+.sign__role a[aria-current="page"] {
+  background: var(--sign-ink);
+  color: var(--sign);
+}
+
+/* --- Admin console --- */
+
+.console {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 0.625rem 2rem;
+  background: var(--asphalt);
+  color: var(--marking);
+  font-size: 0.875rem;
+}
+
+.console code {
+  font-family: var(--mono);
+}
+
+.console label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.console .select {
+  width: auto;
+  color: var(--asphalt);
+  background: var(--marking);
+}
+
+.console .btn-sm-outline {
+  color: var(--marking);
+}
+
+/* --- The road --- */
+
+.road {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(11rem, 1fr)) minmax(15rem, 1.3fr);
+  overflow-x: auto;
+  background: var(--asphalt);
+}
+
+.lane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  padding: 1rem 0.75rem;
+  /* the dashed lane marking on the right edge */
+  background-image: linear-gradient(var(--marking) 55%, transparent 55%);
+  background-size: 0.1875rem 2.5rem;
+  background-repeat: repeat-y;
+  background-position: right top;
+}
+
+.lane h2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--marking);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.lane__count {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  opacity: 0.7;
+}
+
+.lane__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lane--shoulder {
+  background: repeating-linear-gradient(-45deg, var(--caution) 0 1rem, #e0a400 1rem 2rem);
+  border-left: 0.375rem solid var(--marking);
+}
+
+.lane--shoulder h2 {
+  color: var(--caution-ink);
+  font-weight: 800;
+}
+
+.lane__note {
+  padding: 0.5rem 0.625rem;
+  background: rgb(255 255 255 / 0.85);
+  border-radius: 0.25rem;
+  color: var(--caution-ink);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* --- Claim cards --- */
+
+.claim {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #d5d8d5;
+  border-left: 0.25rem solid transparent;
+  border-radius: 0.375rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.claim:hover {
+  border-color: var(--asphalt);
+}
+
+.claim:focus-visible {
+  outline: 3px solid var(--pin);
+  outline-offset: 2px;
+}
+
+.claim--pinned {
+  border-left-color: var(--pin);
+}
+
+.claim__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.claim__id {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.claim[data-sla="breached"] .claim__id {
+  color: var(--late);
+}
+
+.claim__tier {
+  padding: 0 0.375rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.claim__story {
+  color: var(--pin);
+  font-weight: 600;
+}
+
+.claim__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.625rem;
+  color: #5f6368;
+}
+
+.claim__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.claim__skills .badge-outline {
+  font-size: 0.6875rem;
+}
+
+.claim__flag {
+  color: var(--sign);
+  font-weight: 600;
+}
+
+.claim__who {
+  color: #5f6368;
+}
+
+.claim__reason {
+  color: var(--caution-ink);
+  font-weight: 800;
+}
+
+.claim__conflicts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--caution);
+}
+
+/* --- Legend and trace --- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0.75rem 2rem;
+  font-size: 0.8125rem;
+}
+
+.legend__pin {
+  font-weight: 600;
+  color: var(--pin);
+}
+
+.legend code {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+#trace > div {
+  max-width: 44rem;
+}
+
+.trace__head h2 {
+  font-family: var(--mono);
+  font-size: 1.25rem;
+}
+
+.trace {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-left: 1rem;
+  border-left: 2px dashed #b0b4b0;
+}
+
+.trace__step {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.25rem 1rem;
+  font-size: 0.875rem;
+}
+
+.trace__step > p,
+.trace__step > table {
+  grid-column: 1 / -1;
+  color: #5f6368;
+}
+
+.trace__stage {
+  font-weight: 600;
+}
+
+.trace__version,
+.trace__step time {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: #5f6368;
+}
+
+.trace__step--exception .trace__stage,
+.trace__reason {
+  color: var(--caution-ink);
+  font-weight: 800;
+}
+
+.trace__conflicts td:nth-child(2) {
+  font-family: var(--mono);
+}
+
+/* --- Motion --- */
+
+::view-transition-group(*) {
+  animation-duration: 0.45s;
+  animation-timing-function: cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes tick {
+  from {
+    transform: translateY(-0.25rem);
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live[data-state="live"]::before,
+  .tick {
+    animation: none;
+  }
+}
+
+@media (max-width: 60rem) {
+  .sign {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .road {
+    grid-template-columns: repeat(7, 14rem);
+  }
+}

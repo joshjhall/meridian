@@ -1,0 +1,45 @@
+{# Per-step trace for one claim, loaded into the trace dialog. The expanded
+   audit record (five fields, review intervals) is #9. #}
+<header class="trace__head">
+  <h2 id="trace-title">{{ view.claim_id }}</h2>
+  {% if view.story %}<p>Demo claim: {{ view.story | lower }}</p>{% endif %}
+</header>
+<ol class="trace">
+  {% for e in view.trace %}
+    <li class="trace__step{% if e.stage == 'exception' %} trace__step--exception{% endif %}">
+      <span class="trace__stage">{{ e.stage.replace('_', ' ') | capitalize }}</span>
+      <time datetime="{{ e.timestamp.isoformat() }}">{{ e.timestamp.strftime("%H:%M") }}</time>
+      <span class="trace__version">{{ e.pipeline_version }}</span>
+      {% set p = e.payload %}
+      {% if p.reason %}
+        <p class="trace__reason">{{ labels[p.reason] }}</p>
+        {% if p.conflicts %}
+          <table class="table trace__conflicts">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Fax OCR</th>
+                <th>EDI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in p.conflicts %}
+                <tr>
+                  <td>{{ c.field }}</td>
+                  <td>{{ c.ocr }}</td>
+                  <td>{{ c.edi }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      {% elif p.routing_reason %}
+        <p>{{ p.routing_reason }}</p>
+      {% elif p.skills %}
+        <p>Skills: {{ p.skills | join(", ") }}</p>
+      {% elif p.adjuster %}
+        <p>Assigned to {{ p.adjuster }}{% if p.retried %} after a retried write{% endif %}</p>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ol>

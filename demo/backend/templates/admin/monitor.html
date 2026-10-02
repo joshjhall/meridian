@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Pipeline monitor{% endblock %}
+{% block head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        referrerpolicy="no-referrer"
+        href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="/static/admin.css" />
+  <script src="/static/admin.js" defer></script>
+{% endblock %}
+{% block body_attrs %}class="monitor-body" data-viewer="{{ viewer }}"{% endblock %}
+{% block main_class %}monitor{% endblock %}
+{% block content %}
+  <header class="sign">
+    <div class="sign__title">
+      <h1>Claims pipeline</h1>
+      <p>
+        <span class="live" id="live" data-state="connecting">Connecting</span>
+        Fixture feed until the replay runner lands
+      </p>
+    </div>
+    <dl class="sign__counters">
+      <div class="counter">
+        <dt>Regulated claims routed to review</dt>
+        <dd id="count-routed">
+          0
+        </dd>
+      </div>
+      <div class="counter counter--exceptions">
+        <dt>Open exceptions</dt>
+        <dd id="count-exceptions">
+          0
+        </dd>
+      </div>
+    </dl>
+    <nav class="sign__role" aria-label="View as">
+      <a class="{{ 'btn-sm' if viewer == 'admin' else 'btn-sm-ghost' }}"
+         href="?view=admin"
+         {% if viewer == 'admin' %}aria-current="page"{% endif %}>Tribe admin</a>
+      <a class="{{ 'btn-sm' if viewer == 'manager' else 'btn-sm-ghost' }}"
+         href="?view=manager"
+         {% if viewer == 'manager' %}aria-current="page"{% endif %}>Manager</a>
+    </nav>
+  </header>
+  {# Admin-only controls are left out of the page for managers, not hidden:
+     this is where access control sits in the real build. #}
+  {% if viewer == "admin" %}
+    <section class="console" id="admin-controls" aria-label="Admin controls">
+      <span>Pipeline <code>{{ pipeline_version }}</code></span>
+      <label>
+        Replay speed
+        <select id="speed" class="select">
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </select>
+      </label>
+      <button type="button" class="btn-sm-outline" id="pause">Pause feed</button>
+    </section>
+  {% endif %}
+  <div class="road" id="road" data-events-url="{{ events_url }}">
+    {% for stage in lanes %}
+      <section class="lane"
+               data-lane="{{ stage }}"
+               aria-labelledby="lane-{{ stage }}">
+        <h2 id="lane-{{ stage }}">
+          {{ stage.replace('_', ' ') | capitalize }} <span class="lane__count" data-count>0</span>
+        </h2>
+        <div class="lane__cards" data-cards></div>
+      </section>
+    {% endfor %}
+    <section class="lane lane--shoulder"
+             data-lane="exception"
+             aria-labelledby="lane-exception">
+      <h2 id="lane-exception">
+        Waiting for a person <span class="lane__count" data-count>0</span>
+      </h2>
+      <p class="lane__note">Anything that fails safe stops here instead of entering ClaimsPro.</p>
+      <div class="lane__cards" data-cards></div>
+    </section>
+  </div>
+  <footer class="legend">
+    <span class="legend__pin">Demo claims:</span>
+    {% for id, story in stories.items() %}
+      <span><code>{{ id[-4:] }}</code> {{ story | lower }}</span>
+    {% endfor %}
+  </footer>
+  <dialog id="trace"
+          class="dialog"
+          aria-labelledby="trace-title"
+          onclick="if (event.target === this) this.close()">
+    <div>
+      <section id="trace-body">
+      </section>
+      <footer>
+        <button type="button"
+                class="btn-outline"
+                onclick="this.closest('dialog').close()">Close</button>
+      </footer>
+    </div>
+  </dialog>
+{% endblock %}
