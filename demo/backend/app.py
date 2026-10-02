@@ -34,6 +34,7 @@ from models import (
 )
 from pipeline import PIPELINE_VERSION
 from replay import Replay
+from replay.api import controls as replay_controls
 from replay.api import router as replay_router
 
 HERE = Path(__file__).resolve().parent
@@ -171,6 +172,14 @@ def require_admin(view: Viewer | None = None) -> None:
     # means no admin.
     if view != "admin":
         raise HTTPException(status_code=403, detail="admin only")
+
+
+# Replay speed, pause and restart are shared by every viewer, so they get the
+# same guards as the fault toggle.
+app.include_router(
+    replay_controls,
+    dependencies=[Depends(require_board_request), Depends(require_admin)],
+)
 
 
 def transfer_runner() -> queues.Runner:

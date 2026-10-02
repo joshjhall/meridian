@@ -1,4 +1,9 @@
-"""Replay endpoints, mounted by app.py: the SSE feed and its speed and pause controls."""
+"""Replay endpoints, mounted by app.py: the SSE feed and its speed and pause controls.
+
+The controls are a separate router so app.py can mount them behind the same
+admin and CSRF guards as the queues board. The feed can't carry those: an
+EventSource sends no custom headers.
+"""
 
 from typing import Annotated
 
@@ -9,6 +14,7 @@ from pydantic import BaseModel, Field
 from replay.runner import Replay
 
 router = APIRouter(prefix="/api")
+controls = APIRouter(prefix="/api")
 
 
 def get_replay(request: Request) -> Replay:
@@ -41,13 +47,13 @@ async def status(replay: ReplayDep) -> dict:
     return replay.status()
 
 
-@router.post("/replay")
+@controls.post("/replay")
 async def control(replay: ReplayDep, body: Controls) -> dict:
     replay.set(speed=body.speed, paused=body.paused)
     return replay.status()
 
 
-@router.post("/replay/restart")
+@controls.post("/replay/restart")
 async def restart(replay: ReplayDep, body: Restart | None = None) -> dict:
     replay.restart(body.seed if body else None)
     return replay.status()

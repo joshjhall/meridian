@@ -19,6 +19,14 @@ FIXTURES = set(load_claim_fixtures())
 FIRST = 1500  # events: a little over three simulated days
 
 
+# How the admin page calls the controls: the board's CSRF header, with ?view=admin.
+ADMIN = {"headers": {"X-Meridian-Board": "1"}}
+
+
+def _admin_client(**kwargs) -> TestClient:
+    return TestClient(app, headers=ADMIN["headers"], **kwargs)
+
+
 def _key(s):
     return (s.event.claim_id, s.event.stage, s.at, s.event.payload)
 
@@ -181,22 +189,22 @@ def test_runner_plays_the_same_sequence_as_the_schedule():
 
 
 def test_controls_round_trip_and_validate(replay):
-    client = TestClient(app)
+    client = _admin_client()
     assert client.get("/api/replay").json()["seed"] == schedule.SEED
-    status = client.post("/api/replay", json={"speed": 4, "paused": True}).json()
+    status = client.post("/api/replay?view=admin", json={"speed": 4, "paused": True}).json()
     assert (status["speed"], status["paused"]) == (4, True)
     assert client.get("/api/replay").json()["paused"] is True
-    assert client.post("/api/replay", json={"paused": False}).json()["speed"] == 4
+    assert client.post("/api/replay?view=admin", json={"paused": False}).json()["speed"] == 4
     for bad in ({"speed": 0}, {"speed": 49}, {"paused": "later"}):
-        assert client.post("/api/replay", json=bad).status_code == 422
+        assert client.post("/api/replay?view=admin", json=bad).status_code == 422
 
 
 def test_restart_endpoint_takes_a_seed(replay):
-    client = TestClient(app)
-    assert client.post("/api/replay/restart", json={"seed": 7}).json()["seed"] == 7
-    assert client.post("/api/replay/restart").json()["seed"] == 7
+    client = _admin_client()
+    assert client.post("/api/replay/restart?view=admin", json={"seed": 7}).json()["seed"] == 7
+    assert client.post("/api/replay/restart?view=admin").json()["seed"] == 7
     assert (
-        client.post("/api/replay/restart", json={"seed": schedule.SEED}).json()["seed"]
+        client.post("/api/replay/restart?view=admin", json={"seed": schedule.SEED}).json()["seed"]
         == schedule.SEED
     )
 
@@ -217,16 +225,98 @@ def test_new_viewer_gets_reset_status_and_the_board_so_far(replay):
     assert card["counters"] == replay.board.counters()
 
 
+@pytest.mark.parametrize(
+    ("path", "headers"),
+    [
+        ("/api/replay?view=admin", {}),  # no CSRF header: a cross-site form or fetch
+        ("/api/replay/restart?view=admin", {}),
+        ("/api/replay?view=manager", ADMIN["headers"]),
+        ("/api/replay/restart", ADMIN["headers"]),  # no view means no admin
+    ],
+)
+def test_controls_refuse_unguarded_and_manager_calls(replay, path, headers):
+    response = TestClient(app).post(path, json={"paused": True}, headers=headers)
+    assert response.status_code == 403
+    assert replay.paused is False
+
+
 def test_event_stream_rejects_out_of_range_limit():
     assert TestClient(app).get("/api/events?limit=0").status_code == 422
 
 
 def test_server_plays_the_feed_on_startup():
-    with TestClient(app) as client:
-        client.post("/api/replay", json={"speed": 48})
+    with _admin_client() as client:
+        client.post("/api/replay?view=admin", json={"speed": 48})
         try:
             frames = _frames(client.get("/api/events?limit=5").text)
         finally:
-            client.post("/api/replay", json={"speed": runner.DEFAULT_SPEED})
-            client.post("/api/replay/restart")
+            client.post("/api/replay?view=admin", json={"speed": runner.DEFAULT_SPEED})
+            client.post("/api/replay/restart?view=admin")
     assert [name for name, _ in frames].count("claim") == 5
+
+
+def test_dropped_rows_are_fax_edi_with_a_field_missing_and_no_outage():
+    dropped = [a for a in itertools.islice(arrivals(), 1500) if a.dropped]
+    assert dropped
+    for a in dropped:
+        row = a.claim
+        assert isinstance(row, dict)
+        assert row["intake_channel"] == "Fax/EDI"
+        assert any(row[f] is None for f in schedule.DROPPABLE)
+        assert not a.outage
+
+
+def test_replay_loops_to_the_start_when_the_extract_ends(monkeypatch):
+    short = list(itertools.islice(events(), 3))
+    monkeypatch.setattr(schedule, "events", lambda seed=schedule.SEED: iter(short))
+
+    async def scenario():
+        r = Replay(render_card)
+        r.set(speed=10_000)
+        frames: list[str] = []
+
+        async def watch():
+            async for text in r.stream(limit=5):
+                frames.append(text)
+
+        watcher = asyncio.create_task(watch())
+        await asyncio.sleep(0)
+        r.start()
+        await asyncio.wait_for(watcher, 10)
+        await r.stop()
+        return frames
+
+    frames = _frames("".join(asyncio.run(scenario())))
+    clock.reset()
+    names = [name for name, _ in frames if name in ("claim", "reset")]
+    assert names == ["reset", "claim", "claim", "claim", "reset", "claim", "claim"]
+
+
+def test_restart_during_a_fetch_drops_the_stale_event(monkeypatch):
+    async def scenario():
+        r = Replay(render_card)
+        stale_pass = r._events
+        real_next = next
+
+        def slow_next(it, default):
+            if it is stale_pass:
+                r.restart(schedule.SEED + 1)  # lands while the old pass is fetching
+            return real_next(it, default)
+
+        monkeypatch.setattr(
+            runner.asyncio, "to_thread", lambda f, *a: asyncio.sleep(0, slow_next(*a))
+        )
+        r.set(speed=10_000)
+        r.start()
+        for _ in range(100):
+            await asyncio.sleep(0.01)
+            if r.board.claims:
+                break
+        await r.stop()
+        return r
+
+    r = asyncio.run(scenario())
+    clock.reset()
+    first = next(iter(r.board.claims.values())).trace[0]
+    assert first == next(events(schedule.SEED + 1)).event
+    assert first != next(events()).event

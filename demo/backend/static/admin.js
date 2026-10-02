@@ -92,10 +92,11 @@
     else if (source?.readyState === EventSource.OPEN) setLive("live", "Live");
   };
 
+  // Controls render only in the admin view; the header is the board's CSRF guard.
   const post = (path, body) =>
-    fetch(path, {
+    fetch(`${path}?view=admin`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Meridian-Board": "1" },
       body: JSON.stringify(body),
     });
 
