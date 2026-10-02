@@ -8,6 +8,7 @@ from claimspro_page import (
     NOT_SAVED,
     SCREENS,
     custom_field_rows,
+    details_by_screen,
     documents,
     neighbours,
     slugify,
@@ -21,6 +22,7 @@ from fixtures import load_claim_fixtures
 
 SIX = list(load_claim_fixtures())
 NOW = datetime(2025, 10, 15, 9, 0)
+EXTRACT_CLAIM = "IS-CLM-2025000095"  # an open extract claim, not one of the six
 
 
 @pytest.fixture
@@ -107,6 +109,34 @@ def test_prev_next_cycle_through_the_six_claims(client):
     assert f'href="/claimspro/{SIX[3]}"' in html
     for claim_id in SIX:
         assert f'<option value="{claim_id}"' in html
+
+
+def test_extract_claim_outside_the_six_renders():
+    # The default simulator seeds the extract's open claims too (store.seed_claims).
+    default_sim = ClaimsProSim(sleep=lambda _s: None)
+    app.dependency_overrides[get_sim] = lambda: default_sim
+    try:
+        response = TestClient(app).get(f"/claimspro/{EXTRACT_CLAIM}")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert neighbours(EXTRACT_CLAIM) == (SIX[-1], SIX[0])
+
+
+def test_details_land_on_their_screens():
+    screens = details_by_screen(load_claim_fixtures()["IS-CLM-2025000300"].claim)
+    assert "policy_number" in screens["policy"]
+    assert "estimate" in screens["payments"]
+    assert "loss_description" in screens["loss"]  # unlisted keys go to Loss
+    assert all("photos" not in fields for fields in screens.values())
+
+
+def test_notes_from_the_simulator_show_on_the_notes_screen(client, sim):
+    claim_id = SIX[0]
+    sim.soap.AddNote(claim_id, "Called the shop", author="ADJ-101", idempotency_key="n1")
+    html = client.get(f"/claimspro/{claim_id}").text
+    notes = html[html.index('id="notes"') : html.index('id="payments"')]
+    assert "Called the shop" in notes
 
 
 def test_picker_redirects_so_the_url_carries_the_claim(client):
