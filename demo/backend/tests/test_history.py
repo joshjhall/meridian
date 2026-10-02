@@ -1,6 +1,9 @@
 import csv
+import re
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app import app
 from fixtures import DATA, load_history
@@ -72,6 +75,7 @@ def test_one_release_regresses_and_is_rolled_back():
         key=lambda r: r.week,
     )
     assert before.version.split()[0] == rollback.version.split()[0]
+    assert before.week >= 1
     agreement = charts()["routing"].primary.points
     assert agreement[before.week].value < agreement[before.week - 1].value
     assert agreement[rollback.week].value > agreement[before.week].value
@@ -79,9 +83,11 @@ def test_one_release_regresses_and_is_rolled_back():
 
 def test_releases_name_known_charts_and_have_notes():
     ids = set(charts())
+    last_week = charts()["routing"].primary.points[-1].week
     for r in load_history().releases:
         assert r.charts and set(r.charts) <= ids
         assert r.notes
+        assert 0 <= r.week <= last_week, r.version
     versions = {r.version for r in load_history().releases}
     assert {"router v0.3", "ocr-check v1.1", "signals-prompt v1.2"} <= versions
 
@@ -103,3 +109,25 @@ def test_admin_page_includes_learning_charts():
     assert "d3@7" in html
     assert 'data-chart="routing"' in html
     assert 'data-chart="intake"' in html
+
+
+@pytest.mark.parametrize(
+    ("path", "bad"),
+    [(("releases", 0, "kind"), "hotfix"), (("charts", 0, "primary", "mark"), "area")],
+)
+def test_schema_rejects_unknown_kind_and_mark(path, bad):
+    data = load_history().model_dump()
+    node = data
+    for key in path[:-1]:
+        node = node[key]
+    node[path[-1]] = bad
+    with pytest.raises(ValidationError):
+        LearningHistory.model_validate(data)
+
+
+def test_learning_js_never_writes_html():
+    # Release notes and labels come from the API; the script must set text only.
+    js = (DATA.parent / "backend" / "static" / "learning.js").read_text()
+    assert not re.search(r"\.(inner|outer)HTML\s*[+]?=", js)
+    assert "insertAdjacentHTML(" not in js
+    assert ".html(" not in js
