@@ -1,0 +1,36 @@
+{
+  "model": "claude-sonnet-5-5",
+  "response": {
+    "suggested_tier": null,
+    "signals": [
+      {
+        "kind": "injury",
+        "quote": "alleges bodily injury and vehicle damage",
+        "source": "intake.md",
+        "confidence": 0.9,
+        "skill": null
+      },
+      {
+        "kind": "secondary_skill",
+        "skill": "Collision",
+        "quote": "Est reconciles to 3,655.74 veh dmg",
+        "source": "adjuster_notes.md",
+        "confidence": 0.85
+      },
+      {
+        "kind": "causation_gap",
+        "quote": "rear quarter sh0ws c0rr0si0n and pri0r paint edges",
+        "source": "ocr_output.txt",
+        "confidence": 0.69,
+        "skill": null
+      },
+      {
+        "kind": "low_confidence",
+        "quote": "OCR est is a mess",
+        "source": "adjuster_notes.md",
+        "confidence": 0.8,
+        "skill": null
+      }
+    ]
+  }
+}

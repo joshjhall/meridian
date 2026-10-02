@@ -533,3 +533,42 @@
     transform: translateY(4px);
   }
 }
+
+/* --- Complexity signals (#4): recorded, or regenerated live (#38) --- */
+
+.signals {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.signals__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.signals__head h3 {
+  margin-right: auto;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.signals__note {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.signals__list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.signal q {
+  display: block;
+  font-size: 0.8125rem;
+}
+
+.signal--unverified q {
+  color: var(--muted);
+  text-decoration: line-through;
+}

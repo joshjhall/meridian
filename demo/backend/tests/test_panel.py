@@ -224,8 +224,8 @@ def test_4222_has_an_injury_timeline_and_marked_transcript_spans(client):
     html = client.get("/panel?claim=IS-CLM-2025004222").text
     assert 'aria-label="Injury timeline"' in html
     assert "Delaware Avenue" in html
-    # #4 (live LLM step) hasn't landed, so there's no regenerate button yet.
-    assert "Regenerate" not in html
+    # The regenerate button (#38) shows only with credentials; both states are in
+    # test_llm_signals.test_panel_shows_regenerate_only_when_live_is_available.
 
 
 def test_4518_lays_accounts_side_by_side(client):

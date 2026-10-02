@@ -18,6 +18,26 @@ def input_data_ref(claim: Claim) -> str:
     return f"claimspro:{claim.claim_id}@sha256:{hashlib.sha256(received.encode()).hexdigest()}"
 
 
+def model_version(signals: Signals) -> str:
+    """The pipeline, where its signals came from, and the LLM behind them if any."""
+    llm = f":{signals.llm_model}" if signals.llm_model else ""
+    return f"{PIPELINE_VERSION}+signals:{signals.source}{llm}"
+
+
+def signals_meta(signals: Signals) -> dict[str, Any]:
+    """What the complexity step contributed, for the audit record."""
+    return {
+        "source": signals.source,
+        "llm_model": signals.llm_model,
+        "latency_ms": signals.latency_ms,
+        "fallback": signals.fallback,
+        "fallback_reason": signals.fallback_reason,
+        "base_url_host": signals.base_url_host,
+        "verified": sum(i.verified for i in signals.items),
+        "unverified": len(signals.unverified),
+    }
+
+
 def build_audit(
     claim: Claim, signals: Signals, output: dict[str, Any], rationale: str
 ) -> AuditRecord:
@@ -25,8 +45,8 @@ def build_audit(
     return AuditRecord(
         claim_id=claim.claim_id,
         input_data_ref=input_data_ref(claim),
-        model_version=f"{PIPELINE_VERSION}+signals:{signals.source}",
-        output=output,
+        model_version=model_version(signals),
+        output=output | {"signals": signals_meta(signals)},
         confidence=signals.confidence,
         human_reviewed=False,
         rationale=rationale,

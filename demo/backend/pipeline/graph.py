@@ -42,7 +42,7 @@ from models import (
 )
 from pipeline import intake, rules
 from pipeline.assign import Loads, match, route_problems
-from pipeline.audit import PIPELINE_VERSION, build_audit, write_custom_fields
+from pipeline.audit import PIPELINE_VERSION, build_audit, model_version, write_custom_fields
 from pipeline.signals import PROMPT_VERSION, complexity_signals
 
 
@@ -185,6 +185,8 @@ def _classify(state: ClaimState) -> ClaimState:
         tier=tier,
         signals=signals.source,
         prompt_version=PROMPT_VERSION,
+        llm_model=signals.llm_model,
+        fallback=signals.fallback,
     )
     return {"signals": signals, "skills": skills, "tier": tier, "events": [event]}
 
@@ -358,7 +360,7 @@ def _exception_audit(state: ClaimState) -> AuditRecord:
     return AuditRecord(
         claim_id=claim_id,
         input_data_ref=f"extract-row:{claim_id}",
-        model_version=f"{PIPELINE_VERSION}+signals:{signals.source}",
+        model_version=model_version(signals),
         output=output,
         confidence=0.0,
         human_reviewed=False,

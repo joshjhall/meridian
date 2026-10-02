@@ -21,7 +21,7 @@
     <dd>
       <table class="table audit__output">
         <tbody>
-          {% for key, value in r.output.items() %}
+          {% for key, value in r.output.items() if key != "signals" %}
             <tr>
               <th scope="row">{{ key.replace('_', ' ') | capitalize }}</th>
               <td>
@@ -138,6 +138,35 @@
     <dd>
       <code data-version="prompt">{{ audit.prompt_version or "none" }}</code>
     </dd>
+    {% set sig = r.output.signals %}
+    {% if sig %}
+      <dt>Complexity signals</dt>
+      <dd class="audit__signals" data-signals-source="{{ sig.source }}">
+        {% if sig.fallback %}
+          <span class="badge-destructive">Fallback</span>
+          <span class="audit__note">{{ sig.fallback_reason }}; recorded response used</span>
+        {% elif sig.source == "llm" %}
+          <span class="badge">Live</span>
+        {% else %}
+          <span class="badge-secondary">{{ sig.source | capitalize }}</span>
+        {% endif %}
+        {% if sig.llm_model %}<code data-version="llm">{{ sig.llm_model }}</code>{% endif %}
+        {% if sig.latency_ms is not none %}<span class="audit__note">{{ sig.latency_ms }} ms</span>{% endif %}
+        {% if sig.base_url_host %}<span class="audit__note">via {{ sig.base_url_host }}</span>{% endif %}
+        <span class="audit__note">{{ sig.verified }} verified, {{ sig.unverified }} unverified (ignored for routing)</span>
+        {% if live_available %}
+          <div id="signals-{{ r.claim_id }}">
+            <button type="button"
+                    class="btn-sm-outline"
+                    hx-post="/claims/{{ r.claim_id }}/signals"
+                    hx-headers='{"X-Meridian-Board": "1"}'
+                    hx-target="#signals-{{ r.claim_id }}"
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this">Run live</button>
+          </div>
+        {% endif %}
+      </dd>
+    {% endif %}
   </dl>
 </section>
 <section class="audit__section" aria-labelledby="audit-writes">

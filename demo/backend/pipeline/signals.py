@@ -1,27 +1,18 @@
-"""Complexity signals: the one step an LLM will fill (#4).
+"""Complexity signals: the one step an LLM fills (#4).
 
-Until #4 lands this returns recorded output for the six demo fixtures, read from
-their panel examples, and an empty signal for everything else.
+Pipeline runs (batch and replay) read the recorded response for each demo claim, so
+they never wait on a network call; the live call runs on demand for one claim
+(`llm_signals.run_live`). Both go through the same schema and quote checks, and only
+verified signals reach routing.
 """
 
-from models import Claim, Signals, Skill
+from models import Claim, Signals
+from pipeline import llm_signals
+from pipeline.llm_signals import PROMPT_VERSION
 
-# The prompt #4 will send; matches the latest signals-prompt release in data/history.json.
-PROMPT_VERSION = "signals-prompt v1.2"
-
-RECORDED: dict[str, Signals] = {
-    # Rear-end collision with a claimed injury: vehicle damage is a second skill.
-    "IS-CLM-2025002993": Signals(
-        secondary_skills=[Skill.COLLISION], injury=True, confidence=0.69, source="recorded"
-    ),
-    "IS-CLM-2025004222": Signals(injury=True, confidence=0.9, source="recorded"),
-    # Disputed intersection collision: liability plus the vehicle damage.
-    "IS-CLM-2025004518": Signals(
-        secondary_skills=[Skill.COLLISION], confidence=0.85, source="recorded"
-    ),
-}
+__all__ = ["PROMPT_VERSION", "complexity_signals"]
 
 
 def complexity_signals(claim: Claim) -> Signals:
-    """Stub hook: #4 replaces this body with the LLM call; the signature stays."""
-    return RECORDED.get(claim.claim_id, Signals(source="rules"))
+    """Recorded signals for a demo claim, checked like live ones; an empty signal otherwise."""
+    return llm_signals.from_recorded(claim)

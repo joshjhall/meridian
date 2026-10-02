@@ -70,7 +70,8 @@ def test_audit_record_has_the_five_fields_and_a_rationale():
     record = build_audit(CLAIM, signals, {"tier": "T1"}, "why")
     assert record.input_data_ref == input_data_ref(CLAIM)
     assert record.model_version == f"{PIPELINE_VERSION}+signals:recorded"
-    assert record.output == {"tier": "T1"}
+    assert record.output["tier"] == "T1"
+    assert record.output["signals"]["source"] == "recorded"
     assert record.confidence == 0.7
     assert record.human_reviewed is False
     assert record.rationale == "why"
@@ -109,11 +110,13 @@ def test_roster_has_a_senior_for_every_skill():
 def test_complexity_signals_recorded_for_fixtures_and_empty_otherwise():
     fixtures = load_claim_fixtures()
     recorded = complexity_signals(fixtures["IS-CLM-2025002993"].claim)
-    assert recorded.source == "recorded"
+    assert recorded.source == "recorded" and recorded.llm_model
     assert recorded.secondary_skills == [Skill.COLLISION]
     assert recorded.injury and recorded.confidence == 0.69
-    plain = complexity_signals(CLAIM)
+    assert recorded.items and all(i.verified for i in recorded.items)
+    plain = complexity_signals(CLAIM.model_copy(update={"claim_id": "IS-CLM-2025999999"}))
     assert (plain.source, plain.secondary_skills, plain.confidence) == ("rules", [], 1.0)
+    assert plain.llm_model is None
 
 
 def test_release_undoes_take_and_refuses_an_unmatched_release():

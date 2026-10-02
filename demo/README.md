@@ -44,6 +44,27 @@ Then open:
 
 In Chrome, open `chrome://extensions`, turn on Developer mode, choose **Load unpacked** and pick `demo/extension/`. With `just serve` running, open a claim at `http://localhost:8000/claimspro/{claim_id}` and click the extension's toolbar button. The panel follows the claim in the active tab, and its Contents links scroll the ClaimsPro tab to the matching screen or document. The extension has no content script: it never touches the ClaimsPro page.
 
+### Live LLM step (complexity signals)
+
+One step calls a model live: complexity signals for one claim (#4), from the **Regenerate** button in the side panel's signals block and **Run live** in the admin audit drawer (`POST /claims/{id}/signals`). Pipeline runs and the replay use the recorded responses in `data/recorded/` and never wait on the network.
+
+Endpoint and credentials come from the environment and are read by the Anthropic SDK; see `.env.example`.
+
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_BASE_URL` | Where calls go. Point it at a gateway (in this devcontainer, the Bifrost gateway); unset, calls go straight to `https://api.anthropic.com`. |
+| `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY` | Credentials: a bearer token (as the gateway uses) or an API key. Without either, the buttons are hidden and every call falls back. |
+| `LLM_MODEL` | Model override; default `claude-sonnet-5-5`. |
+
+The server logs the base URL's host and whether credentials are set at startup; never the token. Each run records the model, latency, host and fallback flag in the audit record.
+
+What contains the output (`backend/pipeline/llm_signals.py`):
+
+- Names, policy numbers and claim numbers are masked before the call, including OCR-garbled forms in faxed documents, along with anything shaped like a phone, email, address, VIN or plate and the EDI contact segments. A second pass refuses to send if any of the claim's known identifiers survived. Not covered: a third party named only in free text; none of the demo claims has one (a test pins this), and production would need entity recognition.
+- Output is structured only: a JSON schema on the request, then strict validation; anything off-schema, including an extra field, is rejected. The schema has no approve, deny or recommendation field, and a tier suggestion can only raise the tier.
+- Every signal quotes its source document. Code checks the quote is there; one that isn't is marked unverified, shown, and ignored for routing.
+- One call, 20 seconds, no retries. On a timeout, an unreachable endpoint, missing credentials or failed validation, the recorded response loads, goes through the same checks, and is marked as a fallback in the UI and the audit record.
+
 ## Stack
 
 One language, Python, end to end. The only JavaScript is the extension glue and small browser libraries loaded from a CDN.
@@ -67,6 +88,7 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 - `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`, plus the replay's `/api/events` and `/api/replay`) and the pages (`/admin`, `/admin/queues`, `/claimspro/{id}`, `/panel`).
 - `backend/replay/`: the replay runner (#5). It plays the claims extract, in filed-date order, through the real pipeline on the demo clock, and streams the events to `/admin` over SSE at `/api/events`. Speed (simulated hours per second) and pause are set with `POST /api/replay`, a restart (optional seed) with `POST /api/replay/restart`. The sequence is a pure function of the seed, so a rehearsal matches the demo. Each pass writes to one ClaimsPro simulator; `replay.current_sim()` returns the served pass's simulator (its write log and alerts) for audit views. It is replaced on restart, so read it per request.
 - `backend/audit_view.py`: the expanded audit record (#9) behind `/admin`'s audit drawer and `/api/claims/{id}/audit`: the pipeline's five-field `AuditRecord` and events, the simulator's write history with retries, and review intervals on one timeline. It reads the replay's current pass (`replay.current_sim()`, per request): the run, writes and retries the operator watched, up to the demo clock. `audit_sim()` is the one place that picks the simulator; with no replay served it falls back to the shared one and runs the claim once.
+- `backend/pipeline/llm_signals.py` and `data/recorded/*.json`: the contained live LLM step (#4) and the recorded response for each demo claim. `pipeline/signals.py` is the hook the pipeline calls; `PROMPT_VERSION` there names the prompt and schema sent, with a content digest.
 - `backend/queues.py`: the admin queues board (#7): the board grouped by tier, the review-lane guard (the pipeline's `regulatory_check` and `assign.match` eligibility), and moves sent through `reliable_write`.
 - `backend/templates/` and `backend/static/`: Jinja templates and CSS. `templates/components/` holds Basecoat's Jinja macros (MIT; see `BASECOAT_LICENSE.txt`) for its interactive components (tabs, dialog, dropdown, select, popover, toast and others).
 - `backend/styles/app.css`: Tailwind input. The built `static/app.css` is committed so a fresh clone runs without a CSS build; run `just css` after changing classes.
