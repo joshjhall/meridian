@@ -27,6 +27,7 @@ def test_six_claim_fixtures_load_and_validate():
 def test_fixture_numbers_match_extract():
     with (REPO / "reference" / "claims_processing.csv").open(newline="") as f:
         rows = {r["claim_id"]: r for r in csv.DictReader(f) if r["claim_id"] in SIX}
+    assert set(rows) == SIX
     for cid, fixture in load_claim_fixtures().items():
         claim, row = fixture.claim, rows[cid]
         assert claim.claim_amount_usd == float(row["claim_amount_usd"])
@@ -37,6 +38,7 @@ def test_fixture_numbers_match_extract():
 
 def test_fixture_sources_exist():
     for fixture in load_claim_fixtures().values():
+        assert fixture.claim.sources, fixture.claim.claim_id
         for src in fixture.claim.sources:
             assert (REPO / src).exists(), src
 
@@ -65,14 +67,19 @@ def test_roster_covers_all_extract_adjuster_ids():
     assert extract_ids <= {a.id for a in load_roster()}
 
 
-def test_roster_is_reproducible_from_seed():
-    import sys
-
-    sys.path.insert(0, str(DATA))
+def test_roster_is_reproducible_from_seed(monkeypatch):
+    monkeypatch.syspath_prepend(str(DATA))
     from gen_roster import build
 
     regenerated = [a.model_dump(mode="json") for a in build()]
     assert regenerated == json.loads((DATA / "roster.json").read_text())
+
+
+def test_claim_fixtures_match_generator(monkeypatch):
+    monkeypatch.syspath_prepend(str(DATA))
+    from build_claims import build
+
+    assert {f.claim.claim_id: f for f in build()} == load_claim_fixtures()
 
 
 client = TestClient(app)

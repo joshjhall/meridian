@@ -218,17 +218,22 @@ def extract_rows(ids: set[str]) -> dict[str, dict]:
     return {cid: {k: v for k, v in r.items() if v != ""} for cid, r in rows.items()}
 
 
-def main() -> None:
+def build() -> list[ClaimFixture]:
     rows = extract_rows(set(OVERLAYS))
-    OUT.mkdir(exist_ok=True)
+    fixtures = []
     for claim_id, overlay in OVERLAYS.items():
         overlay = dict(overlay)
         expected = overlay.pop("expected")
-        fixture = ClaimFixture.model_validate({"claim": {**rows[claim_id], **overlay}, "expected": expected})
-        path = OUT / f"{claim_id}.json"
+        fixtures.append(ClaimFixture.model_validate({"claim": {**rows[claim_id], **overlay}, "expected": expected}))
+    return fixtures
+
+
+def main() -> None:
+    OUT.mkdir(exist_ok=True)
+    for fixture in build():
+        path = OUT / f"{fixture.claim.claim_id}.json"
         path.write_text(fixture.model_dump_json(indent=2, exclude={"claim": {"sla_due_at"}}) + "\n")
         print(f"wrote {path.relative_to(REPO)}")
-
 
 if __name__ == "__main__":
     main()
