@@ -21,6 +21,7 @@ window.addEventListener("message", async (event) => {
   if (event.origin !== BACKEND || event.data?.type !== "navigate") return;
   const { claimId, anchor } = event.data;
   if (!/^IS-CLM-\d{10}$/.test(claimId ?? "")) return;
+  if (!/^[a-z0-9/-]{1,80}$/.test(anchor ?? "")) return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) chrome.tabs.update(tab.id, { url: `${BACKEND}/claimspro/${claimId}#${anchor}` });
 });

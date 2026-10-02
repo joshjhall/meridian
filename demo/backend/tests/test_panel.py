@@ -1,7 +1,7 @@
 import json
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from html import unescape
 
 import panel
@@ -13,7 +13,7 @@ from app import app
 from claimspro_sim import ClaimsProSim
 from claimspro_sim.api import get_sim
 from fixtures import DATA, load_claim_fixtures
-from models import OcrCheck, PanelSummary, SourceRef
+from models import CorrectionLogEntry, OcrCheck, OcrWord, PanelSummary, SourceRef
 
 SIX = list(load_claim_fixtures())
 NOW = datetime(2025, 10, 15, 9, 0)  # clock.DEMO_START
@@ -133,19 +133,45 @@ def test_2993_shows_raw_ocr_next_to_corrected_with_the_negation_highlighted(clie
     assert '<span class="neg">n0t</span>' in html
     assert '<span class="neg">not</span>' in html
     assert "The negation “not” is kept." in html
+    assert 'class="drop"' not in html and 'class="add"' not in html
     # The pipeline's OCR/EDI conflicts are there too, with a suggestion to confirm.
     assert "CA-CA-88123-18" in html
     assert "Confirm suggested" in html
 
 
-def test_ocr_diff_sends_a_dropped_negation_to_a_person():
-    ref = SourceRef(label="Fax OCR", path="ocr_output.txt", anchor="documents/ocr-output")
+OCR_REF = SourceRef(label="Fax OCR", path="ocr_output.txt", anchor="documents/ocr-output")
+
+
+def test_ocr_diff_pairs_character_fixes_word_for_word():
     diff = panel.ocr_diff(
-        OcrCheck(label="note", raw="n0t c0nsistent", corrected="consistent", source=ref)
+        OcrCheck(label="note", raw="n0t c0nsistent", corrected="not consistent", source=OCR_REF)
+    )
+    assert diff.verdict.accepted
+    assert [(w.raw, w.corrected, w.negation) for w in diff.words] == [
+        ("n0t", "not", True),
+        ("c0nsistent", "consistent", False),
+    ]
+
+
+def test_ocr_diff_marks_a_dropped_negation_on_the_raw_side():
+    diff = panel.ocr_diff(
+        OcrCheck(label="note", raw="n0t c0nsistent", corrected="consistent", source=OCR_REF)
     )
     assert not diff.verdict.accepted
     assert diff.verdict.reason == "negation changed"
-    assert any(w.negation for w in diff.words)
+    assert [(w.raw, w.corrected, w.negation) for w in diff.words] == [
+        ("n0t", "", True),
+        ("c0nsistent", "consistent", False),
+    ]
+
+
+def test_ocr_diff_marks_an_added_negation_on_the_corrected_side():
+    diff = panel.ocr_diff(
+        OcrCheck(label="note", raw="c0nsistent", corrected="not consistent", source=OCR_REF)
+    )
+    assert not diff.verdict.accepted
+    assert diff.words[0] == OcrWord(raw="", corrected="not", negation=True)
+    assert (diff.words[1].raw, diff.words[1].corrected) == ("c0nsistent", "consistent")
 
 
 def test_4222_has_an_injury_timeline_and_marked_transcript_spans(client):
@@ -173,9 +199,26 @@ def test_breached_sla_is_shown_red(client):
     assert "review not needed" in html  # the calibration-sample footer note
 
 
-def test_sla_label_and_progress():
+@pytest.mark.parametrize(
+    ("left", "label", "used"),
+    [
+        (timedelta(hours=20), "20h left", 4 / 24),
+        (timedelta(hours=5, minutes=59), "5h left", 1 - (5 + 59 / 60) / 24),  # amber: under 6h
+        (timedelta(minutes=59, seconds=59), "59m left", None),  # never "60m left"
+        (timedelta(0), "Breached", 1.0),
+        (timedelta(minutes=-30), "Breached", 1.0),
+        (timedelta(hours=-6), "Breached 6h ago", 1.0),
+        (timedelta(hours=30), "30h left", 0.0),  # clamped
+    ],
+)
+def test_sla_label_counts_down_and_clamps(left, label, used):
     s = summary("IS-CLM-2025000300")
-    assert panel.sla_left(s, NOW) == ("20h left", pytest.approx(4 / 24))
+    now = s.header.sla_due_at - left
+    got_label, got_used = panel.sla_left(s, now)
+    assert got_label == label
+    assert 0.0 <= got_used <= 1.0
+    if used is not None:
+        assert got_used == pytest.approx(used)
 
 
 # --- Unknown claims and the correction log ---
@@ -206,6 +249,18 @@ def test_this_is_wrong_goes_to_the_correction_log(client):
     ]
     only = client.get("/api/corrections?claim=IS-CLM-2025002993").json()
     assert [e["item"] for e in only] == ["Policy number"]
+
+
+def test_correction_log_is_capped():
+    for i in range(panel.LOG_LIMIT + 5):
+        panel.log_correction(
+            CorrectionLogEntry(
+                claim_id="IS-CLM-2025000300", section="panel", action="flag", note=str(i), at=NOW
+            )
+        )
+    log = panel.corrections()
+    assert len(log) == panel.LOG_LIMIT
+    assert log[0].note == "5"
 
 
 def test_log_rejects_unknown_claims_and_actions(client):

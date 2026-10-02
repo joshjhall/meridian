@@ -115,28 +115,30 @@
     </details>
   </section>
 {% endmacro %}
-{% macro ocr_view(diff, claim_id) %}
+{% macro ocr_word(text, w) -%}
+  {%- set kind = "neg" if w.negation else ("drop" if not w.corrected else ("add" if not w.raw else ("chg" if w.raw != w.corrected else ""))) -%}
+  <span {% if kind %}class="{{ kind }}"{% endif %}>{{ text }}</span>
+{%- endmacro %}
+{% macro ocr_view(diff) %}
   <div class="ocr">
     <div class="ocr__col">
       <p class="ocr__head">Raw OCR</p>
       <p class="ocr__text ocr__text--raw">
-        {% for w in diff.words %}
-          <span {% if w.raw != w.corrected %}class="{{ 'neg' if w.negation else 'chg' }}"{% endif %}>{{ w.raw }}</span>
-        {% endfor %}
+        {% for w in diff.words if w.raw %}{{ ocr_word(w.raw, w) }}{{ " " if not loop.last }}{% endfor %}
       </p>
     </div>
     <div class="ocr__col">
       <p class="ocr__head">Corrected</p>
       <p class="ocr__text">
-        {% for w in diff.words %}
-          <span {% if w.negation %}class="neg"{% elif w.raw != w.corrected %}class="chg"{% endif %}>{{ w.corrected or w.raw }}</span>
-        {% endfor %}
+        {% for w in diff.words if w.corrected %}{{ ocr_word(w.corrected, w) }}{{ " " if not loop.last }}{% endfor %}
       </p>
     </div>
   </div>
   <p class="hint">
+    {% set negations = diff.words | selectattr("negation") | list %}
     {% if diff.verdict.accepted %}
-      Characters changed, words did not. The negation “not” is kept.
+      Characters changed, words did not.
+      {% if negations %}The negation “{{ negations[0].corrected }}” is kept.{% endif %}
     {% else %}
       Words changed ({{ diff.verdict.reason }}): this goes to a person, not the record.
     {% endif %}
@@ -159,7 +161,7 @@
               {{ item.label }}
             </p>
             {% if item.ocr_diff %}
-              {{ ocr_view(item.ocr_diff, cid) }}
+              {{ ocr_view(item.ocr_diff) }}
             {% elif item.values %}
               <ul class="values">
                 {% for v in item.values %}<li>{{ v }}</li>{% endfor %}

@@ -425,6 +425,16 @@
   text-decoration: underline dotted var(--muted);
 }
 
+.ocr .drop {
+  text-decoration: line-through;
+  color: var(--late);
+}
+
+.ocr .add {
+  text-decoration: underline;
+  color: var(--late);
+}
+
 .ocr .neg {
   padding: 0 0.125rem;
   background: var(--caution);

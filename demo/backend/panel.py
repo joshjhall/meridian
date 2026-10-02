@@ -10,8 +10,10 @@ The panel shows evidence for a person to judge. It never recommends approving or
 denying a claim, and nothing it does writes a decision to ClaimsPro.
 """
 
+import difflib
+from collections import deque
 from datetime import datetime
-from functools import cache
+from functools import cache, lru_cache
 
 from claimspro_page import SCREENS, documents, slugify
 
@@ -31,7 +33,7 @@ from models import (
     SourceRef,
 )
 from pipeline import PIPELINE_VERSION, PipelineResult, run_pipeline
-from pipeline.intake import check_correction, is_negation
+from pipeline.intake import check_correction, fold, is_negation
 
 PANEL_DATA = DATA / "panel"
 
@@ -54,28 +56,36 @@ def load_content(claim_id: str) -> PanelContent | None:
     return PanelContent.model_validate_json(path.read_text())
 
 
-@cache
+@lru_cache(maxsize=2)
 def _pipeline(now: datetime) -> PipelineResult:
     # No sim: the panel reads the routing outcome; it never writes to ClaimsPro.
+    # Kept for the latest clock times only; callers must treat the result as read-only.
     claims = [f.claim for f in load_claim_fixtures().values()]
     return run_pipeline(claims, load_roster(), now=now)
 
 
 def ocr_diff(check: OcrCheck) -> OcrDiff:
-    """Pair raw and corrected words; the guard decides whether a person must look.
+    """Align raw and corrected words; the guard decides whether a person must look.
 
-    Only character-level corrections pair up word for word. If the guard finds a
-    dropped or added word, the diff still shows both texts and the verdict says so.
+    Words align on the guard's own folding, so "n0t" pairs with "not". A word only on
+    the raw side was dropped (corrected is ""); one only on the corrected side was
+    added (raw is ""). A negation is marked on whichever side holds it.
     """
     raw, corrected = check.raw.split(), check.corrected.split()
+    matcher = difflib.SequenceMatcher(
+        a=[fold(w) for w in raw], b=[fold(w) for w in corrected], autojunk=False
+    )
+    words: list[OcrWord] = []
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op == "equal":
+            words += [
+                OcrWord(raw=r, corrected=c, negation=is_negation(c))
+                for r, c in zip(raw[i1:i2], corrected[j1:j2], strict=True)
+            ]
+            continue
+        words += [OcrWord(raw=r, corrected="", negation=is_negation(r)) for r in raw[i1:i2]]
+        words += [OcrWord(raw="", corrected=c, negation=is_negation(c)) for c in corrected[j1:j2]]
     verdict = check_correction(check.raw, check.corrected)
-    if len(raw) != len(corrected):
-        words = [OcrWord(raw=w, corrected="", negation=is_negation(w)) for w in raw]
-    else:
-        words = [
-            OcrWord(raw=r, corrected=c, negation=is_negation(c))
-            for r, c in zip(raw, corrected, strict=True)
-        ]
     return OcrDiff(source=check.source, words=words, verdict=verdict)
 
 
@@ -159,23 +169,28 @@ def build_summary(claim_id: str, now: datetime) -> PanelSummary | None:
 
 
 def sla_left(summary: PanelSummary, now: datetime) -> tuple[str, float]:
-    """Time left on the 24h SLA as a label, and the fraction of the window used (0-1)."""
+    """Time left on the 24h SLA as a label, and the fraction of the window used (0-1).
+
+    The label rounds down, like a countdown: 5h59m reads "5h left", so it never shows
+    more time than remains and agrees with the amber threshold (under 6h).
+    """
     left = summary.header.sla_due_at - now
-    hours = left.total_seconds() / 3600
-    used = min(max(1 - hours / 24, 0.0), 1.0)
-    if hours <= 0:
-        over = -hours
-        return (f"Breached {over:.0f}h ago" if over >= 1 else "Breached"), used
-    if hours < 1:
-        return f"{hours * 60:.0f}m left", used
-    return f"{hours:.0f}h left", used
+    seconds = left.total_seconds()
+    used = min(max(1 - seconds / (24 * 3600), 0.0), 1.0)
+    if seconds <= 0:
+        over = int(-seconds // 3600)
+        return (f"Breached {over}h ago" if over >= 1 else "Breached"), used
+    if seconds < 3600:
+        return f"{int(seconds // 60)}m left", used
+    return f"{int(seconds // 3600)}h left", used
 
 
 # --- Correction log ---
-# In memory, like the rest of the demo's state. The admin view (#9) reads it; a real
-# deployment would persist it with the audit record.
+# In memory and capped, like the rest of the demo's state. The admin view (#9) reads
+# it; a real deployment would authenticate it and persist it with the audit record.
 
-_log: list[CorrectionLogEntry] = []
+LOG_LIMIT = 1000
+_log: deque[CorrectionLogEntry] = deque(maxlen=LOG_LIMIT)
 
 
 def log_correction(entry: CorrectionLogEntry) -> CorrectionLogEntry:
