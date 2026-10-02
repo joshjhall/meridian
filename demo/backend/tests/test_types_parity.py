@@ -42,3 +42,10 @@ def test_interface_fields_match(name):
 def test_enum_values_match(name):
     ts_values = set(re.findall(r'=\s*"([^"]+)"', ts_block("enum", name)))
     assert ts_values == {m.value for m in ENUMS[name]}
+
+
+def test_ts_constants_match():
+    assert re.search(rf"export const SLA_HOURS = {models.SLA_HOURS};", SOURCE)
+    labels = dict(re.findall(r'\[Tier\.(\w+)\]:\s*"([^"]+)"', ts_block("const", "TIER_LABELS: Record<Tier, string> =")))
+    assert labels == {t.name: label for t, label in models.TIER_LABELS.items()}
+    assert set(models.TIER_LABELS) == set(models.Tier)

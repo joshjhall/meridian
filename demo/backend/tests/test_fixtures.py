@@ -40,8 +40,9 @@ def test_fixture_sources_exist():
 
 
 def test_sla_is_24h_from_receipt():
-    claim = load_claim_fixtures()["IS-CLM-2025004222"].claim
-    assert (claim.sla_due_at - claim.received_at).total_seconds() == 24 * 3600
+    for fixture in load_claim_fixtures().values():
+        claim = fixture.claim
+        assert (claim.sla_due_at - claim.received_at).total_seconds() == 24 * 3600
 
 
 def test_roster_shape():
@@ -76,6 +77,7 @@ def test_roster_is_reproducible_from_seed():
 def test_api_serves_claims():
     client = TestClient(app)
     assert client.get("/api/health").json() == {"status": "ok"}
+    assert {c["claim_id"] for c in client.get("/api/claims").json()} == SIX
     body = client.get("/api/claims/IS-CLM-2025004222").json()
     assert body["claim_type"] == "Bodily Injury"
     assert body["sla_due_at"].startswith("2025-09-26T10:00")
