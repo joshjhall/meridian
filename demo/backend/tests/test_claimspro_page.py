@@ -96,6 +96,21 @@ def test_custom_fields_read_not_yet_saved_while_a_write_is_pending(client, sim):
     assert "T1 standard" not in fields
 
 
+def test_custom_fields_for_a_never_written_claim():
+    claim = load_claim_fixtures()[SIX[0]].claim
+    rows = custom_field_rows(claim, NOW)
+    assert [label for label, _ in rows] == [
+        "Skills",
+        "Tier",
+        "Review lane",
+        "Routing reason",
+        "SLA due",
+        "Brief status",
+        "Last save",
+    ]
+    assert dict(rows)["Last save"] == EMPTY
+
+
 def test_custom_fields_flag_a_failed_save_and_a_breached_sla():
     claim = load_claim_fixtures()["IS-CLM-2025000375"].claim.model_copy(
         update={"write_status": "write_failed"}
