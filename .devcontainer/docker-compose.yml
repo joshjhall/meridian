@@ -36,6 +36,11 @@ services:
       # first-startup hook, so the index lives on this volume (out of the git
       # tree, droppable to force a clean re-index).
       - meridian-codegraph:/cache/codegraph
+      # Python venvs at /cache/venvs/<checkout>: `just install` points each
+      # checkout's demo/backend/.venv here. They stay off the case-insensitive
+      # workspace mount (where a deleted venv can leave an undeletable phantom
+      # `Lib`) and survive rebuilds. Drop the volume to rebuild every venv.
+      - meridian-venvs:/cache/venvs
     tmpfs:
       # 1Password cache is kept in memory. No uid=/gid=: paths under /cache are
       # aligned to the runtime user by fix_cache_permissions.
@@ -71,3 +76,6 @@ volumes:
   # codegraph index at /cache/codegraph; survives rebuilds. The /cache prefix
   # is load-bearing: fix_cache_permissions aligns it to the runtime user.
   meridian-codegraph:
+  # Per-checkout Python venvs at /cache/venvs; safe to drop, `just install`
+  # recreates them.
+  meridian-venvs:

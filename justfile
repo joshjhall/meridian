@@ -10,9 +10,34 @@ default:
     @just --list
 
 # Create or update the backend venv from uv.lock
-[working-directory('demo/backend')]
-install:
-    uv sync
+install: venv-link
+    cd {{ backend }} && uv sync
+
+# In the devcontainer, link demo/backend/.venv to /cache/venvs/<checkout>
+# (meridian, or meridian--issue-N for a worktree) so venvs stay off the
+# case-insensitive workspace mount. Elsewhere (CI) the venv stays in-tree.
+[private]
+venv-link:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -d /cache/venvs ] || exit 0
+    # A linked worktree's git dir differs from the shared common dir.
+    name="meridian"
+    if [ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ]; then
+        name="meridian--$(basename "$(git rev-parse --show-toplevel)")"
+    fi
+    target="/cache/venvs/$name"
+    link="{{ backend }}/.venv"
+    [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && exit 0
+    if [ -e "$link" ] || [ -L "$link" ]; then
+        rm -rf "$link" || {
+            echo "venv-link: could not remove $link; run: unwedge-worktree $link" >&2
+            exit 1
+        }
+    fi
+    mkdir -p "$target"
+    ln -s "$target" "$link"
+    echo "venv-link: $link -> $target"
 
 # API and pages on http://localhost:8000, rebuilding CSS as templates change
 [working-directory('demo/backend')]
@@ -123,7 +148,18 @@ fmt-sh:
 
 # Remove the venv and Python caches; `just install` rebuilds
 clean:
-    rm -rf {{ backend }}/.venv {{ backend }}/.pytest_cache {{ backend }}/.ruff_cache
+    #!/usr/bin/env bash
+    set -euo pipefail
+    venv="{{ backend }}/.venv"
+    # A linked venv (devcontainer): empty the target on /cache/venvs and keep
+    # the link. An in-tree venv (CI): remove it.
+    if [ -L "$venv" ]; then
+        target="$(readlink "$venv")"
+        find "$target" -mindepth 1 -delete
+    else
+        rm -rf "$venv"
+    fi
+    rm -rf {{ backend }}/.pytest_cache {{ backend }}/.ruff_cache
     find demo -type d -name __pycache__ -prune -exec rm -rf {} +
 
 # Clean, reinstall, and run the tests

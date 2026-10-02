@@ -13,10 +13,12 @@ just test   # pytest: fixtures, roster, API, pages (extra args go to pytest)
 just css    # rebuild Tailwind utilities (just dev watches)
 just data   # regenerate claim fixtures and roster
 just lint   # every linter, no changes (just fmt applies fixes; just lint-py etc. run one)
-just clean  # remove .venv and caches (just reset also reinstalls and tests)
+just clean  # empty the venv and remove caches (just reset also reinstalls and tests)
 ```
 
 Run from anywhere in the repo; `just` lists every recipe (the justfile is at the repo root).
+
+In the devcontainer, `backend/.venv` is a symlink to `/cache/venvs/<checkout>` on the `meridian-venvs` volume: `meridian` for the main checkout, `meridian--<worktree>` for a git worktree. That keeps venvs off the case-insensitive workspace mount and lets them survive rebuilds. To rebuild every venv, drop the volume (`docker volume rm meridian-venvs`) and run `just install`. Outside the devcontainer (CI included), `.venv` is an ordinary in-tree directory.
 
 ### Linting
 
