@@ -519,6 +519,15 @@
         "intake"
       ],
       "notes": "Field extractor retuned on adjuster-confirmed values."
+    },
+    {
+      "week": 20,
+      "version": "signals-prompt v1.3",
+      "kind": "release",
+      "charts": [
+        "routing"
+      ],
+      "notes": "Reworked complexity-signals prompt after the v1.2 rollback: quotes must match the masked claim text and output is schema-checked, so unsupported injury flags are dropped. Passed evaluation before release."
     }
   ]
 }
