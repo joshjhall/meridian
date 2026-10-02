@@ -483,11 +483,13 @@ def test_runner_clock_runs_on_the_real_loop():
         r, nxt = _gap_replay()
         hours = (nxt.at - r.sim_now) / timedelta(hours=1)
         start = r.sim_now
-        r.set(speed=hours / 0.6)
+        r.set(speed=hours / 1.5)
         r.start()
-        await asyncio.sleep(0.3)
+        # Sample the first move rather than after a fixed sleep: a tick is 0.25 s of
+        # a 1.5 s gap, so even a stalled runner sees the clock between the two events.
+        await asyncio.wait_for(_until(lambda: r.sim_now > start), 3)
         moved = r.sim_now
-        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 3)
+        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 5)
         await r.stop()
         return start, moved, nxt
 
