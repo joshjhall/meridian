@@ -31,13 +31,23 @@ import os
 import re
 import time
 from typing import Any
-from urllib.parse import urlsplit
 
 import anthropic
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import ValidationError
 
 from fixtures import DATA, REPO
-from models import Claim, SignalItem, SignalKind, Signals, Skill, Tier
+from models import (
+    MAX_QUOTE,
+    MAX_SIGNALS,
+    Claim,
+    LlmSignal,
+    LlmSignalsResponse,
+    Recorded,
+    SignalItem,
+    Signals,
+)
+
+__all__ = ["LlmSignal", "LlmSignalsResponse", "Recorded", "from_recorded", "run_live"]
 
 log = logging.getLogger(__name__)
 
@@ -51,45 +61,6 @@ MIN_QUOTE_CHARS = 12
 
 
 # --- What the model may return ---
-
-
-# Size limits are stated to the model and enforced here by trimming, not by rejecting
-# the response: the schema and quote check carry the safety, these only bound size.
-# (The SDK moves length constraints into descriptions, so the model isn't held to them.)
-MAX_QUOTE = 300
-MAX_SIGNALS = 12
-
-
-class LlmSignal(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    kind: SignalKind
-    skill: Skill | None = Field(
-        default=None, description="Only for kind=secondary_skill: the second skill needed."
-    )
-    quote: str = Field(
-        description=f"Verbatim passage from the source, copied exactly; at most {MAX_QUOTE} chars."
-    )
-    source: str = Field(description="File name of the document the quote is from.")
-    confidence: float = Field(ge=0, le=1)
-
-
-class LlmSignalsResponse(BaseModel):
-    """No approve, deny or recommendation field: by construction, the model can't decide."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    signals: list[LlmSignal] = Field(description=f"At most {MAX_SIGNALS} signals.")
-    suggested_tier: Tier | None = Field(
-        default=None, description="A higher handling tier, if the text shows more complexity."
-    )
-
-
-class Recorded(BaseModel):
-    """A response saved from an earlier run: what replay and the fallback use."""
-
-    model: str
-    response: LlmSignalsResponse
 
 
 SYSTEM = """You read commercial auto insurance claim documents for complexity signals \
@@ -431,10 +402,12 @@ def base_url_host() -> str:
     Host and port only: credentials embedded in the URL never reach a log, an audit
     record or a response.
     """
-    netloc = urlsplit(os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL).netloc
-    # Drop "user:token@"; keep the host exactly as written (IPv6 brackets, any port).
-    # Never parses the port, so a malformed URL can't turn a fallback into a crash.
-    return netloc.rpartition("@")[2]
+    url = os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL
+    # Userinfo always comes before the host, so whatever follows the LAST "@" can't
+    # contain it, even when an unescaped "/" in a token would fool a URL parser.
+    # Never parses the port either: a malformed URL can't turn a fallback into a crash.
+    rest = url.partition("://")[2] or url
+    return re.split(r"[/?#]", rest.rpartition("@")[2], maxsplit=1)[0]
 
 
 def live_available() -> bool:

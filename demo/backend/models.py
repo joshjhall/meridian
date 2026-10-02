@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 SLA_HOURS = 24
 SLA_AT_RISK_HOURS = 6  # amber under 6h left (panel_examples.md, Header)
@@ -252,6 +252,47 @@ class SignalItem(BaseModel):
     source: str
     confidence: float = Field(ge=0, le=1)
     verified: bool = False
+
+
+# What the complexity step's LLM may return (#4). No approve, deny or recommendation
+# field anywhere. Size limits are stated to the model and enforced by trimming in
+# pipeline/llm_signals.py rather than by rejecting the response: the schema and the
+# quote check carry the safety, these only bound size. (The SDK moves length
+# constraints into descriptions, so the model isn't held to them.)
+MAX_QUOTE = 300
+MAX_SIGNALS = 12
+
+
+class LlmSignal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: SignalKind
+    skill: Skill | None = Field(
+        default=None, description="Only for kind=secondary_skill: the second skill needed."
+    )
+    quote: str = Field(
+        description=f"Verbatim passage from the source, copied exactly; at most {MAX_QUOTE} chars."
+    )
+    source: str = Field(description="File name of the document the quote is from.")
+    confidence: float = Field(ge=0, le=1)
+
+
+class LlmSignalsResponse(BaseModel):
+    """No approve, deny or recommendation field: by construction, the model can't decide."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    signals: list[LlmSignal] = Field(description=f"At most {MAX_SIGNALS} signals.")
+    suggested_tier: Tier | None = Field(
+        default=None, description="A higher handling tier, if the text shows more complexity."
+    )
+
+
+class Recorded(BaseModel):
+    """A response saved from an earlier run: what replay and the fallback use."""
+
+    model: str
+    response: LlmSignalsResponse
 
 
 class Signals(BaseModel):

@@ -702,6 +702,9 @@ def test_endpoint_json_carries_a_full_audit_record(monkeypatch):
         ("https://bifrost.stoic.studio/anthropic", "bifrost.stoic.studio"),
         ("http://user:s3cret@[::1]:8080/x", "[::1]:8080"),
         ("http://user:s3cret@gw:notaport/x", "gw:notaport"),
+        ("https://user:s3cret/x@gateway.example/anthropic", "gateway.example"),
+        ("https://user:s3cret?x#y@gateway.example", "gateway.example"),
+        ("gateway.example:8080", "gateway.example:8080"),
     ],
 )
 def test_the_recorded_host_never_carries_credentials(monkeypatch, url, host):
