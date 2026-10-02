@@ -17,8 +17,6 @@ TEMPLATES = BACKEND / "templates"
 STATIC = BACKEND / "static"
 VENDOR = STATIC / "vendor"
 
-# src/href values only: inline SVGs carry xmlns="http://www.w3.org/2000/svg",
-# a namespace name the browser never fetches.
 ASSET_URL = re.compile(r"""\b(?:src|href)\s*=\s*["']([^"']+)["']""")
 REMOTE = re.compile(r"^(?:https?:)?//(?!localhost\b|127\.0\.0\.1\b)", re.IGNORECASE)
 # Our own CSS/JS: url()/@import targets and quoted string literals. Comments
@@ -27,6 +25,9 @@ STATIC_URL = re.compile(
     r"""url\(\s*["']?([^"')\s]+)|@import\s+["']([^"']+)|["'`]((?:https?:)?//[^"'`]+)"""
 )
 COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+ABSOLUTE_URL = re.compile(r"""https?://(?!localhost\b|127\.0\.0\.1\b)[^\s"'`<>)]+""", re.IGNORECASE)
+# Namespace names in inline SVG are identifiers, never fetched.
+XML_NAMESPACES = {"http://www.w3.org/2000/svg", "http://www.w3.org/1999/xlink"}
 
 # Upstream builds, byte-for-byte; digests recorded in static/vendor/README.md.
 VENDORED = {
@@ -50,12 +51,14 @@ def vendored_urls(html: str) -> list[str]:
 
 
 def test_no_template_references_a_remote_asset():
-    remote = [
-        f"{path.relative_to(TEMPLATES)}: {url}"
-        for path in sorted(TEMPLATES.rglob("*.html*"))
-        for url in ASSET_URL.findall(path.read_text(encoding="utf-8"))
-        if REMOTE.match(url)
-    ]
+    remote = []
+    for path in sorted(TEMPLATES.rglob("*.html*")):
+        text = path.read_text(encoding="utf-8")
+        # Protocol-relative //host URLs in attributes, plus any absolute URL
+        # anywhere: inline <style>/<script>, srcset, hx-get and the like.
+        urls = [u for u in ASSET_URL.findall(text) if u.startswith("//") and REMOTE.match(u)]
+        urls += [u for u in ABSOLUTE_URL.findall(text) if u not in XML_NAMESPACES]
+        remote += [f"{path.relative_to(TEMPLATES)}: {url}" for url in urls]
     assert remote == []
 
 
