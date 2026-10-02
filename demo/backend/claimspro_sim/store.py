@@ -1,11 +1,16 @@
 """The simulator's system of record: claims, notes and applied idempotency keys."""
 
+import logging
 import threading
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 
+from pydantic import ValidationError
+
 from fixtures import claim_from_row, extract_rows, load_claim_fixtures
 from models import Claim, ClaimNote, ClaimWriteStatus
+
+log = logging.getLogger(__name__)
 
 
 def seed_claims() -> list[Claim]:
@@ -16,7 +21,22 @@ def seed_claims() -> list[Claim]:
 
 
 def _open_extract_claims() -> Iterable[Claim]:
-    return (claim_from_row(r) for r in extract_rows() if r["disposition"] == "Pending Review")
+    """A malformed row is skipped and logged, never allowed to stop the simulator starting."""
+    for row in extract_rows():
+        if row["disposition"] != "Pending Review":
+            continue
+        try:
+            yield claim_from_row(row)
+        except ValidationError as e:
+            errors = "; ".join(
+                f"{'.'.join(str(p) for p in err['loc']) or 'record'}: {err['msg']}"
+                for err in e.errors()
+            )
+            log.warning(
+                "Skipped malformed extract row %s: %s",
+                row.get("claim_id") or "<no claim_id>",
+                errors,
+            )
 
 
 class IdempotencyKeyConflict(ValueError):
