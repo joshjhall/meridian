@@ -20,8 +20,8 @@
     </script>
     {% block head %}{% endblock %}
   </head>
-  <body>
-    <main class="mx-auto max-w-5xl p-6">
+  <body{% block body_attrs %}{% endblock %}>
+    <main class="{% block main_class %}mx-auto max-w-5xl p-6{% endblock %}">
       {% block content %}{% endblock %}
     </main>
   </body>

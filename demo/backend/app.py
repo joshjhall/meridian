@@ -4,16 +4,18 @@ Run: uv run uvicorn app:app --reload --port 8000
 """
 
 from pathlib import Path
+from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request
+import monitor
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from claimspro_sim.api import router as claimspro_router
 from fixtures import load_claim_fixtures, load_roster
-from models import Adjuster, Claim, Stage
+from models import EXCEPTION_LABELS, Adjuster, Claim
 
 HERE = Path(__file__).resolve().parent
 
@@ -69,9 +71,52 @@ def index(request: Request):
     return templates.TemplateResponse(request, "index.html")
 
 
+# --- Admin monitor (#6) ---
+
+Viewer = Literal["admin", "manager"]
+
+
+def render_card(view: monitor.ClaimView) -> str:
+    return templates.get_template("admin/_card.html").module.card(view)  # type: ignore[attr-defined]
+
+
 @app.get("/admin", response_class=HTMLResponse)
-def admin(request: Request):
-    return templates.TemplateResponse(request, "admin.html", {"stages": list(Stage)})
+def admin(request: Request, view: Viewer = "admin"):
+    return templates.TemplateResponse(
+        request,
+        "admin/monitor.html",
+        {
+            "viewer": view,
+            "lanes": monitor.LANES,
+            "stories": monitor.STORIES,
+            "pipeline_version": monitor.PIPELINE_VERSION,
+            # The replay runner (#5) will serve /api/events; point this at it then.
+            "events_url": "/admin/events",
+        },
+    )
+
+
+@app.get("/admin/events")
+def admin_events(
+    speed: float = Query(1.0, gt=0, le=100), limit: int | None = Query(None, ge=1)
+) -> StreamingResponse:
+    return StreamingResponse(
+        monitor.event_stream(render_card, speed=speed, limit=limit),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/admin/claims/{claim_id}/trace", response_class=HTMLResponse)
+def admin_trace(request: Request, claim_id: str):
+    view = monitor.replay().claims.get(claim_id)
+    if view is None:
+        raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
+    return templates.TemplateResponse(
+        request,
+        "admin/_trace.html",
+        {"view": view, "labels": EXCEPTION_LABELS},
+    )
 
 
 @app.get("/claimspro/{claim_id}", response_class=HTMLResponse)

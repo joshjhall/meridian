@@ -137,7 +137,7 @@ def test_cors_allows_only_extension_origins():
     ("path", "expected"),
     [
         ("/", "Meridian demo"),
-        ("/admin", "received → validated"),
+        ("/admin", "Claims pipeline"),
         ("/claimspro/IS-CLM-2025004222", "Bodily Injury"),
         ("/panel?claim=IS-CLM-2025004222", "IS-CLM-2025004222"),
     ],

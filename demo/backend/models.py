@@ -50,6 +50,25 @@ class Stage(StrEnum):
     EXCEPTION = "exception"
 
 
+class ExceptionReason(StrEnum):
+    """Why a claim failed safe into the exceptions lane to wait for a person."""
+
+    MISSING_FIELDS = "missing_fields"
+    OCR_CONFLICT = "ocr_conflict"
+    UNKNOWN_RULE = "unknown_rule"
+    FAILED_WRITE = "failed_write"
+    LLM_FALLBACK = "llm_fallback"
+
+
+EXCEPTION_LABELS: dict[ExceptionReason, str] = {
+    ExceptionReason.MISSING_FIELDS: "Missing fields",
+    ExceptionReason.OCR_CONFLICT: "OCR conflicts with EDI",
+    ExceptionReason.UNKNOWN_RULE: "No routing rule matched",
+    ExceptionReason.FAILED_WRITE: "ClaimsPro write failed",
+    ExceptionReason.LLM_FALLBACK: "LLM unavailable, fell back",
+}
+
+
 YesNo = Literal["Yes", "No"]
 IntakeChannel = Literal["E-Portal", "Phone", "Fax/EDI"]
 Complexity = Literal["Simple", "Moderate", "Complex"]
