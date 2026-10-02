@@ -18,3 +18,7 @@ extend-exclude = [
   # Vendored third-party builds (minified; see its README).
   "demo/backend/static/vendor/**",
 ]
+
+[default]
+# Subresource Integrity digests are base64; their substrings are not words.
+extend-ignore-re = ["sha384-[A-Za-z0-9+/=]{64}", "\"[A-Za-z0-9+/]{64}\""]

@@ -14,14 +14,35 @@ client = TestClient(app)
 
 BACKEND = Path(__file__).parents[1]
 TEMPLATES = BACKEND / "templates"
-VENDOR = BACKEND / "static" / "vendor"
+STATIC = BACKEND / "static"
+VENDOR = STATIC / "vendor"
 
 # src/href values only: inline SVGs carry xmlns="http://www.w3.org/2000/svg",
 # a namespace name the browser never fetches.
 ASSET_URL = re.compile(r"""\b(?:src|href)\s*=\s*["']([^"']+)["']""")
 REMOTE = re.compile(r"^(?:https?:)?//(?!localhost\b|127\.0\.0\.1\b)", re.IGNORECASE)
+# Our own CSS/JS: url()/@import targets and quoted string literals. Comments
+# (e.g. the Tailwind licence banner in app.css) are not fetched.
+STATIC_URL = re.compile(
+    r"""url\(\s*["']?([^"')\s]+)|@import\s+["']([^"']+)|["'`]((?:https?:)?//[^"'`]+)"""
+)
+COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+# Upstream builds, byte-for-byte; digests recorded in static/vendor/README.md.
+VENDORED = {
+    "basecoat/basecoat.cdn.min.css": (
+        "XWKdrxzE2X33lI8Q03C9fIbqdLWV11whVNycR2/3bMNJY73EEQOa7rmN+SeiSCor"
+    ),
+    "basecoat/all.min.js": "rD2ZCuReXV7nIneJcn1lsTn6yOv87YARLQyUsemVAxrYYHdy5hcAW8XZEQxx87Dj",
+    "htmx/htmx.min.js": "HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+",
+    "d3/d3.min.js": "CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i",
+}
 
 PAGES = ["/admin", "/admin/queues", "/panel"]
+
+
+def sha384(path: Path) -> str:
+    return "sha384-" + base64.b64encode(hashlib.sha384(path.read_bytes()).digest()).decode()
 
 
 def vendored_urls(html: str) -> list[str]:
@@ -32,8 +53,25 @@ def test_no_template_references_a_remote_asset():
     remote = [
         f"{path.relative_to(TEMPLATES)}: {url}"
         for path in sorted(TEMPLATES.rglob("*.html*"))
-        for url in ASSET_URL.findall(path.read_text())
+        for url in ASSET_URL.findall(path.read_text(encoding="utf-8"))
         if REMOTE.match(url)
+    ]
+    assert remote == []
+
+
+def test_no_own_static_file_references_a_remote_asset():
+    own = [
+        p
+        for p in sorted(STATIC.rglob("*"))
+        if p.suffix in {".css", ".js"} and VENDOR not in p.parents
+    ]
+    assert own
+    remote = [
+        f"{path.relative_to(STATIC)}: {url}"
+        for path in own
+        for match in STATIC_URL.findall(COMMENT.sub("", path.read_text(encoding="utf-8")))
+        for url in match
+        if url and REMOTE.match(url) and "www.w3.org/2000/svg" not in url
     ]
     assert remote == []
 
@@ -63,23 +101,28 @@ def test_admin_loads_the_vendored_d3():
     ],
 )
 def test_vendored_builds_are_the_pinned_versions(path, marker):
-    assert marker in (VENDOR / path).read_text()
+    assert marker in (VENDOR / path).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(("path", "digest"), VENDORED.items())
+def test_vendored_files_match_their_recorded_digests(path, digest):
+    assert sha384(VENDOR / path) == f"sha384-{digest}"
+    assert f"sha384-{digest}" in (VENDOR / "README.md").read_text(encoding="utf-8")
 
 
 def test_vendor_readme_records_the_pinned_versions():
-    readme = (VENDOR / "README.md").read_text()
+    readme = (VENDOR / "README.md").read_text(encoding="utf-8")
     for pin in ("basecoat-css@1.0.2", "htmx.org@2.0.4", "d3@7.9.0"):
         assert pin in readme
 
 
 @pytest.mark.parametrize("licence", ["basecoat/LICENSE.md", "htmx/LICENSE", "d3/LICENSE"])
 def test_licences_ship_with_the_vendored_packages(licence):
-    assert (VENDOR / licence).read_text().strip()
+    assert (VENDOR / licence).read_text(encoding="utf-8").strip()
 
 
 def test_d3_integrity_matches_the_local_file():
-    template = (TEMPLATES / "admin" / "monitor.html").read_text()
+    template = (TEMPLATES / "admin" / "monitor.html").read_text(encoding="utf-8")
     pinned = re.search(r'integrity="(sha384-[^"]+)"', template)
     assert pinned is not None
-    digest = hashlib.sha384((VENDOR / "d3" / "d3.min.js").read_bytes()).digest()
-    assert pinned.group(1) == "sha384-" + base64.b64encode(digest).decode()
+    assert pinned.group(1) == sha384(VENDOR / "d3" / "d3.min.js")

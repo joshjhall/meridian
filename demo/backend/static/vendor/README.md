@@ -9,4 +9,11 @@ Self-hosted copies of the libraries the demo pages load, so the demo runs with n
 | `htmx/htmx.min.js` | htmx.org | 2.0.4 | <https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js> | 0BSD, `htmx/LICENSE` |
 | `d3/d3.min.js` | d3 | 7.9.0 | <https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js> | ISC, `d3/LICENSE` |
 
-`admin/monitor.html` keeps a Subresource Integrity hash on `d3.min.js`; `tests/test_assets.py` checks it still matches the local file.
+SHA-384 digests of the vendored files. `tests/test_assets.py` checks each file against its digest, and checks that the Subresource Integrity hash `admin/monitor.html` keeps on `d3.min.js` still matches:
+
+| File | SHA-384 |
+| --- | --- |
+| `basecoat/basecoat.cdn.min.css` | `sha384-XWKdrxzE2X33lI8Q03C9fIbqdLWV11whVNycR2/3bMNJY73EEQOa7rmN+SeiSCor` |
+| `basecoat/all.min.js` | `sha384-rD2ZCuReXV7nIneJcn1lsTn6yOv87YARLQyUsemVAxrYYHdy5hcAW8XZEQxx87Dj` |
+| `htmx/htmx.min.js` | `sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+` |
+| `d3/d3.min.js` | `sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i` |
