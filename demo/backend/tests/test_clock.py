@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -49,6 +49,12 @@ def test_reset_restores_demo_start():
     clock.advance(timedelta(days=3))
     clock.reset()
     assert clock.now() == clock.DEMO_START
+
+
+def test_reset_can_pin_another_instant():
+    at = datetime(2025, 10, 16, 9, 0)
+    clock.reset(at)
+    assert clock.now() == at
 
 
 def test_sla_state_boundaries():
