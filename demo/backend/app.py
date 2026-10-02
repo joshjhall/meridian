@@ -4,17 +4,19 @@ Run: uv run uvicorn app:app --reload --port 8000
 """
 
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 import claimspro_page
 import monitor
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import clock
+import queues
+from claimspro_sim import FaultConfig
 from claimspro_sim.api import Sim
 from claimspro_sim.api import router as claimspro_router
 from fixtures import load_claim_fixtures, load_history, load_roster
@@ -131,6 +133,90 @@ def admin_trace(request: Request, claim_id: str, upto: int | None = Query(None, 
         "admin/_trace.html",
         {"view": view, "labels": EXCEPTION_LABELS},
     )
+
+
+# --- Admin queues (#7) ---
+
+
+def require_admin(view: Viewer = "admin") -> None:
+    # A demo gate on the query string, not security: it stops the manager view
+    # from flipping faults, and marks where real access control goes.
+    if view != "admin":
+        raise HTTPException(status_code=403, detail="admin only")
+
+
+def transfer_runner() -> queues.Runner:
+    return queues.run_in_thread
+
+
+@app.get("/admin/queues", response_class=HTMLResponse)
+def admin_queues(request: Request, sim: Sim, view: Viewer = "admin"):
+    now = clock.now()
+    return templates.TemplateResponse(
+        request,
+        "admin/queues.html",
+        {
+            "viewer": view,
+            "groups": queues.board(sim, now),
+            "now": now,
+            "fault_on": queues.TRANSFER in sim.faults.configs(),
+            "format_left": queues.format_left,
+        },
+    )
+
+
+@app.post("/admin/queues/claims/{claim_id}/transfer", response_class=HTMLResponse)
+def admin_transfer(
+    request: Request,
+    sim: Sim,
+    run: Annotated[queues.Runner, Depends(transfer_runner)],
+    claim_id: str,
+    to: str,
+    view: Viewer = "admin",
+):
+    claim = sim.store.get(claim_id)
+    if claim is None:
+        raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
+    target = queues.roster_by_id().get(to)
+    reason = queues.block_reason(claim, target)
+    if reason is not None or target is None:
+        return templates.TemplateResponse(
+            request, "admin/_transfer_blocked.html", {"reason": reason}, status_code=409
+        )
+    key = queues.start_transfer(sim, claim_id, target.id, run)
+    return _write_status(request, sim, claim_id, key, view)
+
+
+@app.get("/admin/queues/claims/{claim_id}/write-status", response_class=HTMLResponse)
+def admin_write_status(request: Request, sim: Sim, claim_id: str, key: str, view: Viewer = "admin"):
+    return _write_status(request, sim, claim_id, key, view)
+
+
+def _write_status(request: Request, sim: Sim, claim_id: str, key: str, view: Viewer):
+    return templates.TemplateResponse(
+        request,
+        "admin/_write_status.html",
+        {
+            "claim_id": claim_id,
+            "key": key,
+            "viewer": view,
+            "progress": queues.write_progress(sim, claim_id, key),
+            "max_attempts": queues.MAX_ATTEMPTS,
+        },
+    )
+
+
+@app.post("/admin/queues/faults", dependencies=[Depends(require_admin)])
+def admin_queue_faults(sim: Sim, on: bool) -> dict[str, bool]:
+    # Only the transfer op: the demo shows a move failing, not the whole simulator.
+    if on:
+        sim.faults.set({queues.TRANSFER: FaultConfig(failure_rate=1.0)})
+    else:
+        configs = sim.faults.configs()
+        configs.pop(queues.TRANSFER, None)
+        sim.faults.reset()
+        sim.faults.set(configs)
+    return {"on": queues.TRANSFER in sim.faults.configs()}
 
 
 # --- Mock ClaimsPro (#10) ---

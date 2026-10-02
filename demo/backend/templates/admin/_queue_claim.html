@@ -1,0 +1,26 @@
+{# One claim in an adjuster's queue. The data- attributes let queues.js refuse a
+   drop the server would block; the server checks again either way. #}
+{% macro queue_claim(qc, format_left) %}
+  {% set c = qc.claim %}
+  <li draggable="true"
+      id="queue-claim-{{ c.claim_id }}"
+      class="cursor-grab rounded-md border p-2 text-xs"
+      data-claim="{{ c.claim_id }}"
+      data-regulated="{{ 'true' if qc.regulated else 'false' }}"
+      data-review-tier="{{ qc.review_tier }}">
+    <div class="flex items-center justify-between gap-2">
+      <span class="font-mono font-semibold">{{ c.claim_id }}</span>
+      <span class="{{ {'breached': 'badge-destructive', 'at_risk': 'badge', 'on_track': 'badge-outline'}[qc.sla] }} text-xs">
+        {{ format_left(qc.left) }}
+      </span>
+    </div>
+    <div class="text-muted-foreground mt-1 flex flex-wrap gap-x-2">
+      <span>{{ c.claim_type }}</span>
+      <span>{{ c.state }}</span>
+      <span>${{ "{:,.0f}".format(c.claim_amount_usd) }}</span>
+      {% if qc.tier %}<span>{{ qc.tier }}</span>{% endif %}
+      {% if qc.regulated %}<span class="font-semibold text-red-700">Regulated · {{ qc.review_tier }} review</span>{% endif %}
+    </div>
+    <div data-status></div>
+  </li>
+{% endmacro %}
