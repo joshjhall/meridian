@@ -2,13 +2,13 @@ import random
 from datetime import datetime
 
 import pytest
-from pipeline import PIPELINE_VERSION, run_pipeline
-from pipeline.rules import REVIEW_LANES
 
 import clock
 from claimspro_sim import ClaimsProSim, FaultConfig
 from fixtures import extract_rows, load_claim_fixtures, load_roster
 from models import Stage
+from pipeline import PIPELINE_VERSION, run_pipeline
+from pipeline.rules import REVIEW_LANES
 
 FIXTURES = load_claim_fixtures()
 NOW = clock.DEMO_START
@@ -145,3 +145,37 @@ def test_pipeline_events_drive_the_admin_monitor():
     assert board.claims["IS-CLM-2025999999"].reason_label == "Missing fields"
     assert board.claims["IS-CLM-2025000375"].facts["review_lane"] == "regulatory_review"
     assert board.claims["IS-CLM-2025002993"].facts["adjuster"].endswith(")")
+
+
+def test_bad_filed_date_stops_for_a_person_instead_of_crashing():
+    row = next(extract_rows()) | {"filed_date": "2025-13-45", "claim_id": "IS-CLM-2025999998"}
+    (routed,) = run_pipeline([row], load_roster(), now=NOW).routed
+    assert routed.stage == Stage.EXCEPTION
+    assert any(i.startswith(("filed_date:", "received_at:")) for i in routed.issues)
+
+
+def test_unreadable_intake_source_stops_for_a_person():
+    claim = FIXTURES["IS-CLM-2025002993"].claim.model_copy(
+        update={
+            "sources": ["sample_claims/gone/ocr_output.txt", "sample_claims/gone/edi_record.txt"]
+        }
+    )
+    (routed,) = run_pipeline([claim], load_roster(), now=NOW).routed
+    assert routed.stage == Stage.EXCEPTION
+    assert routed.issues[0].startswith("intake source unreadable")
+
+
+def test_duplicate_claim_id_in_a_batch_is_an_exception():
+    claim = FIXTURES["IS-CLM-2025000300"].claim
+    first, second = run_pipeline([claim, claim], load_roster(), now=NOW).routed
+    assert first.stage == Stage.WITH_ADJUSTER
+    assert second.stage == Stage.EXCEPTION
+    assert "duplicate claim ID" in second.issues[0]
+
+
+def test_runs_are_independent():
+    claims = [f.claim for f in FIXTURES.values()]
+    first = run_pipeline(claims, load_roster(), now=NOW)
+    second = run_pipeline(claims, load_roster(), now=NOW)
+    assert [r.adjuster_id for r in first.routed] == [r.adjuster_id for r in second.routed]
+    assert len(first.events) == len(second.events)

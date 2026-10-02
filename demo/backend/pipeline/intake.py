@@ -81,14 +81,24 @@ def check_correction(raw: str, corrected: str) -> CorrectionVerdict:
 # --- Fax OCR vs EDI cross-check ---
 
 
+class UnreadableSource(ValueError):
+    """A listed intake source can't be read; a person must look, not the pipeline."""
+
+
 def ocr_cross_check(claim: Claim) -> list[AttentionItem]:
-    """Conflicts between the fax OCR, the EDI record and the estimate's own arithmetic."""
+    """Conflicts between the fax OCR, the EDI record and the estimate's own arithmetic.
+
+    Raises UnreadableSource when a listed source is missing, so the claim stops for a person.
+    """
     ocr_path = _source(claim, "ocr_output.txt")
     edi_path = _source(claim, "edi_record.txt")
     if ocr_path is None or edi_path is None:
         return []
-    ocr = (REPO / ocr_path).read_text()
-    edi = _segments((REPO / edi_path).read_text())
+    try:
+        ocr = (REPO / ocr_path).read_text()
+        edi = _segments((REPO / edi_path).read_text())
+    except OSError as e:
+        raise UnreadableSource(f"intake source unreadable: {e.filename or e}") from e
     ocr_ref = SourceRef(label="Fax OCR", path=ocr_path)
     edi_ref = SourceRef(label="EDI 837", path=edi_path)
     items = [
@@ -211,8 +221,18 @@ def _date_of_loss(
     written = re.search(r"Written\s+([0-9O]{4}-[0-9O]{2}-[0-9O]{2})", ocr)
     if loss is None or written is None:
         return []
-    loss_date = datetime.strptime(loss[3], "%Y%m%d").date()
-    estimate_date = date.fromisoformat(written.group(1).replace("O", "0"))
+    try:
+        loss_date = datetime.strptime(loss[3], "%Y%m%d").date()
+        estimate_date = date.fromisoformat(written.group(1).replace("O", "0"))
+    except IndexError, ValueError:
+        return [
+            AttentionItem(
+                kind="conflict",
+                label="Date of loss unreadable; unverified",
+                sources=[ocr_ref, edi_ref],
+                values=[f"EDI: {'*'.join(loss)}", f"estimate: {written.group(1)}"],
+            )
+        ]
     if loss_date <= estimate_date:
         return []
     fax = re.search(r"D0?L\s+(\S+)", ocr)

@@ -149,7 +149,18 @@ def _validate(state: ClaimState) -> ClaimState:
 
 
 def _ocr_check(state: ClaimState) -> ClaimState:
-    found = intake.ocr_cross_check(state["claim"])
+    try:
+        found = intake.ocr_cross_check(state["claim"])
+    except intake.UnreadableSource as e:
+        issues = [str(e)]
+        event = _event(
+            state["claim"].claim_id,
+            Stage.EXCEPTION,
+            state["now"],
+            reason=ExceptionReason.MISSING_FIELDS.value,
+            issues=issues,
+        )
+        return {"issues": issues, "events": [event]}
     event = _event(
         state["claim"].claim_id,
         Stage.ENRICHED,
@@ -201,7 +212,7 @@ def build_enrich_graph():
     g.add_node("exception", _exception)
     g.add_edge(START, "validate")
     g.add_conditional_edges("validate", _fail_safe_to("ocr_check"), ["ocr_check", "exception"])
-    g.add_edge("ocr_check", "classify")
+    g.add_conditional_edges("ocr_check", _fail_safe_to("classify"), ["classify", "exception"])
     g.add_edge("classify", "regulatory")
     g.add_edge("regulatory", END)
     g.add_edge("exception", END)
@@ -331,15 +342,37 @@ def _exception_audit(state: ClaimState) -> AuditRecord:
 
 
 def build_pipeline(roster: Iterable[Adjuster], sim: ClaimsProSim | None = None):
+    """One pipeline run. Build a fresh one per run: adjuster loads and checkpoints are per run."""
     enrich_graph = build_enrich_graph()
     route_graph = build_route_graph(Loads(roster), sim)
 
-    def run(graph, state: ClaimState) -> ClaimState:
-        thread = {"configurable": {"thread_id": f"{id(graph)}:{_raw_id(state['raw'])}"}}
+    def run(graph, state: ClaimState, n: int) -> ClaimState:
+        # n is the claim's input position, so even a repeated claim ID gets its own thread.
+        thread = {"configurable": {"thread_id": f"{n}:{_raw_id(state['raw'])}"}}
         return graph.invoke(state, thread)  # type: ignore[return-value]
 
     def enrich(state: PipelineState) -> PipelineState:
-        enriched = [run(enrich_graph, {"raw": raw, "now": state["now"]}) for raw in state["inputs"]]
+        enriched = [
+            run(enrich_graph, {"raw": raw, "now": state["now"]}, n)
+            for n, raw in enumerate(state["inputs"])
+        ]
+        seen: set[str] = set()
+        for c in enriched:
+            claim_id = _raw_id(c["raw"])
+            if claim_id in seen and not c.get("issues"):
+                issue = f"duplicate claim ID {claim_id} in this batch"
+                c["issues"] = [issue]
+                c["events"] = [
+                    *c.get("events", []),
+                    _event(
+                        claim_id,
+                        Stage.EXCEPTION,
+                        state["now"],
+                        reason=ExceptionReason.MISSING_FIELDS.value,
+                        issues=[issue],
+                    ),
+                ]
+            seen.add(claim_id)
         events = [e for c in enriched for e in c.get("events", [])]
         return {"enriched": enriched, "events": events}
 
@@ -370,7 +403,7 @@ def build_pipeline(roster: Iterable[Adjuster], sim: ClaimsProSim | None = None):
         results: list[Routed] = []
         events: list[PipelineEvent] = []
         for position, c in enumerate(state["queue"], start=1):
-            done = run(route_graph, {**c, "events": []})
+            done = run(route_graph, {**c, "events": []}, position)
             events += done.get("events", [])
             results.append(_routed(done, position))
         for c in state["enriched"]:

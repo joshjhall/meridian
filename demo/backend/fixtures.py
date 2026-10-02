@@ -43,5 +43,8 @@ def extract_rows() -> Iterator[dict[str, str | None]]:
 def claim_from_row(row: dict[str, str | None]) -> Claim:
     """The extract has no receipt time, so a claim counts as received at the start of its day."""
     filed = row.get("filed_date")
-    received = datetime.fromisoformat(filed) if filed else None
+    try:
+        received = datetime.fromisoformat(filed) if filed else None
+    except ValueError:
+        received = None  # Claim validation then names filed_date and received_at
     return Claim.model_validate({**row, "received_at": received})

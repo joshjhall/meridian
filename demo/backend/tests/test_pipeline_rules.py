@@ -1,8 +1,8 @@
 import pytest
-from pipeline import rules
 
 from fixtures import load_claim_fixtures
 from models import AttentionItem, Signals, Tier
+from pipeline import rules
 
 FIXTURES = load_claim_fixtures()
 

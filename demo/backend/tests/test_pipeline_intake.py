@@ -1,6 +1,5 @@
-from pipeline.intake import check_correction, ocr_cross_check, validate
-
 from fixtures import load_claim_fixtures
+from pipeline.intake import check_correction, ocr_cross_check, validate
 
 CLAIM_2993 = load_claim_fixtures()["IS-CLM-2025002993"].claim
 
