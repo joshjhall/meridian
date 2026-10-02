@@ -31,6 +31,7 @@ import os
 import re
 import time
 from typing import Any
+from urllib.parse import urlsplit
 
 import anthropic
 from pydantic import ValidationError
@@ -55,6 +56,7 @@ RECORDED_DIR = DATA / "recorded"
 SAMPLES = (REPO / "sample_claims").resolve()
 DEFAULT_MODEL = "claude-sonnet-5-5"
 DEFAULT_BASE_URL = "https://api.anthropic.com"
+AMBIGUOUS_HOST = "[host withheld: ambiguous URL]"
 TIMEOUT_S = 20.0
 # Shorter than this and a "quote" matches almost anything.
 MIN_QUOTE_CHARS = 12
@@ -403,11 +405,15 @@ def base_url_host() -> str:
     record or a response.
     """
     url = os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL
-    # Userinfo always comes before the host, so whatever follows the LAST "@" can't
-    # contain it, even when an unescaped "/" in a token would fool a URL parser.
-    # Never parses the port either: a malformed URL can't turn a fallback into a crash.
-    rest = url.partition("://")[2] or url
-    return re.split(r"[/?#]", rest.rpartition("@")[2], maxsplit=1)[0]
+    netloc = urlsplit(url if "://" in url else f"//{url}").netloc
+    if "@" in netloc:
+        return netloc.rpartition("@")[2]  # well-formed userinfo: drop it
+    if "@" in url:
+        # An "@" past the parsed host is either in the path or in a credential with an
+        # unescaped "/", "?" or "#" that cut the host short. The two can't be told
+        # apart, so record neither: never a credential, never a wrong host.
+        return AMBIGUOUS_HOST
+    return netloc
 
 
 def live_available() -> bool:
