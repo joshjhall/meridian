@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 
 import claimspro_page
 import monitor
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -138,9 +138,21 @@ def admin_trace(request: Request, claim_id: str, upto: int | None = Query(None, 
 # --- Admin queues (#7) ---
 
 
-def require_admin(view: Viewer = "admin") -> None:
+# The board's own script sends this on every POST. A cross-site form can't set a
+# custom header, and a cross-site fetch that does fails the CORS preflight (only
+# the side panel's extension origin is allowed), so it blocks CSRF on these routes.
+BOARD_HEADER = "X-Meridian-Board"
+
+
+def require_board_request(x_meridian_board: Annotated[str | None, Header()] = None) -> None:
+    if x_meridian_board != "1":
+        raise HTTPException(status_code=403, detail=f"missing {BOARD_HEADER} header")
+
+
+def require_admin(view: Viewer | None = None) -> None:
     # A demo gate on the query string, not security: it stops the manager view
-    # from flipping faults, and marks where real access control goes.
+    # from flipping faults, and marks where real access control goes. No view
+    # means no admin.
     if view != "admin":
         raise HTTPException(status_code=403, detail="admin only")
 
@@ -165,7 +177,11 @@ def admin_queues(request: Request, sim: Sim, view: Viewer = "admin"):
     )
 
 
-@app.post("/admin/queues/claims/{claim_id}/transfer", response_class=HTMLResponse)
+@app.post(
+    "/admin/queues/claims/{claim_id}/transfer",
+    response_class=HTMLResponse,
+    dependencies=[Depends(require_board_request)],
+)
 def admin_transfer(
     request: Request,
     sim: Sim,
@@ -204,7 +220,10 @@ def _write_status(request: Request, sim: Sim, claim_id: str, key: str, view: Vie
     )
 
 
-@app.post("/admin/queues/faults", dependencies=[Depends(require_admin)])
+@app.post(
+    "/admin/queues/faults",
+    dependencies=[Depends(require_board_request), Depends(require_admin)],
+)
 def admin_queue_faults(sim: Sim, on: bool) -> dict[str, bool]:
     # Only the transfer op, in one set(): other ops' faults are never touched.
     sim.faults.set({queues.TRANSFER: FaultConfig(failure_rate=1.0 if on else 0.0)})

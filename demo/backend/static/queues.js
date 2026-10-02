@@ -26,9 +26,8 @@
     return null;
   };
 
-  const showNotice = (html) => {
-    notice.innerHTML = html;
-  };
+  // Every POST carries this header; the server refuses any without it (CSRF guard).
+  const post = (url) => fetch(url, { method: "POST", headers: { "X-Meridian-Board": "1" } });
 
   const blocked = (reason) => {
     const alert = document.createElement("div");
@@ -95,13 +94,19 @@
     const claim = dragged;
     if (!queue || !claim || blockReason(claim, queue)) return;
     e.preventDefault();
-    showNotice("");
+    notice.replaceChildren();
     const id = claim.dataset.claim;
     const params = new URLSearchParams({ to: queue.dataset.queue, view });
-    const res = await fetch(`/admin/queues/claims/${id}/transfer?${params}`, { method: "POST" });
+    const res = await post(`/admin/queues/claims/${encodeURIComponent(id)}/transfer?${params}`);
     const html = await res.text();
+    if (res.status === 409) {
+      // Our own server-rendered (autoescaped) partial with the reason.
+      notice.innerHTML = html;
+      return;
+    }
     if (!res.ok) {
-      showNotice(html);
+      // Anything else (a JSON 404, a proxy page) is shown as text, never as markup.
+      blocked(`The move could not be sent (HTTP ${res.status}).`);
       return;
     }
     claim.dataset.inFlight = "true";
@@ -125,7 +130,7 @@
 
   faultToggle?.addEventListener("change", async () => {
     const params = new URLSearchParams({ on: String(faultToggle.checked), view });
-    const res = await fetch(`/admin/queues/faults?${params}`, { method: "POST" });
+    const res = await post(`/admin/queues/faults?${params}`);
     if (res.ok) faultToggle.checked = (await res.json()).on;
     else faultToggle.checked = !faultToggle.checked;
   });

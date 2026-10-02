@@ -60,8 +60,22 @@ def owner(sim: ClaimsProSim, claim_id: str) -> str:
     return claim.adjuster_id
 
 
+BOARD = {"X-Meridian-Board": "1"}  # what queues.js sends on every POST
+
+
 def transfer(client: TestClient, claim_id: str, to: str, view: str = "admin"):
-    return client.post(f"/admin/queues/claims/{claim_id}/transfer", params={"to": to, "view": view})
+    return client.post(
+        f"/admin/queues/claims/{claim_id}/transfer",
+        params={"to": to, "view": view},
+        headers=BOARD,
+    )
+
+
+def faults(client: TestClient, on: bool, view: str | None = "admin"):
+    params = {"on": str(on).lower()}
+    if view is not None:
+        params["view"] = view
+    return client.post("/admin/queues/faults", params=params, headers=BOARD)
 
 
 # --- The board ---
@@ -169,7 +183,7 @@ def test_status_belongs_to_one_move(client: TestClient, sim: ClaimsProSim):
 
 def test_fault_toggle_shows_retries_then_failure_with_alert(client: TestClient, sim: ClaimsProSim):
     src = owner(sim, SIMPLE)
-    on = client.post("/admin/queues/faults", params={"on": True})
+    on = faults(client, True)
     assert on.json() == {"on": True}
     res = transfer(client, SIMPLE, adjuster(Tier.T1, skip=src))
     assert 'data-write-status="failed"' in res.text
@@ -181,7 +195,7 @@ def test_fault_toggle_shows_retries_then_failure_with_alert(client: TestClient, 
     assert alert.operation == "TransferWorkItem"
 
     # The failed write freed the claim, so it can move again once faults are off.
-    assert client.post("/admin/queues/faults", params={"on": False}).json() == {"on": False}
+    assert faults(client, False).json() == {"on": False}
     assert (
         'data-write-status="confirmed"'
         in transfer(client, SIMPLE, adjuster(Tier.T1, skip=src)).text
@@ -191,8 +205,8 @@ def test_fault_toggle_shows_retries_then_failure_with_alert(client: TestClient, 
 def test_fault_toggle_off_keeps_other_faults(client: TestClient, sim: ClaimsProSim):
     note_fault = FaultConfig(failure_rate=0.5)
     sim.faults.set({"AddNote": note_fault})
-    client.post("/admin/queues/faults", params={"on": True})
-    client.post("/admin/queues/faults", params={"on": False})
+    faults(client, True)
+    faults(client, False)
     assert sim.faults.configs()["AddNote"] == note_fault
     assert not queues.transfer_fault_on(sim)
 
@@ -330,7 +344,7 @@ def test_unknown_adjuster_and_same_queue_are_blocked(client: TestClient, sim: Cl
 
 
 def test_fault_toggle_is_admin_only(client: TestClient, sim: ClaimsProSim):
-    res = client.post("/admin/queues/faults", params={"on": True, "view": "manager"})
+    res = faults(client, True, view="manager")
     assert res.status_code == 403
     assert sim.faults.configs() == {}
     assert 'id="fault-toggle"' not in client.get("/admin/queues", params={"view": "manager"}).text
@@ -406,3 +420,22 @@ def test_default_runner_settles_on_a_background_thread(sim: ClaimsProSim):
             assert time.monotonic() < deadline, "slot never freed"
             time.sleep(0.01)
     assert owner(sim, SIMPLE) == back.id
+
+
+def test_posts_without_the_board_header_are_refused(client: TestClient, sim: ClaimsProSim):
+    # A cross-site form can post, but can't add a custom header.
+    to = adjuster(Tier.T1, skip=owner(sim, SIMPLE))
+    src = owner(sim, SIMPLE)
+    moved = client.post(
+        f"/admin/queues/claims/{SIMPLE}/transfer", params={"to": to, "view": "admin"}
+    )
+    assert moved.status_code == 403
+    assert owner(sim, SIMPLE) == src
+    flipped = client.post("/admin/queues/faults", params={"on": True, "view": "admin"})
+    assert flipped.status_code == 403
+    assert not queues.transfer_fault_on(sim)
+
+
+def test_fault_toggle_without_a_view_is_not_admin(client: TestClient, sim: ClaimsProSim):
+    assert faults(client, True, view=None).status_code == 403
+    assert not queues.transfer_fault_on(sim)
