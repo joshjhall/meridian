@@ -207,6 +207,38 @@ class AuditRecord(BaseModel):
     review_intervals: list[ReviewInterval] = []
 
 
+class Signals(BaseModel):
+    """What the complexity step (#4) reads from a claim's text; recorded until it lands."""
+
+    secondary_skills: list[Skill] = []
+    injury: bool = False
+    confidence: float = Field(default=1.0, ge=0, le=1)
+    source: Literal["recorded", "rules", "llm"] = "rules"
+
+
+class Regulation(BaseModel):
+    """Why a claim must reach a person. `regulated` is the law; `flagged` is discretion."""
+
+    regulated: bool
+    by_rule: bool
+    flagged: bool
+    reason: str | None = None
+
+    @property
+    def review_required(self) -> bool:
+        return self.regulated or self.flagged
+
+
+class CorrectionVerdict(BaseModel):
+    """An OCR correction may change characters, never words."""
+
+    accepted: bool
+    needs_person: bool
+    dropped: list[str] = []
+    added: list[str] = []
+    reason: str | None = None
+
+
 # Panel summary: the six sections in docs/presentation/panel_examples.md.
 
 

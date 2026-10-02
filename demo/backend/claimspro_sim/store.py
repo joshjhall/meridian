@@ -1,15 +1,11 @@
 """The simulator's system of record: claims, notes and applied idempotency keys."""
 
-import csv
 import threading
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from datetime import datetime
 
-from fixtures import DATA, load_claim_fixtures
+from fixtures import claim_from_row, extract_rows, load_claim_fixtures
 from models import Claim, ClaimNote, ClaimWriteStatus
-
-EXTRACT = DATA.parents[1] / "reference" / "claims_processing.csv"
 
 
 def seed_claims() -> list[Claim]:
@@ -20,14 +16,7 @@ def seed_claims() -> list[Claim]:
 
 
 def _open_extract_claims() -> Iterable[Claim]:
-    with EXTRACT.open(newline="") as f:
-        for row in csv.DictReader(f):
-            if row["disposition"] != "Pending Review":
-                continue
-            fields = {k: v or None for k, v in row.items()}
-            yield Claim.model_validate(
-                {**fields, "received_at": datetime.fromisoformat(row["filed_date"])}
-            )
+    return (claim_from_row(r) for r in extract_rows() if r["disposition"] == "Pending Review")
 
 
 class IdempotencyKeyConflict(ValueError):
