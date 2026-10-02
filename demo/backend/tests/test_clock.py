@@ -9,6 +9,12 @@ from fixtures import load_claim_fixtures
 
 BACKEND = Path(__file__).resolve().parents[1]
 
+# No call parens required, so default_factory=datetime.now is caught too.
+WALL_CLOCK = re.compile(
+    r"\bdatetime\.(now|utcnow|today)\b|\bdate\.today\b"
+    r"|\btime\.(time|time_ns|monotonic)\b|\bfrom time import\b"
+)
+
 
 @pytest.fixture(autouse=True)
 def reset_clock():
@@ -20,6 +26,11 @@ def reset_clock():
 def test_fixture_shows_expected_sla_state_at_default_clock(claim_id):
     fixture = load_claim_fixtures()[claim_id]
     assert fixture.claim.sla_state(clock.now()) == fixture.expected.sla_in_demo
+
+
+def test_fixtures_cover_every_sla_state():
+    states = {f.expected.sla_in_demo for f in load_claim_fixtures().values()}
+    assert states == {"on_track", "at_risk", "breached"}
 
 
 def test_advance_moves_the_clock_forward():
@@ -51,14 +62,26 @@ def test_sla_state_boundaries():
 
 
 def test_no_backend_code_reads_the_wall_clock():
-    # No call parens required, so default_factory=datetime.now is caught too.
-    wall_clock = re.compile(
-        r"\bdatetime\.(now|utcnow|today)\b|\bdate\.today\b"
-        r"|\btime\.(time|time_ns|monotonic)\b|\bfrom time import\b"
-    )
     offenders = [
         str(p.relative_to(BACKEND))
         for p in BACKEND.rglob("*.py")
-        if ".venv" not in p.parts and "tests" not in p.parts and wall_clock.search(p.read_text())
+        if ".venv" not in p.parts and "tests" not in p.parts and WALL_CLOCK.search(p.read_text())
     ]
     assert offenders == []
+
+
+@pytest.mark.parametrize(
+    ("source", "reads_wall_clock"),
+    [
+        ("datetime.now()", True),
+        ("datetime.utcnow()", True),
+        ("Field(default_factory=datetime.now)", True),
+        ("date.today()", True),
+        ("time.time_ns()", True),
+        ("from time import monotonic", True),
+        ("clock.now()", False),
+        ("def now() -> datetime:", False),
+    ],
+)
+def test_wall_clock_pattern(source, reads_wall_clock):
+    assert bool(WALL_CLOCK.search(source)) == reads_wall_clock
