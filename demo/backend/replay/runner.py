@@ -20,6 +20,7 @@ from typing import Any
 import monitor
 
 import clock
+from claimspro_sim import ClaimsProSim
 from models import Stage
 from replay import schedule
 
@@ -32,6 +33,25 @@ TICK_S = 0.25  # the demo clock moves at least this often between events
 
 def frame(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+_served: Replay | None = None
+
+
+def serve(replay: Replay) -> None:
+    """Make `replay` the one the app serves; app.py calls this once at import."""
+    global _served
+    _served = replay
+
+
+def current_sim() -> ClaimsProSim:
+    """The served replay's ClaimsPro for the current pass: its write log and alerts.
+
+    Replaced on every restart, so read it per request rather than holding it.
+    """
+    if _served is None:
+        raise RuntimeError("no replay is being served")
+    return _served.sim
 
 
 class Replay:
@@ -52,7 +72,8 @@ class Replay:
         """Back to the start of the sequence (same seed unless given) and the demo clock."""
         self.seed = self.seed if seed is None else seed
         self.board = monitor.MonitorState()
-        self._events: Iterator[schedule.Scheduled] = schedule.events(self.seed)
+        self.sim = schedule.PassSim()
+        self._events: Iterator[schedule.Scheduled] = schedule.events(self.seed, self.sim)
         self._next: schedule.Scheduled | None = None
         self.sim_now = clock.DEMO_START
         clock.reset()

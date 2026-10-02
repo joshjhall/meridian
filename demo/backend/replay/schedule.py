@@ -4,9 +4,10 @@ Everything here is a pure function of the seed, so a rehearsal and the live demo
 the same claims in the same order with the same outcomes. The runner only decides how
 fast to play it.
 
-Each claim runs through `run_pipeline` with its own ClaimsPro simulator when it
-arrives. The pipeline's exceptions come from the real code path. A seeded share of
-claims meet a ClaimsPro outage, so the verified write fails after retries. A seeded
+Each claim runs through `run_pipeline` when it arrives, writing to one ClaimsPro
+simulator per pass, so the pass's write log and alerts accumulate there. The
+pipeline's exceptions come from the real code path. A seeded share of claims
+meet a ClaimsPro outage, so the verified write fails after retries. A seeded
 share of Fax/EDI rows arrive with a field dropped, as the EDI parser drops them
 today, and fail validation.
 """
@@ -103,25 +104,43 @@ def arrivals(seed: int = SEED) -> Iterator[Arrival]:
     yield from heapq.merge(pinned, extract(), key=lambda a: a.at)
 
 
+class PassSim(ClaimsProSim):
+    """One pass's ClaimsPro: claims are added as they arrive, at their own simulated time.
+
+    Faults are switched per claim, never rolled: a seeded outage claim always fails
+    and no other write touches the fault RNG, so sharing it keeps the run seeded.
+    """
+
+    def __init__(self) -> None:
+        self.at = DEMO_START
+        super().__init__([], sleep=lambda _: None, now=lambda: self.at)
+
+
 def _run(
-    arrival: Arrival, roster: list[Adjuster], loads: dict[str, int], seed: int
+    arrival: Arrival, roster: list[Adjuster], loads: dict[str, int], sim: PassSim
 ) -> list[PipelineEvent]:
-    claims = [arrival.claim] if isinstance(arrival.claim, Claim) else []
-    sim = ClaimsProSim(
-        claims, sleep=lambda _: None, now=lambda: arrival.at, rng=random.Random(seed)
-    )
+    sim.at = arrival.at
+    if isinstance(arrival.claim, Claim):
+        sim.store.add(arrival.claim)
     if arrival.outage:
         sim.faults.set({"UpdateCustomFields": FaultConfig(failure_rate=1.0)})
     current = [a.model_copy(update={"current_load": loads[a.id]}) for a in roster]
-    result = run_pipeline([arrival.claim], current, now=arrival.at, sim=sim)
+    try:
+        result = run_pipeline([arrival.claim], current, now=arrival.at, sim=sim)
+    finally:
+        sim.faults.reset()
     for r in result.routed:
         if r.adjuster_id:
             loads[r.adjuster_id] += 1  # work spreads across the replay, not just one claim
     return result.events
 
 
-def events(seed: int = SEED) -> Iterator[Scheduled]:
-    """Every pipeline event of the replay, in simulated-time order. Lazy: one claim at a time."""
+def events(seed: int = SEED, sim: PassSim | None = None) -> Iterator[Scheduled]:
+    """Every pipeline event of the replay, in simulated-time order. Lazy: one claim at a time.
+
+    Pass `sim` to keep the pass's ClaimsPro (writes, alerts) readable while it plays.
+    """
+    sim = sim or PassSim()
     roster = load_roster()
     loads = {a.id: a.current_load for a in roster}
     heap: list[tuple[datetime, int, Scheduled]] = []
@@ -129,7 +148,7 @@ def events(seed: int = SEED) -> Iterator[Scheduled]:
     for arrival in arrivals(seed):
         while heap and heap[0][0] <= arrival.at:
             yield heapq.heappop(heap)[2]
-        for i, event in enumerate(_run(arrival, roster, loads, seed)):
+        for i, event in enumerate(_run(arrival, roster, loads, sim)):
             at = arrival.at + i * STEP
             heapq.heappush(heap, (at, n, Scheduled(at, event.model_copy(update={"timestamp": at}))))
             n += 1

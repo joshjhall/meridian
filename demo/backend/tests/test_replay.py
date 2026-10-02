@@ -14,7 +14,7 @@ from app import app, render_card
 from clock import DEMO_START
 from fixtures import load_claim_fixtures
 from models import Stage
-from replay import Replay, arrivals, events, runner, schedule
+from replay import Replay, arrivals, current_sim, events, runner, schedule
 
 FIXTURES = set(load_claim_fixtures())
 FIRST = 1500  # events: a little over three simulated days
@@ -285,7 +285,7 @@ def test_dropped_rows_are_fax_edi_with_a_field_missing_and_no_outage():
 
 def test_replay_loops_to_the_start_when_the_extract_ends(monkeypatch):
     short = list(itertools.islice(events(), 3))
-    monkeypatch.setattr(schedule, "events", lambda seed=schedule.SEED: iter(short))
+    monkeypatch.setattr(schedule, "events", lambda seed=schedule.SEED, sim=None: iter(short))
 
     async def scenario():
         r = Replay(render_card)
@@ -419,3 +419,23 @@ def test_a_stalled_viewer_is_dropped_without_stopping_the_feed(monkeypatch):
 
     asyncio.run(scenario())
     clock.reset()
+
+
+def test_current_sim_is_the_served_passes_claimspro(replay):
+    assert current_sim() is replay.sim
+    _ = [replay.step() for _ in range(600)]
+    sim = current_sim()
+    # Every routed claim's verified write is in the one log, as #9's audit drawer reads it.
+    done = [v.claim_id for v in replay.board.claims.values() if v.stage is Stage.WITH_ADJUSTER]
+    assert done
+    for claim_id in done:
+        assert sim.store.get(claim_id) is not None
+        assert {e.payload["write_status"] for e in sim.events(claim_id)} >= {"confirmed"}
+    # Seeded outages raise alerts to people on the same simulator.
+    failed = {
+        v.claim_id for v in replay.board.claims.values() if v.facts.get("reason") == "failed_write"
+    }
+    assert failed
+    assert failed <= {a.claim_id for a in sim.alerts()}
+    replay.restart()
+    assert current_sim() is replay.sim is not sim  # a restart starts a fresh ClaimsPro

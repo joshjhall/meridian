@@ -33,7 +33,7 @@ from models import (
     LearningHistory,
 )
 from pipeline import PIPELINE_VERSION
-from replay import Replay
+from replay import Replay, serve
 from replay.api import controls as replay_controls
 from replay.api import router as replay_router
 
@@ -58,6 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Meridian demo", lifespan=lifespan)
 app.state.replay = Replay(render_card)
+serve(app.state.replay)  # replay.current_sim() reads this replay's ClaimsPro
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 app.include_router(claimspro_router)
 app.include_router(replay_router)
