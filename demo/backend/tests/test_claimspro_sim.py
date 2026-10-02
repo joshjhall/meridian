@@ -392,15 +392,26 @@ def test_max_attempts_below_one_is_rejected_before_any_state_change(sim, max_att
     assert sim.events() == []
 
 
-def test_replay_after_a_later_write_still_confirms(sim):
-    first = reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"})
-    reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-152"})
-    replay = reliable_write(
-        sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"},
-        idempotency_key=first.idempotency_key,
-    )  # fmt: skip
+@pytest.mark.parametrize(
+    ("op", "first", "later", "read"),
+    [
+        ("TransferWorkItem", {"to_adjuster_id": "ADJ-151"}, {"to_adjuster_id": "ADJ-152"},
+         lambda sim: sim.store.get(CLAIM).adjuster_id),
+        ("UpdateCustomFields", {"fields": {"tier": "T2"}}, {"fields": {"tier": "T3"}},
+         lambda sim: sim.store.get(CLAIM).tier),
+        ("AddNote", {"text": "first", "author": "pipeline"},
+         {"text": "later", "author": "pipeline"},
+         lambda sim: [n.text for n in sim.store.notes(CLAIM)]),
+    ],
+    ids=["TransferWorkItem", "UpdateCustomFields", "AddNote"],
+)  # fmt: skip
+def test_replay_after_a_later_write_still_confirms(sim, op, first, later, read):
+    original = reliable_write(sim, op, CLAIM, first)
+    reliable_write(sim, op, CLAIM, later)
+    after_later = read(sim)
+    replay = reliable_write(sim, op, CLAIM, first, idempotency_key=original.idempotency_key)
     assert replay.status == "confirmed"
-    assert sim.store.get(CLAIM).adjuster_id == "ADJ-152"  # type: ignore[union-attr]
+    assert read(sim) == after_later  # the replay neither overwrites nor adds a second note
     assert sim.alerts() == []
 
 
