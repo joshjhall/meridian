@@ -72,6 +72,8 @@ def index(request: Request):
 
 
 # --- Admin monitor (#6) ---
+# Unauthenticated, like the rest of the demo: ?view= only shapes the page. Real
+# access control belongs on these routes before they serve live claim data.
 
 Viewer = Literal["admin", "manager"]
 
