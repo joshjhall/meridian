@@ -1,0 +1,43 @@
+/* Overpass and Overpass Mono, self-hosted (#27) so the admin monitor and the
+   side panel make no third-party font requests and render offline. Latin
+   subset WOFF2 from @fontsource (SIL OFL 1.1, see OFL.txt). */
+
+@font-face {
+  font-family: "Overpass";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/static/fonts/overpass-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Overpass";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/static/fonts/overpass-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Overpass";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("/static/fonts/overpass-latin-800-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Overpass Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/static/fonts/overpass-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Overpass Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/static/fonts/overpass-mono-latin-600-normal.woff2") format("woff2");
+}
