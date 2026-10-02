@@ -17,6 +17,11 @@ from claimspro_sim.store import ClaimsProStore
 from fixtures import load_roster
 from models import Claim, ClaimNote
 
+PAYLOAD_KEYS: dict[str, frozenset[str]] = {
+    "UpdateCustomFields": frozenset({"fields"}),
+    "TransferWorkItem": frozenset({"to_adjuster_id"}),
+    "AddNote": frozenset({"text", "author"}),
+}
 CUSTOM_FIELDS = frozenset({"skills", "tier", "routing_reason", "review_lane", "brief_status"})
 
 
@@ -83,6 +88,12 @@ class ClaimsProSoapClient:
 
     def check(self, op: SoapOperation, claim_id: str, payload: dict[str, Any]) -> None:
         """Raise SoapClientError for a request ClaimsPro would reject, before anything is sent."""
+        if set(payload) != PAYLOAD_KEYS[op]:
+            raise SoapClientError(f"{op} takes {sorted(PAYLOAD_KEYS[op])}, got {sorted(payload)}")
+        if op == "UpdateCustomFields" and not isinstance(payload["fields"], dict):
+            raise SoapClientError("UpdateCustomFields fields must be a mapping")
+        if any(not isinstance(v, str) for k, v in payload.items() if k != "fields"):
+            raise SoapClientError(f"{op} values must be strings")
         match op:
             case "UpdateCustomFields":
                 self._custom_field_values(claim_id, payload["fields"])

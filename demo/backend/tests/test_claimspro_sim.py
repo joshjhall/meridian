@@ -9,6 +9,7 @@ from app import app
 from claimspro_sim import ALERT_RECIPIENTS, ClaimsProSim, FaultConfig, reliable_write
 from claimspro_sim.api import get_sim
 from claimspro_sim.soap import ClaimsProSoapClient, SoapClientError
+from claimspro_sim.store import IdempotencyKeyConflict
 from fixtures import load_claim_fixtures
 from models import Skill, Tier
 
@@ -315,3 +316,55 @@ def test_persistent_lost_response_on_transfer_still_confirms(sim):
     result = reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"})
     assert result.status == "confirmed"
     assert statuses(sim) == ["pending", "confirmed"]
+
+
+def test_reused_key_is_rejected_before_the_claim_goes_pending(sim):
+    first = reliable_write(sim, "AddNote", CLAIM, {"text": "x", "author": "pipeline"})
+    events_before = len(sim.events())
+    with pytest.raises(IdempotencyKeyConflict):
+        reliable_write(
+            sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"},
+            idempotency_key=first.idempotency_key,
+        )  # fmt: skip
+    assert sim.store.get(CLAIM).write_status == "confirmed"  # type: ignore[union-attr]
+    assert len(sim.events()) == events_before
+
+
+@pytest.mark.parametrize(
+    ("op", "payload"),
+    [
+        ("UpdateCustomFields", {}),
+        ("UpdateCustomFields", {"fields": ["tier"]}),
+        ("TransferWorkItem", {"adjuster": "ADJ-151"}),
+        ("TransferWorkItem", {"to_adjuster_id": 151}),
+        ("AddNote", {"text": "x"}),
+        ("AddNote", {"text": "x", "author": "y", "extra": "z"}),
+    ],
+)
+def test_malformed_payload_is_rejected_before_any_state_change(sim, op, payload):
+    with pytest.raises(SoapClientError):
+        reliable_write(sim, op, CLAIM, payload)
+    assert sim.store.get(CLAIM).write_status is None  # type: ignore[union-attr]
+    assert sim.events() == []
+
+
+def test_unexpected_error_mid_write_marks_failed_and_alerts(sim, monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("ClaimsPro connection reset")
+
+    monkeypatch.setattr(sim.soap, "call", boom)
+    with pytest.raises(RuntimeError):
+        reliable_write(sim, "AddNote", CLAIM, {"text": "x", "author": "pipeline"})
+    assert sim.store.get(CLAIM).write_status == "write_failed"  # type: ignore[union-attr]
+    assert statuses(sim) == ["pending", "failed"]
+    assert [a.recipients for a in sim.alerts()] == [ALERT_RECIPIENTS]
+
+
+def test_fault_reset_and_event_filter_over_http(client, sim):
+    client.post("/api/sim/faults", json={"AddNote": {"failure_rate": 1}})
+    assert client.delete("/api/sim/faults").json() == {}
+    assert client.get("/api/sim/faults").json() == {}
+    reliable_write(sim, "AddNote", CLAIM, {"text": "x", "author": "pipeline"})
+    other = "IS-CLM-2025004222"
+    assert client.get("/api/sim/events", params={"claim_id": other}).json() == []
+    assert len(client.get("/api/sim/events", params={"claim_id": CLAIM}).json()) == 2

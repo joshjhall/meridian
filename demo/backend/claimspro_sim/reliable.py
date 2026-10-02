@@ -39,8 +39,10 @@ def reliable_write(
     pipeline_version: str = SIM_VERSION,
 ) -> WriteResult:
     """Apply one intended change. Pass the same key to replay a change already sent."""
-    sim.soap.check(op, claim_id, payload)  # rejected requests are never retried
+    # Rejected requests raise here, before any state change, and are never retried.
+    sim.soap.check(op, claim_id, payload)
     key = idempotency_key or str(uuid.uuid4())
+    sim.store.check_key(key, op, claim_id)
 
     def emit(status: WriteStatus, attempt: int, reason: str | None = None) -> None:
         sim.record_event(
@@ -59,36 +61,46 @@ def reliable_write(
             )
         )
 
+    def fail(attempts: int, reason: str) -> Alert:
+        sim.store.set_write_status(claim_id, "write_failed")
+        emit("failed", attempts, reason)
+        alert = Alert(
+            claim_id=claim_id,
+            operation=op,
+            idempotency_key=key,
+            recipients=ALERT_RECIPIENTS,
+            message=f"{op} on {claim_id} failed after {attempts} attempts: {reason}",
+            raised_at=sim.now(),
+        )
+        sim.record_alert(alert)
+        return alert
+
     sim.store.set_write_status(claim_id, "pending")
     emit("pending", 1)
     reason = ""
-    for attempt in range(1, max_attempts + 1):
-        response = sim.soap.call(op, claim_id, payload, key)
-        # Verify even after a fault: the write may have landed and only the response was lost.
-        sim.sleep(verify_delay_s)
-        if sim.soap.is_applied(op, claim_id, payload, key):
-            sim.store.set_write_status(claim_id, "confirmed")
-            emit("confirmed", attempt)
-            return WriteResult(status="confirmed", attempts=attempt, idempotency_key=key)
-        if response.ok:
-            reason = "write returned OK but the verify read does not show it"
-        else:
-            reason = response.fault or "SOAP fault"
-        if attempt < max_attempts:
-            emit("retrying", attempt, reason)
-            sim.sleep(base_backoff_s * 2 ** (attempt - 1))
+    attempt = 1
+    try:
+        for attempt in range(1, max_attempts + 1):
+            response = sim.soap.call(op, claim_id, payload, key)
+            # Verify even after a fault: the write may have landed and only the response was lost.
+            sim.sleep(verify_delay_s)
+            if sim.soap.is_applied(op, claim_id, payload, key):
+                sim.store.set_write_status(claim_id, "confirmed")
+                emit("confirmed", attempt)
+                return WriteResult(status="confirmed", attempts=attempt, idempotency_key=key)
+            if response.ok:
+                reason = "write returned OK but the verify read does not show it"
+            else:
+                reason = response.fault or "SOAP fault"
+            if attempt < max_attempts:
+                emit("retrying", attempt, reason)
+                sim.sleep(base_backoff_s * 2 ** (attempt - 1))
+    except Exception as e:
+        # Never leave the claim stuck at "pending" for #7/#10 to show forever.
+        fail(attempt, f"unexpected error: {e!r}")
+        raise
 
-    sim.store.set_write_status(claim_id, "write_failed")
-    emit("failed", max_attempts, reason)
-    alert = Alert(
-        claim_id=claim_id,
-        operation=op,
-        idempotency_key=key,
-        recipients=ALERT_RECIPIENTS,
-        message=f"{op} on {claim_id} failed after {max_attempts} attempts: {reason}",
-        raised_at=sim.now(),
-    )
-    sim.record_alert(alert)
+    alert = fail(max_attempts, reason)
     return WriteResult(
         status="write_failed", attempts=max_attempts, idempotency_key=key, alert=alert
     )

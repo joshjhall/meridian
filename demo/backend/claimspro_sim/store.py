@@ -30,6 +30,10 @@ def _open_extract_claims() -> Iterable[Claim]:
             )
 
 
+class IdempotencyKeyConflict(ValueError):
+    """A key reused for a different claim or operation: a caller bug, never retried."""
+
+
 class ClaimsProStore:
     """Claims are deep copies, so writes never touch the cached fixtures."""
 
@@ -69,16 +73,25 @@ class ClaimsProStore:
         A key reused for a different claim or operation is a caller bug, so it raises
         rather than silently dropping the second change.
         """
-        scope = (claim_id, operation)
         with self._lock:
-            seen = self._applied_keys.get(idempotency_key)
-            if seen == scope:
+            if self._key_seen(idempotency_key, operation, claim_id):
                 return False
-            if seen is not None:
-                raise ValueError(f"idempotency key {idempotency_key} already used for {seen}")
             change()
-            self._applied_keys[idempotency_key] = scope
+            self._applied_keys[idempotency_key] = (claim_id, operation)
             return True
+
+    def check_key(self, idempotency_key: str, operation: str, claim_id: str) -> None:
+        """Raise IdempotencyKeyConflict if the key was already used for a different change."""
+        with self._lock:
+            self._key_seen(idempotency_key, operation, claim_id)
+
+    def _key_seen(self, idempotency_key: str, operation: str, claim_id: str) -> bool:
+        seen = self._applied_keys.get(idempotency_key)
+        if seen is not None and seen != (claim_id, operation):
+            raise IdempotencyKeyConflict(
+                f"idempotency key {idempotency_key} already used for {seen}"
+            )
+        return seen is not None
 
     def update_claim(
         self, idempotency_key: str, operation: str, claim_id: str, change: Callable[[Claim], None]
