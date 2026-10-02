@@ -128,15 +128,38 @@ def test_trace_lists_the_exception_step_with_conflicts():
     assert "routing-v0.4.0" in html
 
 
+def test_every_pass_of_the_stream_opens_with_a_reset(monkeypatch):
+    monkeypatch.setattr(monitor, "HOLD_S", 0.0)
+    limit = len(monitor.fixture_script()) + 1  # one claim frame into the second pass
+    frames = _frames(client.get(f"/admin/events?speed=100&limit={limit}").text)
+    names = [name for name, _ in frames]
+    assert names == ["reset", *["claim"] * (limit - 1), "reset", "claim"]
+
+
 def test_trace_stops_where_the_card_is():
     html = client.get(f"/admin/claims/{CLAIM_2993}/trace?upto=1").text
     assert "Received" in html
     assert "OCR conflicts with EDI" not in html
 
 
+def test_trace_upto_past_the_end_is_the_whole_trace():
+    whole = client.get(f"/admin/claims/{CLAIM_2993}/trace").text
+    assert client.get(f"/admin/claims/{CLAIM_2993}/trace?upto=999").text == whole
+
+
+def test_card_links_its_trace_at_the_steps_it_has_seen():
+    view = monitor.replay().claims[CLAIM_2993]
+    assert f"/trace?upto={len(view.trace)}" in render_card(view)
+
+
 @pytest.mark.parametrize("query", ["speed=0", "speed=101", "limit=0"])
 def test_event_stream_rejects_out_of_range_params(query):
     assert client.get(f"/admin/events?{query}").status_code == 422
+
+
+@pytest.mark.parametrize("upto", [0, -1])
+def test_trace_rejects_out_of_range_upto(upto):
+    assert client.get(f"/admin/claims/{CLAIM_2993}/trace?upto={upto}").status_code == 422
 
 
 def test_card_escapes_feed_text():
