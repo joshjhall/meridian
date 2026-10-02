@@ -1,12 +1,14 @@
 import csv
+import json
 from collections import Counter
-from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app import app
 from fixtures import DATA, load_claim_fixtures, load_roster
-from models import Skill, Tier
+from models import Adjuster, ClaimFixture, Skill, Tier
 
 REPO = DATA.parents[1]
 SIX = {
@@ -64,7 +66,6 @@ def test_roster_covers_all_extract_adjuster_ids():
 
 
 def test_roster_is_reproducible_from_seed():
-    import json
     import sys
 
     sys.path.insert(0, str(DATA))
@@ -74,12 +75,40 @@ def test_roster_is_reproducible_from_seed():
     assert regenerated == json.loads((DATA / "roster.json").read_text())
 
 
-def test_api_serves_claims():
-    client = TestClient(app)
+client = TestClient(app)
+
+
+def test_api_health():
     assert client.get("/api/health").json() == {"status": "ok"}
+
+
+def test_api_lists_six_claims():
     assert {c["claim_id"] for c in client.get("/api/claims").json()} == SIX
+
+
+def test_api_gets_claim_with_computed_sla():
     body = client.get("/api/claims/IS-CLM-2025004222").json()
     assert body["claim_type"] == "Bodily Injury"
     assert body["sla_due_at"].startswith("2025-09-26T10:00")
-    assert client.get("/api/claims/IS-CLM-0000000000").status_code == 404
-    assert len(client.get("/api/roster").json()) == 95
+
+
+def test_api_unknown_claim_is_404():
+    response = client.get("/api/claims/IS-CLM-0000000000")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "unknown claim IS-CLM-0000000000"
+
+
+def test_api_roster_entries_validate():
+    body = client.get("/api/roster").json()
+    assert len(body) == 95
+    assert [Adjuster.model_validate(a) for a in body] == load_roster()
+
+
+def test_invalid_fixture_is_rejected():
+    raw = (DATA / "claims" / "IS-CLM-2025000300.json").read_text()
+    with pytest.raises(ValidationError):
+        ClaimFixture.model_validate_json(raw.replace('"Collision"', '"Hovercraft"', 1))
+    payload = json.loads(raw)
+    del payload["claim"]["received_at"]
+    with pytest.raises(ValidationError):
+        ClaimFixture.model_validate(payload)
