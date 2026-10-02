@@ -13,6 +13,11 @@
       {% set p = e.payload %}
       {% if p.reason %}
         <p class="trace__reason">{{ labels[p.reason] }}</p>
+        {% if p.issues %}
+          <ul class="trace__issues">
+            {% for issue in p.issues %}<li>{{ issue }}</li>{% endfor %}
+          </ul>
+        {% endif %}
         {% if p.conflicts %}
           <table class="table trace__conflicts">
             <thead>

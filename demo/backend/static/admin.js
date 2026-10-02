@@ -1,6 +1,8 @@
 // Admin pipeline monitor (#6): moves claim cards between lanes as SSE frames
-// arrive. The server renders each card; this file only places it, animating the
-// move with a View Transition where the browser supports one.
+// arrive from the replay runner (#5). The server renders each card; this file
+// only places it, animating the move with a View Transition where the browser
+// supports one. Speed and pause belong to the server's replay, shared by every
+// viewer, so the controls post to it and the page follows its `control` frames.
 
 (() => {
   const road = document.getElementById("road");
@@ -11,6 +13,8 @@
   const exceptions = document.getElementById("count-exceptions");
   const speed = document.getElementById("speed");
   const pause = document.getElementById("pause");
+  const restart = document.getElementById("restart");
+  const simNow = document.getElementById("sim-now");
   const trace = document.getElementById("trace");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -69,6 +73,33 @@
     }
   };
 
+  const unplace = ({ claim_id }) => {
+    document.getElementById(`card-${claim_id}`)?.remove();
+    recount();
+  };
+
+  const counters = ({ counters: c }) => {
+    tick(routed, c.routed);
+    tick(exceptions, c.exceptions);
+  };
+
+  const control = (status) => {
+    simNow.textContent = status.sim_now.replace("T", " ").slice(0, 16);
+    simNow.dateTime = status.sim_now;
+    if (speed) speed.value = String(status.speed);
+    if (pause) pause.textContent = status.paused ? "Resume feed" : "Pause feed";
+    if (status.paused) setLive("paused", "Paused");
+    else if (source?.readyState === EventSource.OPEN) setLive("live", "Live");
+  };
+
+  // Controls render only in the admin view; the header is the board's CSRF guard.
+  const post = (path, body) =>
+    fetch(`${path}?view=admin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Meridian-Board": "1" },
+      body: JSON.stringify(body),
+    });
+
   const clear = () => {
     generation += 1;
     for (const cards of road.querySelectorAll("[data-cards]")) cards.replaceChildren();
@@ -78,43 +109,29 @@
   };
 
   const connect = () => {
-    const url = new URL(road.dataset.eventsUrl, window.location.origin);
-    if (speed) url.searchParams.set("speed", speed.value);
     clear();
-    source = new EventSource(url);
+    source = new EventSource(new URL(road.dataset.eventsUrl, window.location.origin));
     source.onopen = () => setLive("live", "Live");
     source.onerror = () => setLive("connecting", "Reconnecting");
     source.addEventListener("claim", (e) => {
       const data = JSON.parse(e.data);
       move(data);
-      tick(routed, data.counters.routed);
-      tick(exceptions, data.counters.exceptions);
+      counters(data);
     });
+    source.addEventListener("remove", (e) => {
+      const data = JSON.parse(e.data);
+      unplace(data);
+      counters(data);
+    });
+    source.addEventListener("control", (e) => control(JSON.parse(e.data)));
     source.addEventListener("reset", clear);
   };
 
-  const disconnect = () => {
-    source?.close();
-    source = null;
-  };
-
-  // A paused feed stays paused; connect() reads the new speed on restart.
-  speed?.addEventListener("change", () => {
-    if (!source) return;
-    disconnect();
-    connect();
-  });
-
-  pause?.addEventListener("click", () => {
-    if (source) {
-      disconnect();
-      setLive("paused", "Paused");
-      pause.textContent = "Restart feed";
-    } else {
-      connect();
-      pause.textContent = "Pause feed";
-    }
-  });
+  speed?.addEventListener("change", () => post("/api/replay", { speed: Number(speed.value) }));
+  pause?.addEventListener("click", () =>
+    post("/api/replay", { paused: pause.textContent.startsWith("Pause") }),
+  );
+  restart?.addEventListener("click", () => post("/api/replay/restart", {}));
 
   // Cards load their trace with hx-get into the dialog; open it once it arrives.
   document.body.addEventListener("htmx:afterSwap", (e) => {

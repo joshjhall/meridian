@@ -17,4 +17,5 @@ known-first-party = [
   "models",
   "pipeline",
   "queues",
+  "replay",
 ]

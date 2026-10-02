@@ -84,6 +84,11 @@ class ClaimsProStore:
             )
         return seen is not None
 
+    def add(self, claim: Claim) -> None:
+        """A claim arriving in ClaimsPro, as intake would create it (the replay, #5)."""
+        with self._lock:
+            self._claims[claim.claim_id] = claim.model_copy(deep=True)
+
     def update_claim(
         self, idempotency_key: str, intent: str, claim_id: str, change: Callable[[Claim], None]
     ) -> bool:

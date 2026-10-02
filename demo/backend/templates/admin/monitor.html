@@ -22,7 +22,7 @@
       <h1>Claims pipeline</h1>
       <p>
         <span class="live" id="live" data-state="connecting">Connecting</span>
-        Fixture feed until the replay runner lands
+        Replaying the claims extract through the pipeline · demo clock <time id="sim-now"></time>
       </p>
     </div>
     <dl class="sign__counters">
@@ -60,12 +60,14 @@
       <label>
         Replay speed
         <select id="speed" class="select">
-          <option value="1" selected>1×</option>
-          <option value="2">2×</option>
-          <option value="4">4×</option>
+          <option value="0.5">½ hour/s</option>
+          <option value="1" selected>1 hour/s</option>
+          <option value="2">2 hours/s</option>
+          <option value="4">4 hours/s</option>
         </select>
       </label>
       <button type="button" class="btn-sm-outline" id="pause">Pause feed</button>
+      <button type="button" class="btn-sm-outline" id="restart">Restart</button>
     </section>
   {% endif %}
   <div class="road" id="road" data-events-url="{{ events_url }}">
