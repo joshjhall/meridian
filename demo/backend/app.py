@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from claimspro_sim.api import router as claimspro_router
 from fixtures import load_claim_fixtures, load_roster
 from models import Adjuster, Claim, Stage
 
@@ -19,6 +20,7 @@ HERE = Path(__file__).resolve().parent
 app = FastAPI(title="Meridian demo")
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
+app.include_router(claimspro_router)
 
 # The side panel extension calls the API from its own chrome-extension:// origin.
 app.add_middleware(
