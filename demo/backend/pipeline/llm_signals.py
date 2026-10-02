@@ -426,8 +426,14 @@ def model_name() -> str:
 
 
 def base_url_host() -> str:
-    """The host the call goes to: the gateway if ANTHROPIC_BASE_URL is set."""
-    return urlsplit(os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL).netloc
+    """The host the call goes to: the gateway if ANTHROPIC_BASE_URL is set.
+
+    Host and port only: credentials embedded in the URL never reach a log, an audit
+    record or a response.
+    """
+    url = urlsplit(os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL)
+    host = url.hostname or ""
+    return f"{host}:{url.port}" if url.port else host
 
 
 def live_available() -> bool:

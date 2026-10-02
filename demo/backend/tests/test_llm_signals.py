@@ -689,3 +689,45 @@ def test_endpoint_json_carries_a_full_audit_record(monkeypatch):
     assert audit["confidence"] == 0.9 and audit["human_reviewed"] is False
     assert audit["output"]["signals"]["verified"] == 1
     assert audit["rationale"].startswith("Complexity signals re-read on request: 1 verified")
+
+
+# --- PR review, cycle 1 ---
+
+
+@pytest.mark.parametrize(
+    ("url", "host"),
+    [
+        ("https://user:s3cret@gateway.example/anthropic", "gateway.example"),
+        ("http://user:s3cret@127.0.0.1:8080/x", "127.0.0.1:8080"),
+        ("https://bifrost.stoic.studio/anthropic", "bifrost.stoic.studio"),
+    ],
+)
+def test_the_recorded_host_never_carries_credentials(monkeypatch, url, host):
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", url)
+    assert llm_signals.base_url_host() == host
+    s = run_live(C4222, client=Stub("garbage"))
+    assert "s3cret" not in s.model_dump_json()
+
+
+def test_regenerate_works_from_the_admin_drawer_too(monkeypatch):
+    # The fragment swapped into the drawer carries its own header, so its button
+    # doesn't depend on the page it lands in.
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "t")
+    monkeypatch.setattr(llm_signals, "make_client", lambda: Stub(response()))
+    r = client.post(
+        f"/claims/{C4222.claim_id}/signals",
+        headers={"X-Meridian-Board": "1", "HX-Request": "true"},
+    )
+    assert """hx-headers='{"X-Meridian-Panel": "1"}'""" in r.text
+
+
+def test_endpoint_rejects_a_malformed_claim_id():
+    r = client.post("/claims/not-a-claim/signals", headers={"X-Meridian-Panel": "1"})
+    assert r.status_code == 422
+
+
+def test_recorded_signals_for_known_and_unknown_claims():
+    import panel
+
+    assert panel.recorded_signals(C4222.claim_id) == complexity_signals(C4222)
+    assert panel.recorded_signals("IS-CLM-2025999999") is None

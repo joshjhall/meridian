@@ -14,6 +14,7 @@ import claimspro_page
 import monitor
 import panel
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Path as FastAPIPath
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -435,7 +436,9 @@ class SignalsRun(BaseModel):
 
 @app.post("/claims/{claim_id}/signals", dependencies=[Depends(require_ui_request)])
 def claim_signals(
-    request: Request, claim_id: str, hx_request: Annotated[str | None, Header()] = None
+    request: Request,
+    claim_id: Annotated[str, FastAPIPath(pattern=r"^IS-CLM-\d{10}$")],
+    hx_request: Annotated[str | None, Header()] = None,
 ):
     """One live call for one claim, with every guard; a failure returns the recorded run.
 

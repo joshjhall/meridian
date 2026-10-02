@@ -25,6 +25,7 @@
       <button type="button"
               class="btn-sm-outline"
               hx-post="/claims/{{ claim_id }}/signals"
+              hx-headers='{"X-Meridian-Panel": "1"}'
               hx-target="#signals-{{ claim_id }}"
               hx-swap="outerHTML"
               hx-disabled-elt="this">Regenerate</button>
