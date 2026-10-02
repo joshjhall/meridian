@@ -15,6 +15,9 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let source = null;
+  // Bumped on every clear, so a move queued behind a View Transition from
+  // before a reset can't put a stale card back on the board.
+  let generation = 0;
 
   const lane = (stage) => road.querySelector(`[data-lane="${stage}"] [data-cards]`);
 
@@ -56,14 +59,18 @@
   };
 
   const move = (data) => {
+    const queuedIn = generation;
     if (document.startViewTransition && !reduceMotion.matches && !document.hidden) {
-      document.startViewTransition(() => place(data));
+      document.startViewTransition(() => {
+        if (queuedIn === generation) place(data);
+      });
     } else {
       place(data);
     }
   };
 
   const clear = () => {
+    generation += 1;
     for (const cards of road.querySelectorAll("[data-cards]")) cards.replaceChildren();
     recount();
     tick(routed, 0);

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from app import app, render_card
 from clock import DEMO_START
 from fixtures import load_claim_fixtures
-from models import ExceptionReason, Skill, Stage, Tier
+from models import EXCEPTION_LABELS, ExceptionReason, Skill, Stage, Tier
 
 client = TestClient(app)
 
@@ -130,6 +130,16 @@ def test_failed_write_recovers_and_clears_its_reason():
         assert view.stage is Stage.WITH_ADJUSTER
         assert "reason" not in view.facts
         assert view.facts["adjuster"]
+
+
+def test_every_exception_reason_has_a_label():
+    assert set(EXCEPTION_LABELS) == set(ExceptionReason)
+
+
+def test_cards_render_for_every_exception_in_the_feed():
+    for view in monitor.replay().claims.values():
+        if view.stage is Stage.EXCEPTION:
+            assert EXCEPTION_LABELS[ExceptionReason(view.facts["reason"])] in render_card(view)
 
 
 def test_routed_claim_is_counted_once():
