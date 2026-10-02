@@ -4,6 +4,7 @@ import asyncio
 import itertools
 import json
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -231,13 +232,29 @@ def test_new_viewer_gets_reset_status_and_the_board_so_far(replay):
         ("/api/replay?view=admin", {}),  # no CSRF header: a cross-site form or fetch
         ("/api/replay/restart?view=admin", {}),
         ("/api/replay?view=manager", ADMIN["headers"]),
+        ("/api/replay/restart?view=manager", ADMIN["headers"]),
         ("/api/replay/restart", ADMIN["headers"]),  # no view means no admin
     ],
 )
 def test_controls_refuse_unguarded_and_manager_calls(replay, path, headers):
-    response = TestClient(app).post(path, json={"paused": True}, headers=headers)
+    replay.step()
+    board = list(replay.board.claims)
+    body = {"paused": True, "seed": schedule.SEED + 2}  # each route reads its own field
+    response = TestClient(app).post(path, json=body, headers=headers)
     assert response.status_code == 403
     assert replay.paused is False
+    assert replay.seed == schedule.SEED
+    assert list(replay.board.claims) == board  # not restarted
+
+
+def test_admin_page_script_sends_the_control_guards():
+    # No JS test harness here: check the one function every control goes through.
+    script = (Path(__file__).parents[1] / "static" / "admin.js").read_text()
+    post = script[
+        script.index("const post = ") : script.index("});", script.index("const post = "))
+    ]
+    assert "?view=admin" in post
+    assert '"X-Meridian-Board": "1"' in post
 
 
 def test_event_stream_rejects_out_of_range_limit():
