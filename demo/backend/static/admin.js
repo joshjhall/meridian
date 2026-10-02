@@ -42,12 +42,13 @@
     const template = document.createElement("template");
     template.innerHTML = html.trim();
     const card = template.content.firstElementChild;
+    const target = lane(stage);
+    // An unknown stage leaves the card where it was rather than dropping it.
+    if (!card || !target) return;
     // Same name before and after the move, so the browser animates it across lanes.
     card.style.viewTransitionName = `claim-${claim_id}`;
-    const old = document.getElementById(`card-${claim_id}`);
-    if (old) old.remove();
+    document.getElementById(`card-${claim_id}`)?.remove();
     // Demo claims stay at the top of a lane so they're easy to follow.
-    const target = lane(stage);
     if (card.classList.contains("claim--pinned")) target.prepend(card);
     else target.append(card);
     window.htmx?.process(card);
