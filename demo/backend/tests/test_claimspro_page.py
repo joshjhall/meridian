@@ -119,8 +119,10 @@ def test_extract_claim_outside_the_six_renders():
         response = TestClient(app).get(f"/claimspro/{EXTRACT_CLAIM}")
     finally:
         app.dependency_overrides.clear()
-    assert response.status_code == 200
+    assert response.status_code == 200, f"{EXTRACT_CLAIM} no longer seeded by the simulator?"
     assert neighbours(EXTRACT_CLAIM) == (SIX[-1], SIX[0])
+    assert f'href="/claimspro/{SIX[-1]}"' in response.text
+    assert f'href="/claimspro/{SIX[0]}"' in response.text
 
 
 def test_details_land_on_their_screens():
@@ -129,6 +131,18 @@ def test_details_land_on_their_screens():
     assert "estimate" in screens["payments"]
     assert "loss_description" in screens["loss"]  # unlisted keys go to Loss
     assert all("photos" not in fields for fields in screens.values())
+    for claim_id, fixture in load_claim_fixtures().items():
+        placed = [k for fields in details_by_screen(fixture.claim).values() for k in fields]
+        assert sorted(placed) == sorted(set(fixture.claim.details) - {"photos"}), claim_id
+
+
+def test_repeated_file_stems_get_unique_anchors():
+    claim = load_claim_fixtures()["IS-CLM-2025000300"].claim.model_copy(
+        update={"sources": ["sample_claims/x/report.pdf", "sample_claims/x/report.md"]}
+    )
+    slugs = [d.slug for d in documents(claim)]
+    assert slugs[:2] == ["report", "report-2"]
+    assert len(slugs) == len(set(slugs))
 
 
 def test_notes_from_the_simulator_show_on_the_notes_screen(client, sim):

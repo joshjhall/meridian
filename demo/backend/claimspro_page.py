@@ -90,10 +90,19 @@ def documents(claim: Claim) -> list[Document]:
         return [Document(s, n, "synthetic") for s, n in SYNTHETIC_DOCUMENTS[claim.claim_id]]
     files = [p for p in claim.sources if p.startswith("sample_claims/")]
     files += claim.details.get("photos", [])
-    return [
-        Document(slugify(f), PurePosixPath(f).name, PurePosixPath(f).suffix.lstrip(".").upper())
-        for f in files
-    ]
+    docs: list[Document] = []
+    seen: set[str] = set()
+    for f in files:
+        # Anchors must be unique: a repeated stem (report.pdf, report.jpg) gets -2, -3.
+        base = slugify(f) or "document"
+        slug, n = base, 1
+        while slug in seen:
+            n += 1
+            slug = f"{base}-{n}"
+        seen.add(slug)
+        path = PurePosixPath(f)
+        docs.append(Document(slug, path.name, path.suffix.lstrip(".").upper()))
+    return docs
 
 
 def neighbours(claim_id: str) -> tuple[str, str]:
