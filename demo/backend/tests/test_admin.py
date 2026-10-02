@@ -1,6 +1,7 @@
 """Admin pipeline monitor (#6): fixture feed, state, page, stream, trace."""
 
 import json
+from datetime import timedelta
 from itertools import pairwise
 
 import monitor
@@ -8,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import app, render_card
+from clock import DEMO_START
 from fixtures import load_claim_fixtures
 from models import ExceptionReason, Skill, Stage, Tier
 
@@ -20,6 +22,18 @@ def test_script_is_time_ordered_and_deterministic():
     script = monitor.fixture_script()
     assert [s.at for s in script] == sorted(s.at for s in script)
     assert monitor.fixture_script.__wrapped__() == script
+
+
+def test_events_run_on_the_demo_clock():
+    fixtures = load_claim_fixtures()
+    script = monitor.fixture_script()
+    assert script[0].event.timestamp == DEMO_START
+    # The whole feed spans a demo morning, not the wall clock.
+    assert script[-1].event.timestamp - DEMO_START < timedelta(days=1)
+    for s in script:
+        fx = fixtures.get(s.event.claim_id)
+        if fx is not None:
+            assert s.event.timestamp >= fx.claim.received_at
 
 
 def test_every_fixture_claim_reaches_its_expected_end_state():
