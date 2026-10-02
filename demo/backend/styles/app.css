@@ -1,0 +1,8 @@
+/* Theme tokens + utilities only. Basecoat's CDN stylesheet (loaded first in
+   base.html) already carries Tailwind's preflight and the components, and
+   loading preflight again after it would reset component styles. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
+@source "../templates";
+@source "../static/*.js";

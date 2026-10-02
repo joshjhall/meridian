@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Meridian claim panel (demo)",
+  "version": "0.1.0",
+  "description": "Side panel for the Meridian claims demo. Embeds the backend's /panel page; built out in #11.",
+  "permissions": ["sidePanel"],
+  "side_panel": { "default_path": "panel.html" }
+}

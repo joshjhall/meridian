@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Meridian demo{% endblock %}</title>
+    {# Order matters: Basecoat (Tailwind theme, preflight, components) first,
+       then our Tailwind utilities build (make css). #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.min.css" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/js/all.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+    <script>
+      // Basecoat initializes components inserted by HTMX swaps on its own; a
+      // history restore brings back already-initialized DOM, so force a reset.
+      document.addEventListener("htmx:historyRestore", () => window.basecoat?.initAll({ force: true }));
+    </script>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <main class="mx-auto max-w-5xl p-6">{% block content %}{% endblock %}</main>
+  </body>
+</html>

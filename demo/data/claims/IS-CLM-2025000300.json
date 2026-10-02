@@ -1,0 +1,62 @@
+{
+  "claim": {
+    "claim_id": "IS-CLM-2025000300",
+    "filed_date": "2025-06-19",
+    "claim_type": "Collision",
+    "state": "FL",
+    "intake_channel": "E-Portal",
+    "cost_per_claim_usd": 351.23,
+    "claim_amount_usd": 2825.07,
+    "complexity": "Simple",
+    "automation_eligibility_score": 85,
+    "flagged_for_human_review": "No",
+    "requires_human_by_regulation": "No",
+    "queue_wait_hours": 30.4,
+    "handling_hours": 4.3,
+    "total_cycle_time_hours": 34.7,
+    "disposition": "Paid in Full",
+    "denial_reason": null,
+    "adjuster_id": "ADJ-110",
+    "document_count": 4,
+    "customer_satisfaction_1to5": 4.0,
+    "review_actually_needed": null,
+    "received_at": "2025-06-19T08:12:00",
+    "synthetic": false,
+    "sources": [
+      "sample_claims/IS-CLM-2025000300/intake.md",
+      "sample_claims/IS-CLM-2025000300/adjuster_notes.md",
+      "sample_claims/IS-CLM-2025000300/status_history.md",
+      "sample_claims/IS-CLM-2025000300/repair_estimate.pdf"
+    ],
+    "details": {
+      "policyholder": "Sunstate Logistics LLC",
+      "policy_number": "CA-FL-4471-19",
+      "vehicle": "2013 Acura TSX",
+      "vin": "JH4CU2F63DC802291",
+      "plate": "FL SLX-4471",
+      "loss_description": "Insured vehicle struck a stationary parking-lot bollard at low speed. Damage to front-left bumper cover, LH headlamp, and fender. No injuries. Single vehicle, no third party.",
+      "injuries": false,
+      "third_party": false,
+      "estimate": "Gulf Coast Collision Center, est. GC-24418",
+      "photos": [
+        "IMG_0071.jpg",
+        "IMG_0072.jpg"
+      ],
+      "complete_at_intake": true
+    },
+    "skills": [],
+    "tier": null,
+    "routing_reason": null,
+    "review_lane": null,
+    "brief_status": null
+  },
+  "expected": {
+    "skills": [
+      "Collision"
+    ],
+    "tier": "T1",
+    "regulated": false,
+    "routing_reason": "Simple collision, complete at intake → T1 fast lane",
+    "sla_in_demo": "on_track"
+  }
+}

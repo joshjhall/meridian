@@ -1,0 +1,22 @@
+[project]
+name = "meridian-demo-backend"
+version = "0.1.0"
+description = "Meridian claims-routing demo: API, pages, and LangGraph pipeline"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "jinja2>=3.1",
+  "langgraph>=0.2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "httpx>=0.28", "pytailwindcss>=0.3.1"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

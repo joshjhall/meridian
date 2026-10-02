@@ -1,0 +1,54 @@
+{
+  "claim": {
+    "claim_id": "IS-CLM-2025002043",
+    "filed_date": "2025-06-20",
+    "claim_type": "Property Damage",
+    "state": "FL",
+    "intake_channel": "Phone",
+    "cost_per_claim_usd": 663.69,
+    "claim_amount_usd": 14103.97,
+    "complexity": "Moderate",
+    "automation_eligibility_score": 34,
+    "flagged_for_human_review": "No",
+    "requires_human_by_regulation": "Yes",
+    "queue_wait_hours": 65.9,
+    "handling_hours": 63.8,
+    "total_cycle_time_hours": 129.7,
+    "disposition": "Paid in Full",
+    "denial_reason": null,
+    "adjuster_id": "ADJ-102",
+    "document_count": 3,
+    "customer_satisfaction_1to5": null,
+    "review_actually_needed": null,
+    "received_at": "2025-06-20T09:00:00",
+    "synthetic": true,
+    "sources": [
+      "docs/presentation/panel_examples.md"
+    ],
+    "details": {
+      "story": "The insured's delivery truck backed into a gas station's canopy column. The owner phoned it in; there is no estimate yet.",
+      "property_owner": "Gas station (third party), contact on file",
+      "property_type": "Canopy column",
+      "missing": [
+        "repair estimate or invoice",
+        "photos",
+        "insured driver's statement"
+      ],
+      "amount_basis": "Owner's verbal figure"
+    },
+    "skills": [],
+    "tier": null,
+    "routing_reason": null,
+    "review_lane": null,
+    "brief_status": null
+  },
+  "expected": {
+    "skills": [
+      "Property Damage"
+    ],
+    "tier": "T2",
+    "regulated": true,
+    "routing_reason": "Regulated (FL, over $10K): required review was missing; added",
+    "sla_in_demo": "on_track"
+  }
+}
