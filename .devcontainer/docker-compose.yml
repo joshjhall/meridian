@@ -17,11 +17,8 @@ services:
         INCLUDE_DEV_TOOLS: "true"
         INCLUDE_OP: "true"
         INCLUDE_HOST_EVENTS: "true"
-        INCLUDE_NODE: "true"
-        # Pinned to 24: Node 25+ dropped the bundled corepack binary, which the
-        # containers node feature calls unconditionally (build exits 127).
-        # Revisit once joshjhall/containers ships the fix.
-        NODE_VERSION: "24"
+        INCLUDE_PYTHON_DEV: "true"
+        PYTHON_VERSION: "3.14"
         # Docker CLI + docker group; talks to the host daemon via the socket
         # mounted below (not docker-in-docker). Mounting the socket without
         # this flag leaves it present but unusable.
