@@ -48,6 +48,9 @@ services:
         required: false
     environment:
       CLAUDE_MCPS: "filesystem,codegraph"
+      # The workspace mount is case-insensitive (macOS host), so `just` can see
+      # a phantom `Justfile` beside the tracked `justfile` and refuse to run.
+      JUST_JUSTFILE: /workspace/meridian/justfile
     init: true
     # CAP_SYS_ADMIN + /dev/fuse are the minimum for the bindfs FUSE overlay that
     # fixes macOS VirtioFS ownership on the workspace bind mount. It degrades to
