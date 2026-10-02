@@ -137,9 +137,10 @@ def test_every_exception_reason_has_a_label():
 
 
 def test_cards_render_for_every_exception_in_the_feed():
-    for view in monitor.replay().claims.values():
-        if view.stage is Stage.EXCEPTION:
-            assert EXCEPTION_LABELS[ExceptionReason(view.facts["reason"])] in render_card(view)
+    views = [v for v in monitor.replay().claims.values() if v.stage is Stage.EXCEPTION]
+    assert views  # an empty feed would pass the loop below vacuously
+    for view in views:
+        assert EXCEPTION_LABELS[ExceptionReason(view.facts["reason"])] in render_card(view)
 
 
 def test_routed_claim_is_counted_once():
