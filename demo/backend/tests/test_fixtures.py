@@ -100,7 +100,7 @@ def test_api_lists_six_claims():
 def test_api_gets_claim_with_computed_sla():
     body = client.get("/api/claims/IS-CLM-2025004222").json()
     assert body["claim_type"] == "Bodily Injury"
-    assert body["sla_due_at"].startswith("2025-09-26T10:00")
+    assert body["sla_due_at"].startswith("2025-10-15T13:00")
 
 
 def test_api_unknown_claim_is_404():

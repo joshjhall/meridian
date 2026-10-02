@@ -16,6 +16,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, computed_field
 
 SLA_HOURS = 24
+SLA_AT_RISK_HOURS = 6  # amber under 6h left (panel_examples.md, Header)
 
 
 class Skill(StrEnum):
@@ -56,6 +57,7 @@ Disposition = Literal["Paid in Full", "Partial Payment", "Denied", "Settled", "P
 ReviewLane = Literal["fast_lane", "standard_review", "regulatory_review", "senior_review"]
 BriefStatus = Literal["pending", "ready", "failed"]
 AdjusterRole = Literal["adjuster", "senior", "lead"]
+SlaState = Literal["on_track", "at_risk", "breached"]
 
 
 class Claim(BaseModel):
@@ -99,6 +101,15 @@ class Claim(BaseModel):
     def sla_due_at(self) -> datetime:
         return self.received_at + timedelta(hours=SLA_HOURS)
 
+    def sla_state(self, now: datetime) -> SlaState:
+        """Pass clock.now(), not the wall clock."""
+        left = self.sla_due_at - now
+        if left <= timedelta(0):
+            return "breached"
+        if left < timedelta(hours=SLA_AT_RISK_HOURS):
+            return "at_risk"
+        return "on_track"
+
 
 class FixtureExpectation(BaseModel):
     """What docs/presentation/panel_examples.md says the pipeline should produce."""
@@ -107,7 +118,7 @@ class FixtureExpectation(BaseModel):
     tier: Tier
     regulated: bool
     routing_reason: str
-    sla_in_demo: Literal["on_track", "at_risk", "breached"]
+    sla_in_demo: SlaState
 
 
 class ClaimFixture(BaseModel):

@@ -9,4 +9,4 @@ extend-exclude = ["backend/.venv"]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
 
 [lint.isort]
-known-first-party = ["app", "fixtures", "models"]
+known-first-party = ["app", "clock", "fixtures", "models"]
