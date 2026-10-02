@@ -30,6 +30,11 @@
         {{ what_matters(s) }}
         {{ needs_attention(s) }}
       {% endif %}
+      {% if signals %}
+        <section class="lane" id="signals" aria-label="Complexity signals">
+          {% include "panel/_signals.html" %}
+        </section>
+      {% endif %}
       {{ key_facts(s) }}
       {{ contents(s) }}
       {{ footer(s) }}

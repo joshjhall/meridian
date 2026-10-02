@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 import clock
 import queues
@@ -29,12 +30,15 @@ from models import (
     EXCEPTION_LABELS,
     TIER_LABELS,
     Adjuster,
+    AuditRecord,
     Claim,
     ClaimAudit,
     CorrectionLogEntry,
     LearningHistory,
+    Signals,
 )
-from pipeline import PIPELINE_VERSION
+from pipeline import PIPELINE_VERSION, llm_signals
+from pipeline.audit import build_audit
 from replay import Replay, serve
 from replay.api import controls as replay_controls
 from replay.api import router as replay_router
@@ -53,6 +57,7 @@ def render_card(view: monitor.ClaimView) -> str:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # The replay exists from import, so the trace endpoint and tests can read it;
     # it only plays while the server runs.
+    llm_signals.log_endpoint()
     app.state.replay.start()
     yield
     await app.state.replay.stop()
@@ -182,6 +187,7 @@ def admin_audit(request: Request, sim: AuditSim, claim_id: str):
             "audit": audit,
             "story": monitor.STORIES.get(claim_id),
             "timeline": audit_view.timeline_rows(audit.timeline),
+            "live_available": llm_signals.live_available(),
         },
     )
 
@@ -358,6 +364,8 @@ def panel_page(request: Request, claim: str | None = Query(None, pattern=r"^IS-C
             "sla_used": sla_used,
             "tier_labels": TIER_LABELS,
             "claim_ids": list(load_claim_fixtures()),
+            "signals": panel.recorded_signals(claim) if claim and summary else None,
+            "live_available": llm_signals.live_available(),
         },
     )
 
@@ -404,3 +412,57 @@ def panel_log(
 @app.get("/api/corrections")
 def corrections(claim: str | None = None) -> list[CorrectionLogEntry]:
     return panel.corrections(claim)
+
+
+# --- Complexity signals, live (#4) ---
+
+
+def require_ui_request(
+    x_meridian_panel: Annotated[str | None, Header()] = None,
+    x_meridian_board: Annotated[str | None, Header()] = None,
+) -> None:
+    """The panel or the admin board; either custom header blocks a cross-site POST."""
+    if "1" not in (x_meridian_panel, x_meridian_board):
+        raise HTTPException(
+            status_code=403, detail=f"missing {PANEL_HEADER} or {BOARD_HEADER} header"
+        )
+
+
+class SignalsRun(BaseModel):
+    signals: Signals
+    audit: AuditRecord
+
+
+@app.post("/claims/{claim_id}/signals", dependencies=[Depends(require_ui_request)])
+def claim_signals(
+    request: Request, claim_id: str, hx_request: Annotated[str | None, Header()] = None
+):
+    """One live call for one claim, with every guard; a failure returns the recorded run.
+
+    The routing already in ClaimsPro is not changed: this shows what the step reads now,
+    with the audit record it would write. JSON, or the signals fragment for HTMX.
+    """
+    claim = get_claim_or_404(claim_id)
+    signals = llm_signals.run_live(claim)
+    if hx_request:
+        return templates.TemplateResponse(
+            request,
+            "panel/_signals.html",
+            {
+                "claim_id": claim_id,
+                "signals": signals,
+                "live_available": llm_signals.live_available(),
+            },
+        )
+    # What the step contributes to routing; the route itself is the pipeline's.
+    output = {
+        "secondary_skills": [k.value for k in signals.secondary_skills],
+        "injury": signals.injury,
+        "suggested_tier": signals.suggested_tier,
+    }
+    rationale = (
+        f"Complexity signals re-read on request: {sum(i.verified for i in signals.items)} verified"
+        f", {len(signals.unverified)} unverified (ignored)"
+        + (f"; fell back: {signals.fallback_reason}" if signals.fallback else "")
+    )
+    return SignalsRun(signals=signals, audit=build_audit(claim, signals, output, rationale))

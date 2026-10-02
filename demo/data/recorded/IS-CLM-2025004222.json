@@ -1,0 +1,43 @@
+{
+  "model": "claude-sonnet-5-5",
+  "response": {
+    "suggested_tier": "T3",
+    "signals": [
+      {
+        "kind": "injury",
+        "quote": "My neck's been bad since. And my lower back.",
+        "source": "call_excerpt.md",
+        "confidence": 0.95,
+        "skill": null
+      },
+      {
+        "kind": "onset_gap",
+        "quote": "Clmt says onset day-of; med summary DOS is 3 days post",
+        "source": "adjuster_notes.md",
+        "confidence": 0.9,
+        "skill": null
+      },
+      {
+        "kind": "causation_gap",
+        "quote": "the causation link isn't airtight on the docs I have",
+        "source": "adjuster_notes.md",
+        "confidence": 0.9,
+        "skill": null
+      },
+      {
+        "kind": "low_confidence",
+        "quote": "we ended up pulling off by Delford [*] Avenue",
+        "source": "call_excerpt.md",
+        "confidence": 0.9,
+        "skill": null
+      },
+      {
+        "kind": "low_confidence",
+        "quote": "I drive commercial too so I can't [inaudible]",
+        "source": "call_excerpt.md",
+        "confidence": 0.9,
+        "skill": null
+      }
+    ]
+  }
+}

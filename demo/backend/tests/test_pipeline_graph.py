@@ -114,7 +114,8 @@ def test_failed_write_raises_an_alert_not_a_silent_drop():
     assert result.events[-1].payload["reason"] == "failed_write"
     audit = routed.audit
     assert audit.input_data_ref.startswith(f"claimspro:{routed.claim_id}@sha256:")
-    assert audit.model_version == f"{PIPELINE_VERSION}+signals:rules"
+    # 0300 has a recorded response with no signals: the LLM still ran, and is named.
+    assert audit.model_version == f"{PIPELINE_VERSION}+signals:recorded:claude-sonnet-5-5"
     assert audit.output["issues"] and audit.output["review_lane"] == "fast_lane"
     assert audit.human_reviewed is False
 

@@ -30,10 +30,12 @@ from models import (
     PanelFooter,
     PanelHeader,
     PanelSummary,
+    Signals,
     SourceRef,
 )
 from pipeline import PIPELINE_VERSION, PipelineResult, run_pipeline
 from pipeline.intake import check_correction, fold, is_negation
+from pipeline.signals import complexity_signals
 
 PANEL_DATA = DATA / "panel"
 
@@ -204,3 +206,9 @@ def corrections(claim_id: str | None = None) -> list[CorrectionLogEntry]:
 
 def clear_corrections() -> None:
     _log.clear()
+
+
+def recorded_signals(claim_id: str) -> Signals | None:
+    """The signals the pipeline routed on, shown until a live regenerate replaces them."""
+    fixture = load_claim_fixtures().get(claim_id)
+    return complexity_signals(fixture.claim) if fixture else None

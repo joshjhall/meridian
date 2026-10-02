@@ -60,6 +60,9 @@ def regulatory_check(claim: Claim) -> Regulation:
     return Regulation(regulated=regulated, by_rule=by_rule, flagged=flagged, reason=reason)
 
 
+TIERS = list(Tier)
+
+
 def classify(claim: Claim, signals: Signals) -> tuple[list[Skill], Tier]:
     skills = list(dict.fromkeys([claim.claim_type, *signals.secondary_skills]))
     tier = BASE_TIER[claim.complexity]
@@ -67,6 +70,9 @@ def classify(claim: Claim, signals: Signals) -> tuple[list[Skill], Tier]:
         tier = Tier.T3
     elif signals.injury and tier == Tier.T1:
         tier = Tier.T2
+    # The LLM's tier suggestion can only raise the tier, never lower it.
+    if signals.suggested_tier and TIERS.index(signals.suggested_tier) > TIERS.index(tier):
+        tier = signals.suggested_tier
     return skills, tier
 
 

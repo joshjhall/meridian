@@ -1,0 +1,59 @@
+{# Complexity signals (#4) for one claim: the recorded run, or a live regenerate
+   swapped in here by HTMX (#38). Evidence for a person: each signal quotes its
+   source, unverified ones are shown but never route, and nothing here decides. #}
+{% set kinds = {
+  "injury": "Injury",
+  "onset_gap": "Onset gap",
+  "causation_gap": "Causation gap",
+  "dispute": "Dispute",
+  "low_confidence": "Low confidence",
+  "secondary_skill": "Second skill"
+} %}
+<div class="signals"
+     id="signals-{{ claim_id }}"
+     data-signals-source="{{ signals.source }}">
+  <div class="signals__head">
+    <h3>Complexity signals</h3>
+    {% if signals.fallback %}
+      <span class="badge-destructive" data-fallback="1">Fallback</span>
+    {% elif signals.source == "llm" %}
+      <span class="badge">Live</span>
+    {% else %}
+      <span class="badge-secondary">{{ signals.source | capitalize }}</span>
+    {% endif %}
+    {% if live_available %}
+      <button type="button"
+              class="btn-sm-outline"
+              hx-post="/claims/{{ claim_id }}/signals"
+              hx-target="#signals-{{ claim_id }}"
+              hx-swap="outerHTML"
+              hx-disabled-elt="this">Regenerate</button>
+    {% endif %}
+  </div>
+  {% if signals.fallback %}
+    <p class="signals__note">
+      Live call failed ({{ signals.fallback_reason }}). Showing the recorded response; routing is unchanged.
+    </p>
+  {% endif %}
+  {% if signals.items %}
+    <ul class="signals__list">
+      {% for i in signals.items %}
+        <li class="signal{% if not i.verified %} signal--unverified{% endif %}"
+            data-verified="{{ i.verified | lower }}">
+          <span class="item__kind">{{ kinds[i.kind] }}{% if i.skill %}: {{ i.skill }}{% endif %}</span>
+          <q>{{ i.quote }}</q>
+          <span class="src{% if not i.verified %} src--unverified{% endif %}">{{ i.source }}</span>
+          {% if not i.verified %}<span class="unverified">unverified, ignored for routing</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="signals__note">No signals beyond the structured fields.</p>
+  {% endif %}
+  <p class="lane__meta">
+    {% if signals.llm_model %}{{ signals.llm_model }}{% endif %}
+    {% if signals.latency_ms is not none %}· {{ signals.latency_ms }} ms{% endif %}
+    {% if signals.base_url_host %}· via {{ signals.base_url_host }}{% endif %}
+    · confidence {{ "{:.0%}".format(signals.confidence) }}
+  </p>
+</div>

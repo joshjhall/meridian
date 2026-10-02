@@ -1,0 +1,22 @@
+{
+  "model": "claude-sonnet-5-5",
+  "response": {
+    "suggested_tier": null,
+    "signals": [
+      {
+        "kind": "dispute",
+        "quote": "each driver says the other ran the light",
+        "source": "claim_details.txt",
+        "confidence": 0.95,
+        "skill": null
+      },
+      {
+        "kind": "secondary_skill",
+        "skill": "Collision",
+        "quote": "Collision at a signalled intersection",
+        "source": "claim_details.txt",
+        "confidence": 0.85
+      }
+    ]
+  }
+}

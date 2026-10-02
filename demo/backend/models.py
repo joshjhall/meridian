@@ -238,13 +238,44 @@ class ClaimAudit(BaseModel):
     writes: list[WriteHistory]
 
 
+SignalKind = Literal[
+    "injury", "onset_gap", "causation_gap", "dispute", "low_confidence", "secondary_skill"
+]
+
+
+class SignalItem(BaseModel):
+    """One complexity signal, with the passage it rests on. Only verified ones route."""
+
+    kind: SignalKind
+    skill: Skill | None = None
+    quote: str
+    source: str
+    confidence: float = Field(ge=0, le=1)
+    verified: bool = False
+
+
 class Signals(BaseModel):
-    """What the complexity step (#4) reads from a claim's text; recorded until it lands."""
+    """What the complexity step (#4) reads from a claim's text.
+
+    `secondary_skills` and `injury` are what routing reads; they come only from
+    verified items. The rest is provenance for the audit record and the UI.
+    """
 
     secondary_skills: list[Skill] = []
     injury: bool = False
+    suggested_tier: Tier | None = None
     confidence: float = Field(default=1.0, ge=0, le=1)
-    source: Literal["recorded", "rules", "llm"] = "rules"
+    source: Literal["recorded", "rules", "llm", "llm_fallback"] = "rules"
+    items: list[SignalItem] = []
+    llm_model: str | None = None
+    latency_ms: int | None = None
+    fallback: bool = False
+    fallback_reason: str | None = None
+    base_url_host: str | None = None
+
+    @property
+    def unverified(self) -> list[SignalItem]:
+        return [i for i in self.items if not i.verified]
 
 
 class Regulation(BaseModel):
