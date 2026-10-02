@@ -42,6 +42,11 @@ def client(sim: ClaimsProSim):
     app.dependency_overrides.clear()
 
 
+def custom_fields_block(html: str) -> str:
+    start = html.index('id="custom-fields"')
+    return html[start : html.index("</fieldset>", start)]
+
+
 def ids(html: str) -> set[str]:
     return set(re.findall(r'id="([^"]+)"', html))
 
@@ -86,7 +91,7 @@ def test_custom_fields_read_not_yet_saved_while_a_write_is_pending(client, sim):
     sim.soap.UpdateCustomFields(claim_id, {"tier": "T1"}, idempotency_key="k1")
     sim.store.set_write_status(claim_id, "pending")
     html = client.get(f"/claimspro/{claim_id}").text
-    fields = html[html.index('id="custom-fields"') : html.index("</fieldset>")]
+    fields = custom_fields_block(html)
     assert fields.count(NOT_SAVED) == 5  # every written field; SLA due is derived
     assert "T1 standard" not in fields
 
@@ -117,8 +122,17 @@ def test_a_reliable_write_shows_in_custom_fields_and_history(client, sim):
     history = html[html.index('id="history"') :]
     assert "No pipeline activity" not in history
     assert history.count(sim.events(claim_id)[0].pipeline_version) == len(sim.events(claim_id))
-    assert "T1 standard" in html
-    assert "Saved" in html
+    fields = custom_fields_block(html)
+    assert "T1 standard" in fields
+    assert re.search(r"Last save</th>\s*<td>Saved</td>", fields)
+
+
+def test_a_failed_write_shows_save_failed_on_the_page(client, sim):
+    claim_id = SIX[0]
+    sim.store.set_write_status(claim_id, "write_failed")
+    fields = custom_fields_block(client.get(f"/claimspro/{claim_id}").text)
+    assert re.search(r"Last save</th>\s*<td>SAVE FAILED</td>", fields)
+    assert re.search(r"Tier</th>\s*<td>—</td>", fields)  # nothing routed yet
 
 
 def test_documents_list_photos_and_survive_odd_names(client):
