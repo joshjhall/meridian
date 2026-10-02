@@ -106,7 +106,11 @@ def test_admin_page_includes_learning_charts():
     assert 'id="learning-loop"' in html
     assert "Illustrative history" in html
     assert "/static/learning.js" in html
-    assert "d3@7" in html
+    # D3 comes from a CDN: pin it with Subresource Integrity.
+    d3_tag = re.search(r"<script[^>]*d3@7[^>]*>", html)
+    assert d3_tag
+    assert re.search(r'integrity="sha384-[A-Za-z0-9+/=]+"', d3_tag.group())
+    assert 'crossorigin="anonymous"' in d3_tag.group()
     assert 'data-chart="routing"' in html
     assert 'data-chart="intake"' in html
 
@@ -128,6 +132,14 @@ def test_schema_rejects_unknown_kind_and_mark(path, bad):
 def test_learning_js_never_writes_html():
     # Release notes and labels come from the API; the script must set text only.
     js = (DATA.parent / "backend" / "static" / "learning.js").read_text()
-    assert not re.search(r"\.(inner|outer)HTML\s*[+]?=", js)
-    assert "insertAdjacentHTML(" not in js
-    assert ".html(" not in js
+    code = re.sub(r"//[^\n]*", "", js)  # comments may name the APIs they avoid
+    for sink in (
+        r"(inner|outer)HTML",
+        r"insertAdjacentHTML",
+        r"document\.write",
+        r"DOMParser",
+        r"createContextualFragment",
+        r"\.html\(",
+        r"setAttribute\(\s*[\"']on",
+    ):
+        assert not re.search(sink, code), sink
