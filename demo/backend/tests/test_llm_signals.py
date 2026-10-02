@@ -709,6 +709,9 @@ def test_endpoint_json_carries_a_full_audit_record(monkeypatch):
         ("https://gateway.example/v1?k=a@b", llm_signals.AMBIGUOUS_HOST),
         ("gateway.example:8080", "gateway.example:8080"),
         ("", "api.anthropic.com"),  # set but empty means the default
+        # urlsplit raises on an unbalanced bracket; that must not crash the fallback.
+        ("https://user:pa[s3cret@host/x", llm_signals.AMBIGUOUS_HOST),
+        ("http://[::1/x", llm_signals.AMBIGUOUS_HOST),
     ],
 )
 def test_the_recorded_host_never_carries_credentials(monkeypatch, url, host):

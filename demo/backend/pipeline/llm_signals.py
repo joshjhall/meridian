@@ -405,7 +405,10 @@ def base_url_host() -> str:
     record or a response.
     """
     url = os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL
-    netloc = urlsplit(url if "://" in url else f"//{url}").netloc
+    try:
+        netloc = urlsplit(url if "://" in url else f"//{url}").netloc
+    except ValueError:  # e.g. an unbalanced "[": record nothing rather than crash
+        return AMBIGUOUS_HOST
     if "@" in netloc:
         return netloc.rpartition("@")[2]  # well-formed userinfo: drop it
     if "@" in url:
