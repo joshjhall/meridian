@@ -1,9 +1,17 @@
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
-from claimspro_page import NOT_SAVED, SCREENS, documents, neighbours, slugify
+from claimspro_page import (
+    EMPTY,
+    NOT_SAVED,
+    SCREENS,
+    custom_field_rows,
+    documents,
+    neighbours,
+    slugify,
+)
 from fastapi.testclient import TestClient
 
 from app import app
@@ -79,6 +87,16 @@ def test_custom_fields_read_not_yet_saved_while_a_write_is_pending(client, sim):
     fields = html[html.index('id="custom-fields"') : html.index("</fieldset>")]
     assert fields.count(NOT_SAVED) == 5  # every written field; SLA due is derived
     assert "T1 standard" not in fields
+
+
+def test_custom_fields_flag_a_failed_save_and_a_breached_sla():
+    claim = load_claim_fixtures()["IS-CLM-2025000375"].claim.model_copy(
+        update={"write_status": "write_failed"}
+    )
+    rows = dict(custom_field_rows(claim, claim.sla_due_at + timedelta(minutes=1)))
+    assert rows["Last save"] == "SAVE FAILED"
+    assert rows["SLA due"].endswith("(BREACHED)")
+    assert rows["Tier"] == EMPTY  # not routed yet
 
 
 def test_prev_next_cycle_through_the_six_claims(client):

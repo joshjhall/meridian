@@ -99,9 +99,7 @@ def documents(claim: Claim) -> list[Document]:
 def neighbours(claim_id: str) -> tuple[str, str]:
     """Previous and next of the six demo claims, wrapping at either end."""
     ids = list(load_claim_fixtures())
-    if claim_id not in ids:
-        return ids[-1], ids[0]
-    i = ids.index(claim_id)
+    i = ids.index(claim_id)  # the route has already 404ed an unknown claim
     return ids[i - 1], ids[(i + 1) % len(ids)]
 
 
