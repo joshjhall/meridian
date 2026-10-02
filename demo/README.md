@@ -4,7 +4,7 @@ A running demo of the claims pre-processing and routing pipeline, an admin monit
 
 ## Run
 
-Prerequisite: [uv](https://docs.astral.sh/uv/). It installs Python 3.12+ if needed.
+Prerequisite: [uv](https://docs.astral.sh/uv/). It installs Python 3.14 (pinned in `backend/.python-version`) if needed.
 
 ```bash
 cd demo
@@ -26,7 +26,7 @@ One language, Python, end to end. The only JavaScript is the extension glue and 
 
 | Piece | Tech | Where |
 |---|---|---|
-| API and pages | Python 3.12+, FastAPI, Pydantic, Jinja2; uv | `backend/` |
+| API and pages | Python 3.14, FastAPI, Pydantic, Jinja2; uv | `backend/` |
 | Components | [Basecoat](https://basecoatui.com) 1.0.2: shadcn/ui as plain HTML + Tailwind, from a CDN | `backend/templates/components/` (Jinja macros) |
 | Styling | Tailwind CSS v4 utilities, built by the standalone CLI (`pytailwindcss`, no Node) | `backend/styles/app.css` → `backend/static/app.css` |
 | Interactivity | HTMX, server-sent events, CSS transitions | `backend/templates/`, `backend/static/` |

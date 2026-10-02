@@ -23,6 +23,8 @@ The user will move the slides into Keynote.
 
 **Build issues filed** on GitHub (#1–#11; dependencies as `Blocked by #N` in each body): #1 foundation → #2 simulator, #3 pipeline, #8 learning charts, #10 mock ClaimsPro run in parallel → #4 LLM step (#3), #5 replay (#2, #3), #6 monitor (#1, then #5), #7 queues (#2, #6), #9 audit (#3, #6), #11 side panel (#1, #10). Stack is all Python (decisions 7 and 8): FastAPI + Jinja/HTMX pages, Basecoat + Tailwind, LangGraph, D3, a thin MV3 extension; the mock ClaimsPro page is plain unstyled HTML. #1 merged as PR #12; follow-ups filed: #13 (demo clock), #14 (CI, none exists yet). The repo is public on purpose for a few days so reviewers can see it; don't raise it again.
 
+**Devcontainer:** the demo is pinned to Python 3.14 (`demo/backend/.python-version`, `requires-python >=3.14`); the old `.venv` was built on Debian's /usr/bin 3.13. Upstream issues filed on joshjhall/containers: #1000 (pyright downloads its own Node at runtime; the fix should make Node an implicit dependency of python-dev) and #1001 (the `test-python-dev` script is missing). Once a fix lands, bump the `containers` submodule.
+
 **Next:**
 
 1. Build the demo per [the demo plan](/demo-plan-routing-pipeline-and-overlay.md).

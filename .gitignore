@@ -51,3 +51,5 @@ __pycache__/
 # Python virtualenvs and build output
 .venv/
 dist/
+
+_notes.md
