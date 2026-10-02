@@ -18,6 +18,7 @@ from claimspro_sim import ClaimsProSim, FaultConfig
 from claimspro_sim.api import get_sim
 from models import AuditTimelineEntry, Stage
 from pipeline.audit import PIPELINE_VERSION
+from pipeline.signals import PROMPT_VERSION
 from replay import runner, schedule
 
 CLAIM_4222 = "IS-CLM-2025004222"
@@ -163,7 +164,7 @@ def test_versions_match_the_pipeline_events(replay):
     assert {e.pipeline_version for e in audit.events} == {audit.pipeline_version}
     assert audit.pipeline_version == PIPELINE_VERSION
     prompts = {e.payload["prompt_version"] for e in audit.events if "prompt_version" in e.payload}
-    assert prompts == {audit.prompt_version}
+    assert prompts == {audit.prompt_version} == {PROMPT_VERSION}
 
     html = client.get(f"/admin/claims/{CLAIM_4222}/audit").text
     assert f'<code data-version="pipeline">{audit.pipeline_version}</code>' in html
