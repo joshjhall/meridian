@@ -3,6 +3,7 @@
 import asyncio
 import itertools
 import json
+import re
 from datetime import timedelta
 from pathlib import Path
 
@@ -566,14 +567,24 @@ def test_event_stream_turns_viewers_away_over_the_cap(monkeypatch, replay):
     assert replay.viewers == 0  # a finished viewer frees its place
 
 
-def test_admin_page_reconnects_after_the_feed_refuses_it():
-    # An EventSource gives up on a non-200 (the 503 over the cap); the page must retry.
+def test_admin_page_reconnects_after_the_feed_refuses_it(monkeypatch, replay):
+    # An EventSource gives up on a non-200 (the 503 over the cap); the page must retry,
+    # and only then: the browser already retries a stream that merely dropped.
     script = (Path(__file__).parents[1] / "static" / "admin.js").read_text()
-    onerror = script[
-        script.index("source.onerror") : script.index("};", script.index("source.onerror"))
-    ]
-    assert "EventSource.CLOSED" in onerror
-    assert "setTimeout(connect" in onerror
+    assert re.search(
+        r"if \(source\.readyState === EventSource\.CLOSED\) setTimeout\(connect, RETRY_MS\)",
+        script,
+    )
+    retry_ms = re.search(r"const RETRY_MS = (\d+);", script)
+    assert retry_ms
+    monkeypatch.setattr(runner, "MAX_VIEWERS", 1)
+    watching: asyncio.Queue[str | None] = asyncio.Queue()
+    replay._subscribers.add(watching)
+    try:
+        refused = TestClient(app).get("/api/events?limit=1")
+    finally:
+        replay._subscribers.discard(watching)
+    assert int(retry_ms[1]) == int(refused.headers["retry-after"]) * 1000
 
 
 def test_current_sim_is_the_served_passes_claimspro(replay):
