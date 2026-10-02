@@ -388,3 +388,15 @@ def test_max_attempts_below_one_is_rejected_before_any_state_change(sim, max_att
         )
     assert sim.store.get(CLAIM).write_status is None  # type: ignore[union-attr]
     assert sim.events() == []
+
+
+def test_replay_after_a_later_write_still_confirms(sim):
+    first = reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"})
+    reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-152"})
+    replay = reliable_write(
+        sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"},
+        idempotency_key=first.idempotency_key,
+    )  # fmt: skip
+    assert replay.status == "confirmed"
+    assert sim.store.get(CLAIM).adjuster_id == "ADJ-152"  # type: ignore[union-attr]
+    assert sim.alerts() == []

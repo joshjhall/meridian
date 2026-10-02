@@ -130,9 +130,12 @@ class ClaimsProSoapClient:
     ) -> bool:
         """REST-style read: does ClaimsPro now show the intended change?
 
-        Notes are matched by key; field and transfer writes by state, so a change the
-        claim already reflects counts as confirmed.
+        A key ClaimsPro has recorded as applied is proof on its own, so replaying a change
+        after later writes still confirms. Otherwise notes are matched by key and field and
+        transfer writes by state, so a change the claim already reflects counts as confirmed.
         """
+        if self._store.key_applied(idempotency_key, intent(op, claim_id, payload)):
+            return True
         claim = self._store.get(claim_id)
         if claim is None:
             return False

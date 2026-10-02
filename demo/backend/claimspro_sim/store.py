@@ -78,6 +78,10 @@ class ClaimsProStore:
             self._applied_keys[idempotency_key] = intent
             return True
 
+    def key_applied(self, idempotency_key: str, intent: str) -> bool:
+        with self._lock:
+            return self._applied_keys.get(idempotency_key) == intent
+
     def check_key(self, idempotency_key: str, intent: str) -> None:
         """Raise IdempotencyKeyConflict if the key was already used for a different change."""
         with self._lock:
