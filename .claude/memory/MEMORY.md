@@ -9,3 +9,4 @@
 - [Cite a repo source for every claim](cite-sources-for-every-claim.md) — every question or finding needs Why + file:line Sources; pushback needs a runnable script
 - [Devcontainer workspace mount quirks](devcontainer-fuse-overlay-quirks.md) — Write fails with EEXIST on new files, first-access symlink errors, rg hangs without a path, phantom Justfile breaks just; use rumdl --no-cache
 - [main requires PR + green CI](main-requires-pr-with-green-ci.md) — ruleset: test/css/lint required, no direct push or bypass; ship via Branch + PR
+- [Dual-axis charts are deliberate](dual-axis-charts-are-deliberate.md) — #8 charts keep dual y-axes over dataviz rule; caption arbitrary scaling, color-matched unit axes

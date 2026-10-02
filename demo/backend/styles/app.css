@@ -6,3 +6,164 @@
 @import "tailwindcss/utilities" layer(utilities);
 @source "../templates";
 @source "../static/*.js";
+
+/* Learning-loop charts (#8). Roles, not raw hex, in learning.js; values from
+   the dataviz reference palette (series 1 blue, series 2 orange; rollback uses
+   status-critical with an icon + label, never color alone). */
+.learning-chart,
+.learning-tooltip {
+  --chart-ink: #52514e;
+  --chart-muted: #8a8984;
+  --chart-grid: #e8e7e3;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --flag: #0b0b0b;
+  --rollback: #d03b3b;
+}
+.learning-tooltip {
+  position: absolute;
+  z-index: 50;
+  max-width: 18rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  pointer-events: none;
+}
+.dark .learning-chart,
+.dark .learning-tooltip {
+  --chart-ink: #c3c2b7;
+  --chart-muted: #8f8e86;
+  --chart-grid: #2e2e2c;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --flag: #ffffff;
+  --rollback: #e66767;
+}
+.learning-chart svg {
+  font-size: 11px;
+  overflow: visible;
+}
+.learning-chart .axis text,
+.learning-chart .start-label,
+.learning-chart .target-label {
+  fill: var(--chart-ink);
+}
+.learning-chart .axis-x .domain,
+.learning-chart .axis line {
+  stroke: var(--chart-grid);
+}
+.learning-chart .axis-title {
+  font-weight: 600;
+}
+/* Surface halo so labels stay readable where they cross bars and lines. */
+.learning-chart .start-label,
+.learning-chart .target-label {
+  paint-order: stroke;
+  stroke: var(--card, #fff);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.learning-chart .grid line {
+  stroke: var(--chart-grid);
+}
+.learning-chart .grid .domain {
+  display: none;
+}
+.learning-chart .series-line {
+  fill: none;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.learning-chart .bars path {
+  opacity: 0.55;
+}
+.learning-chart .end-dot {
+  stroke: var(--card, #fff);
+  stroke-width: 2px;
+}
+.learning-chart .target-line {
+  stroke-width: 1px;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+.learning-chart .crosshair {
+  stroke: var(--chart-muted);
+  stroke-width: 1px;
+}
+.learning-chart .crosshair-hit,
+.learning-chart .flag-hit {
+  fill: transparent;
+}
+.learning-chart .flag {
+  cursor: pointer;
+  outline: none;
+}
+.learning-chart .flag-rule {
+  stroke: var(--flag);
+  stroke-width: 1px;
+  opacity: 0.5;
+}
+.learning-chart .flag-glyph {
+  fill: var(--flag);
+  font-size: 13px;
+}
+.learning-chart .flag-rollback .flag-rule {
+  stroke: var(--rollback);
+  stroke-dasharray: 3 3;
+  opacity: 1;
+}
+.learning-chart .flag-rollback .flag-glyph {
+  fill: var(--rollback);
+  font-size: 16px;
+  font-weight: 700;
+}
+.learning-chart .flag-other {
+  opacity: 0.35;
+}
+.learning-chart .flag:hover .flag-rule,
+.learning-chart .flag:focus-visible .flag-rule {
+  stroke-width: 2px;
+  opacity: 1;
+}
+.learning-chart .flag:focus-visible .flag-glyph {
+  text-decoration: underline;
+}
+.learning-chart .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--chart-ink);
+}
+.learning-chart .legend-key {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+}
+.learning-chart .legend-bar .legend-key {
+  height: 10px;
+  border-radius: 2px 2px 0 0;
+  opacity: 0.55;
+}
+.learning-chart .swatch-1 .legend-key {
+  background: var(--series-1);
+}
+.learning-chart .swatch-2 .legend-key {
+  background: var(--series-2);
+}
+.learning-chart .legend-rollback {
+  color: var(--rollback);
+}
+.learning-tooltip .swatch::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 0.375rem;
+  border-radius: 50%;
+}
+.learning-tooltip .swatch-1::before {
+  background: var(--series-1);
+}
+.learning-tooltip .swatch-2::before {
+  background: var(--series-2);
+}

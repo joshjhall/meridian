@@ -1,0 +1,27 @@
+{# Learning-loop charts (#8). Data: GET /api/history; drawing: static/learning.js. #}
+<section id="learning-loop"
+         class="mx-auto mt-8 flex w-full max-w-5xl flex-col gap-4 p-6">
+  <header class="flex flex-wrap items-center gap-2">
+    <h2 class="text-lg font-semibold">Learning loop</h2>
+    <span class="badge-outline">Illustrative history</span>
+  </header>
+  <p id="learning-caption"
+     class="text-sm text-muted-foreground">Illustrative history: mocked data, not measurements.</p>
+  {% for chart_id in ["routing", "intake"] %}
+    <figure class="card learning-chart" data-chart="{{ chart_id }}">
+      <header>
+        <h3 data-role="title"></h3>
+        <p data-role="subtitle"></p>
+      </header>
+      <section>
+        <svg data-role="plot" role="img" class="w-full" viewBox="0 0 720 320">
+        </svg>
+        <figcaption data-role="legend" class="mt-2 flex flex-wrap gap-4 text-sm"></figcaption>
+      </section>
+    </figure>
+  {% endfor %}
+  <div id="learning-tooltip"
+       role="tooltip"
+       class="learning-tooltip card"
+       hidden></div>
+</section>

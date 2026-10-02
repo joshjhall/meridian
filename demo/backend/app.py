@@ -14,8 +14,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from claimspro_sim.api import router as claimspro_router
-from fixtures import load_claim_fixtures, load_roster
-from models import EXCEPTION_LABELS, Adjuster, Claim
+from fixtures import load_claim_fixtures, load_history, load_roster
+from models import EXCEPTION_LABELS, Adjuster, Claim, LearningHistory
 
 HERE = Path(__file__).resolve().parent
 
@@ -61,6 +61,11 @@ def get_claim(claim_id: str) -> Claim:
 @app.get("/api/roster")
 def roster() -> list[Adjuster]:
     return load_roster()
+
+
+@app.get("/api/history")
+def history() -> LearningHistory:
+    return load_history()
 
 
 # --- Pages ---

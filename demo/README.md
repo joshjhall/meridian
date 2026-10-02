@@ -58,12 +58,13 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 
 - `backend/models.py`: the shared contracts and **the only schema**: `Claim`, `Skill`, `Tier`, `Stage`, `Adjuster`, `PipelineEvent`, `AuditRecord`, `PanelSummary`.
 - `backend/fixtures.py`: `load_claim_fixtures()` and `load_roster()`, validated through the models.
-- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`) and the pages (`/admin`, `/claimspro/{id}`, `/panel`).
+- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`) and the pages (`/admin`, `/claimspro/{id}`, `/panel`).
 - `backend/templates/` and `backend/static/`: Jinja templates and CSS. `templates/components/` holds Basecoat's Jinja macros (MIT; see `BASECOAT_LICENSE.txt`) for its interactive components (tabs, dialog, dropdown, select, popover, toast and others).
 - `backend/styles/app.css`: Tailwind input. The built `static/app.css` is committed so a fresh clone runs without a CSS build; run `just css` after changing classes.
 - `data/claims/*.json`: the six side-panel claims. Each is a `ClaimFixture`: the `claim` plus an `expected` block (skills, tier, regulated, routing reason, SLA state) from the spec, for the pipeline to test against.
 - `data/build_claims.py`: builds the fixtures. Numbers come from `reference/claims_processing.csv`; intake details and stories come from an overlay in the script.
 - `data/roster.json` and `data/gen_roster.py`: the seeded roster.
+- `data/history.json`: the mocked learning-loop history behind `/admin`'s charts (#8): weekly series from kickoff, release flags, one rollback. Week-0 values carry their sources and `tests/test_history.py` checks them; end points are targets. Illustrative, not measured.
 - `extension/`: the MV3 side panel. It embeds the backend's `/panel` page.
 
 ## Contracts and conventions
