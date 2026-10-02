@@ -23,7 +23,7 @@ from claimspro_sim import ClaimsProSim, FaultConfig
 from clock import DEMO_START
 from fixtures import claim_from_row, extract_rows, load_claim_fixtures, load_roster
 from models import Adjuster, Claim, PipelineEvent
-from pipeline import run_pipeline
+from pipeline import PipelineResult, run_pipeline
 
 SEED = 5
 # Display pacing between one claim's events, so a card visibly moves lane to lane.
@@ -113,6 +113,8 @@ class PassSim(ClaimsProSim):
 
     def __init__(self) -> None:
         self.at = DEMO_START
+        # Each claim's pipeline run, with events at their replay times, for the audit record (#9).
+        self.runs: dict[str, PipelineResult] = {}
         super().__init__([], sleep=lambda _: None, now=lambda: self.at)
 
 
@@ -132,7 +134,12 @@ def _run(
     for r in result.routed:
         if r.adjuster_id:
             loads[r.adjuster_id] += 1  # work spreads across the replay, not just one claim
-    return result.events
+    timed = [
+        e.model_copy(update={"timestamp": arrival.at + i * STEP})
+        for i, e in enumerate(result.events)
+    ]
+    sim.runs[arrival.claim_id] = result.model_copy(update={"events": timed})
+    return timed
 
 
 def events(seed: int = SEED, sim: PassSim | None = None) -> Iterator[Scheduled]:
@@ -148,9 +155,8 @@ def events(seed: int = SEED, sim: PassSim | None = None) -> Iterator[Scheduled]:
     for arrival in arrivals(seed):
         while heap and heap[0][0] <= arrival.at:
             yield heapq.heappop(heap)[2]
-        for i, event in enumerate(_run(arrival, roster, loads, sim)):
-            at = arrival.at + i * STEP
-            heapq.heappush(heap, (at, n, Scheduled(at, event.model_copy(update={"timestamp": at}))))
+        for event in _run(arrival, roster, loads, sim):
+            heapq.heappush(heap, (event.timestamp, n, Scheduled(event.timestamp, event)))
             n += 1
     while heap:
         yield heapq.heappop(heap)[2]

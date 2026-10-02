@@ -3,6 +3,10 @@
 It joins three sources on the claim ID: the pipeline's `AuditRecord` and events
 (#3), the simulator's write log with every attempt and retry (#2), and review
 intervals. Nothing records reviews yet, so the demo scripts them in `REVIEWS`.
+
+While the replay (#5) is served, everything comes from its current pass: the run
+the operator just watched, its writes and retries. Nothing is shown ahead of the
+demo clock, so steps and reviews appear as the replay reaches them.
 """
 
 import threading
@@ -10,6 +14,8 @@ import weakref
 from datetime import datetime, timedelta
 from typing import Any
 
+import clock
+import replay
 from claimspro_sim import ClaimsProSim
 from claimspro_sim.api import Sim
 from fixtures import load_roster
@@ -27,27 +33,30 @@ ASSIGNEE = "assignee"  # stands for whoever the pipeline routed the claim to
 
 
 def audit_sim(sim: Sim) -> ClaimsProSim:
-    """The simulator the audit record reads: the one place to swap it.
+    """The simulator the audit record reads: the served replay's current pass (#5).
 
-    TODO(#40): return the replay runner's simulator (#5) once it is live, so the drawer
-    shows the writes and retries the operator just watched, not a separate run.
+    Read per request: a replay restart replaces it. With no replay served, the shared
+    simulator (`get_sim`, injected as `sim`).
     """
-    return sim
+    try:
+        return replay.current_sim()
+    except RuntimeError:
+        return sim
 
 
-# Scripted handling for the demo, as offsets from receipt: (actor, start, end).
+# Scripted handling for the demo, as offsets from assignment: (actor, start, end).
 # One person can review in several non-contiguous intervals.
 REVIEWS: dict[str, list[tuple[str, timedelta, timedelta]]] = {
     # The assigned senior reads the file, stops for the medical summary, picks it
-    # back up, and a T3 lead signs off the next morning before the SLA runs out.
+    # back up, and a T3 lead signs off before the SLA runs out.
     "IS-CLM-2025004222": [
-        (ASSIGNEE, timedelta(hours=1), timedelta(hours=2, minutes=10)),
-        (ASSIGNEE, timedelta(hours=3, minutes=30), timedelta(hours=4, minutes=20)),
-        ("ADJ-114", timedelta(hours=19, minutes=15), timedelta(hours=19, minutes=40)),
+        (ASSIGNEE, timedelta(minutes=30), timedelta(hours=1, minutes=10)),
+        (ASSIGNEE, timedelta(hours=2), timedelta(hours=2, minutes=40)),
+        ("ADJ-114", timedelta(hours=3, minutes=15), timedelta(hours=3, minutes=35)),
     ],
 }
 CLOSED_AFTER: dict[str, timedelta] = {
-    "IS-CLM-2025004222": timedelta(hours=19, minutes=50),
+    "IS-CLM-2025004222": timedelta(hours=3, minutes=45),
 }
 
 _runs: weakref.WeakKeyDictionary[ClaimsProSim, dict[str, PipelineResult]] = (
@@ -57,10 +66,15 @@ _runs_lock = threading.Lock()
 
 
 def routed(sim: ClaimsProSim, claim_id: str) -> PipelineResult:
-    """The pipeline's run for this claim, once per simulator: reopening never re-writes ClaimsPro.
+    """The pipeline's run for this claim on this simulator.
 
-    Raises KeyError for a claim ClaimsPro doesn't hold.
+    A replay pass kept its own run as it played, so that is read, never repeated.
+    Otherwise the claim is run once per simulator: reopening never re-writes ClaimsPro.
+    Raises KeyError for a claim ClaimsPro doesn't hold (or the replay hasn't reached).
     """
+    kept: dict[str, PipelineResult] | None = getattr(sim, "runs", None)
+    if kept is not None:
+        return kept[claim_id]
     with _runs_lock:
         runs = _runs.setdefault(sim, {})
         if claim_id not in runs:
@@ -79,15 +93,22 @@ def _name(adjuster_id: str | None) -> str:
     return f"{names[adjuster_id]} ({adjuster_id})" if adjuster_id in names else adjuster_id
 
 
-def review_intervals(claim_id: str, received_at: datetime, adjuster_id: str | None):
-    return [
-        ReviewInterval(
-            actor=_name(adjuster_id if actor == ASSIGNEE else actor),
-            start=received_at + start,
-            end=received_at + end,
+def review_intervals(
+    claim_id: str, assigned_at: datetime, adjuster_id: str | None, now: datetime
+) -> list[ReviewInterval]:
+    """Scripted reviews as of `now`: not started yet are left out, one under way is open."""
+    out = []
+    for actor, start, end in REVIEWS.get(claim_id, []):
+        if assigned_at + start > now:
+            continue
+        out.append(
+            ReviewInterval(
+                actor=_name(adjuster_id if actor == ASSIGNEE else actor),
+                start=assigned_at + start,
+                end=assigned_at + end if assigned_at + end <= now else None,
+            )
         )
-        for actor, start, end in REVIEWS.get(claim_id, [])
-    ]
+    return out
 
 
 def _step_label(event: PipelineEvent) -> str:
@@ -96,10 +117,12 @@ def _step_label(event: PipelineEvent) -> str:
     return f"{stage}: {step.replace('_', ' ')}" if step else stage
 
 
-def write_history(sim: ClaimsProSim, claim_id: str) -> list[WriteHistory]:
-    """Every reliable write on the claim, read live, so later retries show on reopen."""
+def write_history(sim: ClaimsProSim, claim_id: str, now: datetime) -> list[WriteHistory]:
+    """Every reliable write on the claim up to `now`, read live, so later retries show on reopen."""
     by_key: dict[str, list[PipelineEvent]] = {}
     for event in sim.events(claim_id):
+        if event.timestamp > now:
+            continue
         if "write_status" in event.payload and event.payload.get("idempotency_key"):
             by_key.setdefault(event.payload["idempotency_key"], []).append(event)
     return [
@@ -113,12 +136,19 @@ def write_history(sim: ClaimsProSim, claim_id: str) -> list[WriteHistory]:
     ]
 
 
-def claim_audit(sim: ClaimsProSim, claim_id: str) -> ClaimAudit:
+def claim_audit(sim: ClaimsProSim, claim_id: str, now: datetime | None = None) -> ClaimAudit:
+    """The record as of `now` (default the demo clock): nothing ahead of what has played."""
+    now = clock.now() if now is None else now
     result = routed(sim, claim_id)
-    run, events = result.routed[0], result.events
+    run = result.routed[0]
+    events = [e for e in result.events if e.timestamp <= now]
     claim = sim.store.get(claim_id)
-    assert claim is not None  # routed() raised already if it were missing
-    intervals = review_intervals(claim_id, claim.received_at, run.adjuster_id)
+    if claim is None or not events:
+        raise KeyError(claim_id)  # not received yet, as far as the board has played
+    assigned = next((e.timestamp for e in events if e.stage is Stage.ASSIGNED), None)
+    intervals = (
+        review_intervals(claim_id, assigned, run.adjuster_id, now) if assigned is not None else []
+    )
     record = run.audit.model_copy(
         update={
             "review_intervals": intervals,
@@ -145,8 +175,12 @@ def claim_audit(sim: ClaimsProSim, claim_id: str) -> ClaimAudit:
         AuditTimelineEntry(label="Review", kind="review", actor=i.actor, start=i.start, end=i.end)
         for i in intervals
     ]
-    if claim_id in CLOSED_AFTER:
-        closed = claim.received_at + CLOSED_AFTER[claim_id]
+    if (
+        assigned is not None
+        and claim_id in CLOSED_AFTER
+        and assigned + CLOSED_AFTER[claim_id] <= now
+    ):
+        closed = assigned + CLOSED_AFTER[claim_id]
         timeline.append(AuditTimelineEntry(label="Closed", kind="event", start=closed))
     timeline.sort(key=lambda t: t.start)  # stable: same-instant steps keep pipeline order
 
@@ -160,7 +194,8 @@ def claim_audit(sim: ClaimsProSim, claim_id: str) -> ClaimAudit:
         prompt_version=prompt,
         events=events,
         timeline=timeline,
-        writes=write_history(sim, claim_id),
+        # The replay logs a claim's writes on arrival; show them once its assignment has played.
+        writes=write_history(sim, claim_id, now) if assigned is not None else [],
     )
 
 
