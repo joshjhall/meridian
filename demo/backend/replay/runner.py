@@ -32,7 +32,7 @@ QUEUE_FRAMES = 1000  # a viewer this far behind is dropped; its browser reconnec
 TICK_S = 0.25  # the demo clock moves at least this often between events
 # Concurrent feed viewers; GET /api/events turns away the rest. A demo-sized limit,
 # not a defense: put a proxy in front if the demo leaves a trusted network.
-MAX_VIEWERS = int(os.environ.get("REPLAY_MAX_VIEWERS", "50"))
+MAX_VIEWERS = max(1, int(os.environ.get("REPLAY_MAX_VIEWERS", "50")))  # 0 would refuse everyone
 
 
 def frame(event: str, data: dict[str, Any]) -> str:
