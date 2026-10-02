@@ -20,7 +20,7 @@
     "document_count": 11,
     "customer_satisfaction_1to5": 4.0,
     "review_actually_needed": null,
-    "received_at": "2025-09-27T09:00:00",
+    "received_at": "2025-10-15T00:00:00",
     "synthetic": true,
     "sources": [
       "docs/presentation/panel_examples.md"

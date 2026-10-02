@@ -20,7 +20,7 @@
     "document_count": 4,
     "customer_satisfaction_1to5": 4.0,
     "review_actually_needed": null,
-    "received_at": "2025-06-19T08:12:00",
+    "received_at": "2025-10-15T05:00:00",
     "synthetic": false,
     "sources": [
       "sample_claims/IS-CLM-2025000300/intake.md",

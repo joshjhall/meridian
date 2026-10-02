@@ -5,16 +5,22 @@ each claim's intake details and story come from the overlay below. Real
 claims cite their sample_claims/ files; synthetic ones carry synthetic=true
 and a story from docs/presentation/panel_examples.md.
 
+received_at is demo time, not the real receipt: each claim arrives
+sla_used_hours before the demo clock starts, so at the default clock it shows
+the SLA state the spec expects. The real dates stay in filed_date and sources.
+
 Run: uv run --project demo/backend python demo/data/build_claims.py
 """
 
 import csv
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "demo" / "backend"))
 
+from clock import DEMO_START  # noqa: E402
 from models import ClaimFixture  # noqa: E402
 
 EXTRACT = REPO / "reference" / "claims_processing.csv"
@@ -23,7 +29,7 @@ SPEC = "docs/presentation/panel_examples.md"
 
 OVERLAYS: dict[str, dict] = {
     "IS-CLM-2025000300": {
-        "received_at": "2025-06-19T08:12:00",
+        "sla_used_hours": 4,
         "sources": [
             "sample_claims/IS-CLM-2025000300/intake.md",
             "sample_claims/IS-CLM-2025000300/adjuster_notes.md",
@@ -56,7 +62,7 @@ OVERLAYS: dict[str, dict] = {
         },
     },
     "IS-CLM-2025004222": {
-        "received_at": "2025-09-25T10:00:00",
+        "sla_used_hours": 20,
         "sources": [
             "sample_claims/IS-CLM-2025004222/intake.md",
             "sample_claims/IS-CLM-2025004222/call_excerpt.md",
@@ -106,7 +112,7 @@ OVERLAYS: dict[str, dict] = {
         },
     },
     "IS-CLM-2025002993": {
-        "received_at": "2025-09-08T15:00:00",
+        "sla_used_hours": 21,
         "sources": [
             "sample_claims/IS-CLM-2025002993/intake.md",
             "sample_claims/IS-CLM-2025002993/ocr_output.txt",
@@ -138,7 +144,7 @@ OVERLAYS: dict[str, dict] = {
     },
     "IS-CLM-2025000375": {
         "synthetic": True,
-        "received_at": "2025-10-14T09:00:00",
+        "sla_used_hours": 30,
         "sources": [SPEC],
         "details": {
             "story": (
@@ -159,7 +165,7 @@ OVERLAYS: dict[str, dict] = {
     },
     "IS-CLM-2025004518": {
         "synthetic": True,
-        "received_at": "2025-09-27T09:00:00",
+        "sla_used_hours": 9,
         "sources": [SPEC],
         "details": {
             "story": (
@@ -192,7 +198,7 @@ OVERLAYS: dict[str, dict] = {
     },
     "IS-CLM-2025002043": {
         "synthetic": True,
-        "received_at": "2025-06-20T09:00:00",
+        "sla_used_hours": 12,
         "sources": [SPEC],
         "details": {
             "story": (
@@ -231,6 +237,8 @@ def build() -> list[ClaimFixture]:
     for claim_id, overlay in OVERLAYS.items():
         overlay = dict(overlay)
         expected = overlay.pop("expected")
+        used = timedelta(hours=overlay.pop("sla_used_hours"))
+        overlay["received_at"] = DEMO_START - used
         fixtures.append(
             ClaimFixture.model_validate(
                 {"claim": {**rows[claim_id], **overlay}, "expected": expected}
