@@ -503,3 +503,52 @@ def test_posts_without_the_board_header_are_refused(
 def test_fault_toggle_without_a_view_is_not_admin(client: TestClient, sim: ClaimsProSim):
     assert faults(client, True, view=None).status_code == 403
     assert not queues.transfer_fault_on(sim)
+
+
+def test_write_status_rejects_a_malformed_key(client: TestClient):
+    res = client.get(f"/admin/queues/claims/{SIMPLE}/write-status", params={"key": "x&view=admin"})
+    assert res.status_code == 422
+
+
+def test_board_attributes_drive_the_same_decision_as_the_server(
+    client: TestClient, sim: ClaimsProSim
+):
+    """Until #33 tests queues.js itself: the dragover rule reads only these data-*
+    attributes, so check they carry what block_reason decides on, for every claim
+    against one adjuster of each kind."""
+    html = client.get("/admin/queues").text
+    chips = {
+        m["id"]: m
+        for m in re.finditer(
+            r'data-claim="(?P<id>[^"]+)"\s+data-needs-review="(?P<review>true|false)"\s+'
+            r'data-review-reason="(?P<reason>[^"]*)"\s+data-review-tier="(?P<tier>T\d)"',
+            html,
+        )
+    }
+    claims = sim.store.list_claims()
+    assert len(chips) == len(claims)
+
+    def js_rule(chip: re.Match, target) -> bool:  # queues.js blockReason, minus "same queue"
+        if chip["review"] != "true":
+            return False
+        if chip["tier"] not in target.tiers:
+            return True
+        return chip["tier"] == "T3" and target.role not in ("senior", "lead")
+
+    senior = ROSTER[adjuster(Tier.T3, role="senior")]
+    targets = [
+        ROSTER[adjuster(Tier.T1, only=True)],
+        ROSTER[adjuster(Tier.T2, only=True)],
+        senior,
+        # No such adjuster in today's roster, but the T3 role rule must still match.
+        senior.model_copy(update={"id": "ADJ-999", "role": "adjuster"}),
+    ]
+    for claim in claims:
+        chip = chips[claim.claim_id]
+        for target in targets:
+            if target.id == claim.adjuster_id:
+                continue
+            assert js_rule(chip, target) == (queues.block_reason(claim, target) is not None), (
+                claim.claim_id,
+                target.id,
+            )

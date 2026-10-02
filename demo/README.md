@@ -35,7 +35,7 @@ ruff, pyright, and djlint are pinned dev dependencies in `uv.lock` (add new Pyth
 Then open:
 
 - <http://localhost:8000/admin>: admin monitor (#6, #8, #9)
-- <http://localhost:8000/admin/queues>: every adjuster's queue, with drag-to-move and ClaimsPro write status (#7). Like the rest of the demo it is unauthenticated: `?view=admin` only gates the fault toggle for the demo, and the moves and toggle have no CSRF protection, so run it locally only.
+- <http://localhost:8000/admin/queues>: every adjuster's queue, with drag-to-move and ClaimsPro write status (#7). Like the rest of the demo it is unauthenticated: `?view=admin` only gates the fault toggle for the demo. The move and toggle POSTs need an `X-Meridian-Board` header, which blocks cross-site requests, but that is not authentication, so run it locally only.
 - <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10), deliberately unstyled
 - <http://localhost:8000/panel?claim=IS-CLM-2025004222>: side panel (#11)
 

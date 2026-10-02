@@ -202,7 +202,13 @@ def admin_transfer(
 
 
 @app.get("/admin/queues/claims/{claim_id}/write-status", response_class=HTMLResponse)
-def admin_write_status(request: Request, sim: Sim, claim_id: str, key: str, view: Viewer = "admin"):
+def admin_write_status(
+    request: Request,
+    sim: Sim,
+    claim_id: str,
+    key: Annotated[str, Query(pattern=r"^[0-9a-f-]{36}$")],  # a uuid4 from start_transfer
+    view: Viewer = "admin",
+):
     return _write_status(request, sim, claim_id, key, view)
 
 
