@@ -10,6 +10,7 @@ Prerequisite: [uv](https://docs.astral.sh/uv/). It installs Python 3.12+ if need
 cd demo
 make dev    # API and pages on http://localhost:8000
 make test   # pytest: fixtures, roster, API, pages
+make css    # rebuild Tailwind utilities (make dev watches)
 make data   # regenerate claim fixtures and roster
 ```
 
@@ -26,6 +27,8 @@ One language, Python, end to end. The only JavaScript is the extension glue and 
 | Piece | Tech | Where |
 |---|---|---|
 | API and pages | Python 3.12+, FastAPI, Pydantic, Jinja2; uv | `backend/` |
+| Components | [Basecoat](https://basecoatui.com) 1.0.2: shadcn/ui as plain HTML + Tailwind, from a CDN | `backend/templates/components/` (Jinja macros) |
+| Styling | Tailwind CSS v4 utilities, built by the standalone CLI (`pytailwindcss`, no Node) | `backend/styles/app.css` → `backend/static/app.css` |
 | Interactivity | HTMX, server-sent events, CSS transitions | `backend/templates/`, `backend/static/` |
 | Charts | D3, from a CDN, fed JSON by the API | `backend/static/` (from #8) |
 | Pipeline | LangGraph: one node per stage, each emitting a `PipelineEvent` | `backend/` (from #3) |
@@ -38,7 +41,8 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 - `backend/models.py`: the shared contracts and **the only schema**: `Claim`, `Skill`, `Tier`, `Stage`, `Adjuster`, `PipelineEvent`, `AuditRecord`, `PanelSummary`.
 - `backend/fixtures.py`: `load_claim_fixtures()` and `load_roster()`, validated through the models.
 - `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`) and the pages (`/admin`, `/claimspro/{id}`, `/panel`).
-- `backend/templates/` and `backend/static/`: Jinja templates and CSS.
+- `backend/templates/` and `backend/static/`: Jinja templates and CSS. `templates/components/` holds Basecoat's Jinja macros (MIT; see `BASECOAT_LICENSE.txt`) for its interactive components (tabs, dialog, dropdown, select, popover, toast and others).
+- `backend/styles/app.css`: Tailwind input. The built `static/app.css` is committed so a fresh clone runs without a CSS build; run `make css` after changing classes.
 - `data/claims/*.json`: the six side-panel claims. Each is a `ClaimFixture`: the `claim` plus an `expected` block (skills, tier, regulated, routing reason, SLA state) from the spec, for the pipeline to test against.
 - `data/build_claims.py`: builds the fixtures. Numbers come from `reference/claims_processing.csv`; intake details and stories come from an overlay in the script.
 - `data/roster.json` and `data/gen_roster.py`: the seeded roster.
@@ -50,6 +54,8 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 - Skill, Tier and Stage are enums. Iterate them instead of listing members, so a fourth or fifth tier means editing only `models.py`.
 - ClaimsPro custom fields (`skills`, `tier`, `routing_reason`, `review_lane`, `brief_status`) are empty in the fixtures; the pipeline (#3) fills them. `sla_due_at` is computed: `received_at` + 24h.
 - Pages are server-rendered. Reach for HTMX or a small script before adding a JavaScript framework.
+- Use Basecoat's classes (`btn`, `card`, `badge`, `alert`, `table` and so on) and its Jinja macros before hand-styling a component, and Tailwind utilities for layout. Load order matters: Basecoat's stylesheet first, then `app.css`. `base.html` already does this.
+- Basecoat sets up components inside HTMX swaps by itself. `base.html` forces a reset after an HTMX history restore.
 
 ## Assumptions
 

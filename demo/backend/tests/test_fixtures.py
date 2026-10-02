@@ -147,3 +147,16 @@ def test_pages_render(path, expected):
 
 def test_claimspro_page_unknown_claim_is_404():
     assert client.get("/claimspro/IS-CLM-0000000000").status_code == 404
+
+
+def test_basecoat_macros_render():
+    from app import templates
+
+    source = '{% from "components/tabs.html.jinja" import tabs %}{{ tabs(id="t", tabsets=[{"tab": "A", "panel": "x"}]) }}'
+    html = templates.env.from_string(source).render()
+    assert 'role="tablist"' in html
+
+
+def test_pages_load_basecoat_before_app_css():
+    html = client.get("/").text
+    assert html.index("basecoat.cdn.min.css") < html.index("/static/app.css")
