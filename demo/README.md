@@ -7,12 +7,28 @@ A running demo of the claims pre-processing and routing pipeline, an admin monit
 Prerequisite: [uv](https://docs.astral.sh/uv/). It installs Python 3.14 (pinned in `backend/.python-version`) if needed.
 
 ```bash
-cd demo
-make dev    # API and pages on http://localhost:8000
-make test   # pytest: fixtures, roster, API, pages
-make css    # rebuild Tailwind utilities (make dev watches)
-make data   # regenerate claim fixtures and roster
+just dev    # API and pages on http://localhost:8000
+just serve  # API and pages without the Tailwind watcher
+just test   # pytest: fixtures, roster, API, pages (extra args go to pytest)
+just css    # rebuild Tailwind utilities (just dev watches)
+just data   # regenerate claim fixtures and roster
+just lint   # every linter, no changes (just fmt applies fixes; just lint-py etc. run one)
+just clean  # remove .venv and caches (just reset also reinstalls and tests)
 ```
+
+Run from anywhere in the repo; `just` lists every recipe (the justfile is at the repo root).
+
+### Linting
+
+| Files | Tool | Recipe | Config |
+|---|---|---|---|
+| Python | ruff (lint + format) | `just lint-py` | `demo/ruff.toml` |
+| Python types | pyright | `just lint-types` | `backend/pyproject.toml` |
+| Jinja/HTMX templates | djlint | `just lint-templates` | `backend/pyproject.toml` |
+| CSS, JS | biome | `just lint-web` | `biome.json` (repo root) |
+| Markdown, YAML/JSON, TOML, shell, spelling | rumdl, dprint, taplo, shellcheck/shfmt, typos | `just lint-docs`, `lint-config`, `lint-sh`, `lint-spelling` | repo root |
+
+ruff, pyright, and djlint are pinned dev dependencies in `uv.lock` (add new Python tools with `uv add --dev`); the rest come from the devcontainer. Git hooks (`lefthook.yml`) fix and check staged files on commit and run the type check and full demo lint on push. The vendored Basecoat components in `templates/components/` are excluded.
 
 Then open:
 
@@ -42,7 +58,7 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 - `backend/fixtures.py`: `load_claim_fixtures()` and `load_roster()`, validated through the models.
 - `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`) and the pages (`/admin`, `/claimspro/{id}`, `/panel`).
 - `backend/templates/` and `backend/static/`: Jinja templates and CSS. `templates/components/` holds Basecoat's Jinja macros (MIT; see `BASECOAT_LICENSE.txt`) for its interactive components (tabs, dialog, dropdown, select, popover, toast and others).
-- `backend/styles/app.css`: Tailwind input. The built `static/app.css` is committed so a fresh clone runs without a CSS build; run `make css` after changing classes.
+- `backend/styles/app.css`: Tailwind input. The built `static/app.css` is committed so a fresh clone runs without a CSS build; run `just css` after changing classes.
 - `data/claims/*.json`: the six side-panel claims. Each is a `ClaimFixture`: the `claim` plus an `expected` block (skills, tier, regulated, routing reason, SLA state) from the spec, for the pipeline to test against.
 - `data/build_claims.py`: builds the fixtures. Numbers come from `reference/claims_processing.csv`; intake details and stories come from an overlay in the script.
 - `data/roster.json` and `data/gen_roster.py`: the seeded roster.

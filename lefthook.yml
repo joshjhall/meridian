@@ -49,6 +49,41 @@ pre-commit:
           exit 1
         fi
 
+    # --- Python (ruff) — pinned in demo/backend/uv.lock; config in demo/ruff.toml ---
+    # root: demo/ so {staged_files} cover backend/ and data/ alike.
+
+    ruff:
+      root: "demo/"
+      glob: "*.py"
+      run: >-
+        uv run --frozen --project backend ruff check --fix {staged_files}
+        && uv run --frozen --project backend ruff format {staged_files}
+      stage_fixed: true
+
+    # --- Jinja / HTMX templates (djlint) ---
+    # Vendored Basecoat components are excluded in pyproject [tool.djlint].
+
+    djlint:
+      root: "demo/backend/"
+      # glob/exclude match repo-root paths; {staged_files} are relative to root.
+      glob:
+        - "demo/backend/templates/*.html"
+        - "demo/backend/templates/**/*.html"
+      exclude:
+        - "demo/backend/templates/components/**"
+      # Reformat first (its non-zero exit only means "changed"), then lint gates.
+      run: uv run --frozen djlint --reformat {staged_files} ; uv run --frozen djlint --lint {staged_files}
+      stage_fixed: true
+
+    # --- CSS / JS (biome) ---
+
+    biome:
+      glob: "*.{css,js}"
+      skip:
+        - run: "! command -v biome >/dev/null 2>&1"
+      run: biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+
     # --- YAML / JSON formatting (dprint) ---
 
     dprint:
@@ -131,3 +166,17 @@ pre-push:
       skip:
         - run: "! command -v dprint >/dev/null 2>&1"
       run: dprint check
+
+    # Whole-project type check; too slow and cross-file for pre-commit.
+    pyright:
+      glob: "demo/**/*.py"
+      skip:
+        - run: "! command -v just >/dev/null 2>&1"
+      run: just lint-types
+
+    # Unstaged-safe full sweep of the demo's Python, templates, and web assets.
+    demo-lint:
+      glob: "demo/**/*.{py,html,jinja,css,js}"
+      skip:
+        - run: "! command -v just >/dev/null 2>&1"
+      run: just lint-py lint-templates lint-web

@@ -12,7 +12,14 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.3", "httpx>=0.28", "pytailwindcss>=0.3.1"]
+dev = [
+  "pytest>=8.3",
+  "httpx>=0.28",
+  "pytailwindcss>=0.3.1",
+  "ruff>=0.16.10",
+  "djlint>=1.46.4",
+  "pyright>=1.1.414",
+]
 
 [tool.uv]
 package = false
@@ -20,3 +27,24 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+# --- Linting (run via `just lint`; also in lefthook pre-commit) ---
+
+[tool.pyright]
+include = [".", "../data"]
+exclude = [".venv", "**/__pycache__"]
+extraPaths = [".", "../data"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+
+[tool.djlint]
+profile = "jinja"
+extension = "html"
+# Basecoat components are vendored verbatim (see BASECOAT_LICENSE.txt).
+extend_exclude = "templates/components"
+# J004/J018: Flask url_for conventions; FastAPI routes here are plain paths.
+ignore = "J004,J018"
+indent = 2
+max_line_length = 120

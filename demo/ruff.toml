@@ -1,0 +1,12 @@
+# Ruff config for all demo Python (backend/ and data/). Lives at demo/ so it
+# covers both; ruff resolves config from each file's nearest ancestor.
+
+target-version = "py314"
+line-length = 100
+extend-exclude = ["backend/.venv"]
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[lint.isort]
+known-first-party = ["app", "fixtures", "models"]
