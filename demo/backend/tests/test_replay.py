@@ -337,3 +337,81 @@ def test_restart_during_a_fetch_drops_the_stale_event(monkeypatch):
     first = next(iter(r.board.claims.values())).trace[0]
     assert first == next(events(schedule.SEED + 1)).event
     assert first != next(events()).event
+
+
+def _gap_replay() -> tuple[Replay, schedule.Scheduled]:
+    """A replay whose next event is a known number of simulated hours away."""
+    r = Replay(render_card)
+    first = r.step()
+    assert first is not None
+    nxt = r._peek()
+    assert nxt is not None
+    return r, nxt
+
+
+def test_clock_runs_between_events_and_speed_changes_keep_waited_time():
+    async def scenario():
+        r, nxt = _gap_replay()
+        hours = (nxt.at - r.sim_now) / timedelta(hours=1)
+        # Slow enough that the gap would take ~2 s, then speed up a few times mid-wait.
+        r.set(speed=hours / 2)
+        start = r.sim_now
+        r.start()
+        await asyncio.sleep(0.6)
+        moved = r.sim_now
+        for _ in range(3):
+            r.set(speed=hours / 2)  # same speed: a control touch must not restart the wait
+            await asyncio.sleep(0.5)
+        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 2)
+        await r.stop()
+        return start, moved
+
+    start, moved = asyncio.run(scenario())
+    clock.reset()
+    assert moved > start  # the clock moved before the next event played
+
+
+def test_pause_mid_wait_holds_the_clock_and_resume_keeps_progress():
+    async def scenario():
+        r, nxt = _gap_replay()
+        hours = (nxt.at - r.sim_now) / timedelta(hours=1)
+        r.set(speed=hours / 1.5)
+        r.start()
+        await asyncio.sleep(0.8)
+        r.set(paused=True)
+        await asyncio.sleep(0.1)
+        held = r.sim_now
+        await asyncio.sleep(0.6)
+        assert r.sim_now == held  # paused: no time passes
+        assert held < nxt.at
+        r.set(paused=False)
+        # About half the gap was already waited, so it plays well before a full 1.5 s.
+        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 1.2)
+        await r.stop()
+
+    asyncio.run(scenario())
+    clock.reset()
+
+
+async def _until(done) -> None:
+    while not done():
+        await asyncio.sleep(0.02)
+
+
+def test_a_stalled_viewer_is_dropped_without_stopping_the_feed(monkeypatch):
+    monkeypatch.setattr(runner, "QUEUE_FRAMES", 3)
+
+    async def scenario():
+        r = Replay(render_card)
+        stream = r.stream()
+        assert (await anext(stream)).startswith("event: reset")
+        assert (await anext(stream)).startswith("event: control")
+        assert len(r._subscribers) == 1  # subscribed, and now never reads
+        for _ in range(10):
+            r.step()  # must not raise once the viewer's queue is full
+        assert r._subscribers == set()
+        rest = [text async for text in stream]
+        assert len(rest) == runner.QUEUE_FRAMES - 1  # what fit, then the hang-up
+
+    asyncio.run(scenario())
+    clock.reset()

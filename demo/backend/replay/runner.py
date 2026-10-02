@@ -27,6 +27,7 @@ DEFAULT_SPEED = 1.0  # simulated hours per second
 MAX_DONE = 30  # with-adjuster cards kept on the board
 MAX_EXCEPTIONS = 8  # open exceptions kept on the board
 QUEUE_FRAMES = 1000  # a viewer this far behind is dropped; its browser reconnects
+TICK_S = 0.25  # the demo clock moves at least this often between events
 
 
 def frame(event: str, data: dict[str, Any]) -> str:
@@ -69,7 +70,7 @@ class Replay:
             else:
                 self._resumed.set()
         self._broadcast_control()
-        self._woken.set()  # re-time the current wait at the new speed
+        self._woken.set()  # end the current tick so the rest of the gap uses the new speed
 
     def status(self) -> dict[str, Any]:
         return {
@@ -105,11 +106,12 @@ class Replay:
 
     async def run(self) -> None:
         """Play forever: wait out each event's simulated gap at the current speed."""
+        loop = asyncio.get_running_loop()
         while True:
             await self._resumed.wait()
+            events = self._events
             if self._next is None:
                 # The pipeline runs a claim inside `next`; keep that off the event loop.
-                events = self._events
                 s = await asyncio.to_thread(next, events, None)
                 if events is not self._events:
                     continue  # restarted meanwhile; that event belongs to the old pass
@@ -121,11 +123,17 @@ class Replay:
             self._woken.clear()
             gap = (s.at - self.sim_now) / timedelta(hours=1) / self.speed
             if gap > 0:
+                started, speed = loop.time(), self.speed
                 with contextlib.suppress(TimeoutError):
-                    await asyncio.wait_for(self._woken.wait(), gap)
-                if self._woken.is_set():
-                    continue  # paused, sped up or restarted: re-time from here
-            if not self.paused and self._next is s:
+                    await asyncio.wait_for(self._woken.wait(), min(gap, TICK_S))
+                if self._events is not events or self._next is not s:
+                    continue  # restarted while waiting
+                # Time waited counts at the speed it was waited at, whatever woke us,
+                # so the clock runs between events and a control change loses nothing.
+                waited = timedelta(hours=(loop.time() - started) * speed)
+                self._advance_to(min(s.at, self.sim_now + waited))
+                continue
+            if not self.paused:
                 self.step()
 
     def start(self) -> None:
@@ -182,15 +190,19 @@ class Replay:
         `limit` caps the number of `claim` frames, which tests use.
         """
         q: asyncio.Queue[str | None] = asyncio.Queue(QUEUE_FRAMES)
+        # Snapshot and subscribe in one step: anything broadcast later is queued and
+        # newer than the snapshot, so a card never steps backwards.
+        board = [self._claim_frame(v) for v in self.board.claims.values()]
+        reset = frame("reset", {"counters": self.board.counters()})
         self._subscribers.add(q)
         try:
-            yield frame("reset", {"counters": self.board.counters()})
+            yield reset
             yield frame("control", self.status())
             sent = 0
-            for view in list(self.board.claims.values()):
+            for text in board:
                 if limit is not None and sent >= limit:
                     return
-                yield self._claim_frame(view)
+                yield text
                 sent += 1
             while limit is None or sent < limit:
                 text = await q.get()

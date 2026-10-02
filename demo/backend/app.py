@@ -175,7 +175,7 @@ def require_admin(view: Viewer | None = None) -> None:
 
 
 # Replay speed, pause and restart are shared by every viewer, so they get the
-# same guards as the fault toggle.
+# same guards as the fault toggle (a demo gate and a CSRF block, not authorization).
 app.include_router(
     replay_controls,
     dependencies=[Depends(require_board_request), Depends(require_admin)],
