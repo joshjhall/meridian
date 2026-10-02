@@ -48,8 +48,8 @@ Thumbs.db
 __pycache__/
 *.pyc
 
-# Python virtualenvs and build output
-.venv/
+# Python virtualenvs (a directory, or in the devcontainer a symlink to /cache/venvs) and build output
+.venv
 dist/
 
 _notes.md
