@@ -80,6 +80,20 @@ def test_counters_track_open_exceptions_and_routed_claims():
     assert CLAIM_2993 not in state.routed_to_review
     assert "IS-CLM-2025000375" in state.routed_to_review
     assert "IS-CLM-2025000300" not in state.routed_to_review
+    # Literal totals, so a bug shared by the state and the stream can't hide:
+    # four regulated demo claims plus two regulated background claims; open
+    # exceptions are 2993, an LLM fallback and missing fields (the failed write
+    # recovers).
+    pinned_routed = sorted(c for c in state.routed_to_review if c in monitor.STORIES)
+    assert pinned_routed == [
+        "IS-CLM-2025000375",
+        "IS-CLM-2025002043",
+        "IS-CLM-2025004222",
+        "IS-CLM-2025004518",
+    ]
+    assert state.counters() == {"routed": 6, "exceptions": 3}
+    reasons = sorted(v.facts["reason"] for v in state.claims.values() if v.stage is Stage.EXCEPTION)
+    assert reasons == ["llm_fallback", "missing_fields", "ocr_conflict"]
 
 
 @pytest.mark.parametrize(
