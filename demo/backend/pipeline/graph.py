@@ -43,7 +43,7 @@ from models import (
 from pipeline import intake, rules
 from pipeline.assign import Loads, match, route_problems
 from pipeline.audit import PIPELINE_VERSION, build_audit, write_custom_fields
-from pipeline.signals import complexity_signals
+from pipeline.signals import PROMPT_VERSION, complexity_signals
 
 
 class ClaimState(TypedDict, total=False):
@@ -184,6 +184,7 @@ def _classify(state: ClaimState) -> ClaimState:
         skills=[k.value for k in skills],
         tier=tier,
         signals=signals.source,
+        prompt_version=PROMPT_VERSION,
     )
     return {"signals": signals, "skills": skills, "tier": tier, "events": [event]}
 

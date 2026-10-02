@@ -207,6 +207,37 @@ class AuditRecord(BaseModel):
     review_intervals: list[ReviewInterval] = []
 
 
+class AuditTimelineEntry(BaseModel):
+    """One mark on a claim's audit timeline: an instant (`end` is None) or a span."""
+
+    label: str
+    kind: Literal["event", "step", "review"]
+    actor: str | None = None
+    start: datetime
+    end: datetime | None = None
+
+
+class WriteHistory(BaseModel):
+    """One intended ClaimsPro change: every attempt, its verify read and retries (#2)."""
+
+    operation: str
+    idempotency_key: str
+    status: WriteStatus
+    attempts: list[PipelineEvent]
+
+
+class ClaimAudit(BaseModel):
+    """The expanded audit record (#9): the required record plus how the claim was handled."""
+
+    record: AuditRecord
+    adjuster_id: str | None
+    pipeline_version: str
+    prompt_version: str | None
+    events: list[PipelineEvent]
+    timeline: list[AuditTimelineEntry]
+    writes: list[WriteHistory]
+
+
 class Signals(BaseModel):
     """What the complexity step (#4) reads from a claim's text; recorded until it lands."""
 

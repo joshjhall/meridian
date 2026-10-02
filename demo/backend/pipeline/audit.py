@@ -7,7 +7,7 @@ from typing import Any
 from claimspro_sim import ClaimsProSim, WriteResult, reliable_write
 from models import AuditRecord, Claim, Signals, Stage
 
-PIPELINE_VERSION = "pipeline-0.1"
+PIPELINE_VERSION = "routing-v0.4.0"  # the monitor stamps its events with this too
 
 
 def input_data_ref(claim: Claim) -> str:

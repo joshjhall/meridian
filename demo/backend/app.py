@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Annotated, Literal
 
+import audit_view
 import claimspro_page
 import monitor
 import panel
@@ -20,7 +21,7 @@ from fastapi.templating import Jinja2Templates
 
 import clock
 import queues
-from claimspro_sim import FaultConfig
+from claimspro_sim import ClaimsProSim, FaultConfig
 from claimspro_sim.api import Sim
 from claimspro_sim.api import router as claimspro_router
 from fixtures import load_claim_fixtures, load_history, load_roster
@@ -29,6 +30,7 @@ from models import (
     TIER_LABELS,
     Adjuster,
     Claim,
+    ClaimAudit,
     CorrectionLogEntry,
     LearningHistory,
 )
@@ -150,6 +152,37 @@ def admin_trace(request: Request, claim_id: str, upto: int | None = Query(None, 
         request,
         "admin/_trace.html",
         {"view": view, "labels": EXCEPTION_LABELS},
+    )
+
+
+# --- Audit record (#9) ---
+
+AuditSim = Annotated[ClaimsProSim, Depends(audit_view.audit_sim)]
+
+
+def claim_audit_or_404(sim: ClaimsProSim, claim_id: str) -> ClaimAudit:
+    try:
+        return audit_view.claim_audit(sim, claim_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}") from None
+
+
+@app.get("/api/claims/{claim_id}/audit")
+def get_claim_audit(sim: AuditSim, claim_id: str) -> ClaimAudit:
+    return claim_audit_or_404(sim, claim_id)
+
+
+@app.get("/admin/claims/{claim_id}/audit", response_class=HTMLResponse)
+def admin_audit(request: Request, sim: AuditSim, claim_id: str):
+    audit = claim_audit_or_404(sim, claim_id)
+    return templates.TemplateResponse(
+        request,
+        "admin/audit/_drawer.html",
+        {
+            "audit": audit,
+            "story": monitor.STORIES.get(claim_id),
+            "timeline": audit_view.timeline_rows(audit.timeline),
+        },
     )
 
 
