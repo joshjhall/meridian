@@ -53,6 +53,13 @@ MIN_QUOTE_CHARS = 12
 # --- What the model may return ---
 
 
+# Size limits are stated to the model and enforced here by trimming, not by rejecting
+# the response: the schema and quote check carry the safety, these only bound size.
+# (The SDK moves length constraints into descriptions, so the model isn't held to them.)
+MAX_QUOTE = 300
+MAX_SIGNALS = 12
+
+
 class LlmSignal(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -61,7 +68,7 @@ class LlmSignal(BaseModel):
         default=None, description="Only for kind=secondary_skill: the second skill needed."
     )
     quote: str = Field(
-        max_length=300, description="Verbatim passage from the source document, copied exactly."
+        description=f"Verbatim passage from the source, copied exactly; at most {MAX_QUOTE} chars."
     )
     source: str = Field(description="File name of the document the quote is from.")
     confidence: float = Field(ge=0, le=1)
@@ -72,7 +79,7 @@ class LlmSignalsResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    signals: list[LlmSignal] = Field(max_length=12)
+    signals: list[LlmSignal] = Field(description=f"At most {MAX_SIGNALS} signals.")
     suggested_tier: Tier | None = Field(
         default=None, description="A higher handling tier, if the text shows more complexity."
     )
@@ -100,6 +107,8 @@ Signal kinds:
 Rules:
 - Every signal quotes the document it rests on, copied character for character, \
 and names that document's file name as `source`. No quote, no signal.
+- Keep each quote to the shortest passage that shows the signal (under 300 \
+characters), and return at most 12 signals.
 - You describe evidence for a person to judge. You never approve, deny, or recommend \
 an outcome, and you don't assess coverage or fault.
 - Names and identifiers appear masked as [CLAIMANT], [POLICYHOLDER], [POLICY_NUMBER] \
@@ -313,8 +322,7 @@ def prompt(claim: Claim, docs: dict[str, str]) -> str:
     # Document text is data: a tag inside it can neither close its wrapper early nor
     # open a fake one under another file name.
     body = "\n\n".join(
-        f'<document name="{n}">\n{DOC_TAG.sub(r"&lt;\1\2", t)}\n</document>'
-        for n, t in docs.items()
+        f'<document name="{n}">\n{_escape_tags(t)}\n</document>' for n, t in docs.items()
     )
     return f"{fields}\n\n{body}\n\nList the complexity signals in these documents."
 
@@ -333,14 +341,24 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", text.translate(TYPOGRAPHY)).strip().casefold()
 
 
+def _escape_tags(text: str) -> str:
+    return DOC_TAG.sub(r"&lt;\1\2", text)
+
+
 def verify(response: LlmSignalsResponse, docs: dict[str, str]) -> list[SignalItem]:
-    """A signal is verified only if its quote is in the document it names."""
-    normed = {name: _norm(text) for name, text in docs.items()}
+    """A signal is verified only if its quote is in the document it names.
+
+    The model saw tags escaped (see prompt()), so a quote may carry either spelling:
+    both are compared against the document, never anything looser.
+    """
+    normed = {name: (_norm(text), _norm(_escape_tags(text))) for name, text in docs.items()}
     items = []
-    for s in response.signals:
-        quote = _norm(s.quote)
-        found = len(quote) >= MIN_QUOTE_CHARS and quote in normed.get(s.source, "")
-        items.append(SignalItem(**s.model_dump(), verified=found))
+    for s in response.signals[:MAX_SIGNALS]:
+        quote = s.quote[:MAX_QUOTE]  # a trimmed real passage is still a real passage
+        q = _norm(quote)
+        raw, escaped = normed.get(s.source, ("", ""))
+        found = len(q) >= MIN_QUOTE_CHARS and (q in raw or q in escaped)
+        items.append(SignalItem(**s.model_dump(exclude={"quote"}), quote=quote, verified=found))
     return items
 
 
@@ -495,6 +513,8 @@ def run_live(claim: Claim, client: Any = None) -> Signals:
     docs: dict[str, str] = {}
     try:
         docs = masked_documents(claim)  # raises before anything is sent if masking fails
+        if not any(t.strip() for t in docs.values()):
+            raise LiveCallError("no text to read")  # don't pay for a call on nothing
         response, model = call(client or make_client(), claim, docs)
     except Exception as e:  # every failure has the same safe answer: the recorded run
         reason = _reason(e)

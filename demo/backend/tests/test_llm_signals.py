@@ -630,3 +630,62 @@ def test_live_fallback_copes_with_a_corrupt_recording(tmp_path, monkeypatch):
     s = run_live(C4222, client=Stub(_status_error(500)))
     assert s.source == "llm_fallback" and s.fallback_reason == "API error 500"
     assert s.items == [] and s.confidence == 0.0
+
+
+# --- Review fixes, cycle 5 ---
+
+
+def test_an_overlong_quote_is_trimmed_not_fatal():
+    long_real = masked_documents(C4222)["call_excerpt.md"][600:1100]  # 500 real chars
+    s = run_live(
+        C4222,
+        client=Stub(
+            response(
+                signal("injury", long_real, "call_excerpt.md"),
+                signal("onset_gap", ONSET, "adjuster_notes.md"),
+            )
+        ),
+    )
+    assert not s.fallback and s.source == "llm"
+    assert len(s.items[0].quote) == llm_signals.MAX_QUOTE and s.items[0].verified
+    assert s.items[1].verified
+
+
+def test_extra_signals_beyond_the_cap_are_dropped():
+    many = [signal("onset_gap", ONSET, "adjuster_notes.md")] * 20
+    s = run_live(C4222, client=Stub(response(*many)))
+    assert not s.fallback and len(s.items) == llm_signals.MAX_SIGNALS
+
+
+@pytest.mark.parametrize("copied", ["see <document> here", "see &lt;document> here"])
+def test_a_quote_over_an_escaped_tag_verifies_either_way(copied):
+    docs = {"a.md": "Claimant wrote: see <document> here, then left."}
+    resp = LlmSignalsResponse.model_validate(response(signal("dispute", copied, "a.md")))
+    assert llm_signals.verify(resp, docs)[0].verified
+
+
+def test_no_text_means_no_call(monkeypatch):
+    monkeypatch.setattr(llm_signals, "documents", lambda claim: {"claim_details.txt": ""})
+    stub = Stub(response())
+    s = run_live(C4222, client=stub)
+    assert stub.requests == [] and s.fallback and s.fallback_reason == "no text to read"
+
+
+def test_endpoint_404s_an_unknown_claim():
+    r = client.post("/claims/IS-CLM-2025999999/signals", headers={"X-Meridian-Panel": "1"})
+    assert r.status_code == 404
+
+
+def test_endpoint_json_carries_a_full_audit_record(monkeypatch):
+    stub = Stub(response(signal("onset_gap", ONSET, "adjuster_notes.md")))
+    monkeypatch.setattr(llm_signals, "make_client", lambda: stub)
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "t")
+    body = client.post(
+        f"/claims/{C4222.claim_id}/signals", headers={"X-Meridian-Panel": "1"}
+    ).json()
+    audit = body["audit"]
+    assert audit["model_version"] == f"{PIPELINE_VERSION}+signals:llm:claude-sonnet-5-5"
+    assert audit["input_data_ref"].startswith(f"claimspro:{C4222.claim_id}@sha256:")
+    assert audit["confidence"] == 0.9 and audit["human_reviewed"] is False
+    assert audit["output"]["signals"]["verified"] == 1
+    assert audit["rationale"].startswith("Complexity signals re-read on request: 1 verified")
