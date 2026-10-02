@@ -422,16 +422,24 @@ def test_default_runner_settles_on_a_background_thread(sim: ClaimsProSim):
     assert owner(sim, SIMPLE) == back.id
 
 
-def test_posts_without_the_board_header_are_refused(client: TestClient, sim: ClaimsProSim):
+@pytest.mark.parametrize("header", [None, "", "0", "true"])
+def test_posts_without_the_board_header_are_refused(
+    client: TestClient, sim: ClaimsProSim, header: str | None
+):
     # A cross-site form can post, but can't add a custom header.
+    headers = {} if header is None else {"X-Meridian-Board": header}
     to = adjuster(Tier.T1, skip=owner(sim, SIMPLE))
     src = owner(sim, SIMPLE)
     moved = client.post(
-        f"/admin/queues/claims/{SIMPLE}/transfer", params={"to": to, "view": "admin"}
+        f"/admin/queues/claims/{SIMPLE}/transfer",
+        params={"to": to, "view": "admin"},
+        headers=headers,
     )
     assert moved.status_code == 403
     assert owner(sim, SIMPLE) == src
-    flipped = client.post("/admin/queues/faults", params={"on": True, "view": "admin"})
+    flipped = client.post(
+        "/admin/queues/faults", params={"on": "true", "view": "admin"}, headers=headers
+    )
     assert flipped.status_code == 403
     assert not queues.transfer_fault_on(sim)
 
