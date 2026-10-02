@@ -229,3 +229,12 @@ def test_rejected_claimspro_write_goes_to_exception_and_the_batch_still_routes()
         rejected.audit.output["routing_reason"]
         == FIXTURES["IS-CLM-2025004222"].expected.routing_reason
     )
+
+
+def test_duplicate_is_flagged_even_when_the_first_copy_stopped():
+    claim = FIXTURES["IS-CLM-2025000300"].claim
+    broken = claim.model_copy(update={"sources": ["../outside/ocr_output.txt", "x/edi_record.txt"]})
+    first, second = run_pipeline([broken, claim], load_roster(), now=NOW).routed
+    assert first.stage == Stage.EXCEPTION
+    assert second.stage == Stage.EXCEPTION
+    assert "duplicate claim ID" in second.issues[0]
