@@ -38,7 +38,8 @@ class Restart(BaseModel):
 async def events(replay: ReplayDep, limit: int | None = Query(None, ge=1)) -> Response:
     # Checked here, not in `stream`: the headers go out before the stream's first read,
     # which is where it subscribes. So the cap is soft: viewers accepted in the same
-    # instant can overshoot it until they read. The browser's EventSource retries.
+    # instant can overshoot it until they read. An EventSource doesn't retry a refusal
+    # on its own; admin.js reconnects after a pause.
     if replay.viewers >= runner.MAX_VIEWERS:
         return JSONResponse(
             {"detail": "too many viewers"}, status_code=503, headers={"Retry-After": "5"}

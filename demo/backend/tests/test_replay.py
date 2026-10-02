@@ -566,6 +566,16 @@ def test_event_stream_turns_viewers_away_over_the_cap(monkeypatch, replay):
     assert replay.viewers == 0  # a finished viewer frees its place
 
 
+def test_admin_page_reconnects_after_the_feed_refuses_it():
+    # An EventSource gives up on a non-200 (the 503 over the cap); the page must retry.
+    script = (Path(__file__).parents[1] / "static" / "admin.js").read_text()
+    onerror = script[
+        script.index("source.onerror") : script.index("};", script.index("source.onerror"))
+    ]
+    assert "EventSource.CLOSED" in onerror
+    assert "setTimeout(connect" in onerror
+
+
 def test_current_sim_is_the_served_passes_claimspro(replay):
     assert current_sim() is replay.sim
     _ = [replay.step() for _ in range(600)]
