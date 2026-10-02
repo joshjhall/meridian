@@ -117,6 +117,17 @@ def test_a_claims_events_are_spread_so_its_card_moves(first_events):
 # --- Runner ---
 
 
+def test_pass_keeps_each_claims_run_as_it_was_scheduled():
+    # #9's audit drawer reads sim.runs: it must be exactly what the board plays.
+    sim = schedule.PassSim()
+    played: dict[str, list] = {}
+    for s in itertools.islice(events(sim=sim), 300):
+        assert s.at == s.event.timestamp
+        played.setdefault(s.event.claim_id, []).append(s.event)
+    for claim_id, seen in played.items():
+        assert sim.runs[claim_id].events[: len(seen)] == seen
+
+
 def test_step_advances_the_demo_clock(replay):
     s = replay.step()
     assert s is not None

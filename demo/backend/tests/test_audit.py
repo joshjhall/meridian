@@ -253,6 +253,11 @@ def test_without_a_replay_the_shared_sim_is_read(sim: ClaimsProSim):
     assert sim.events(CLAIM_4222), "the claim is run once against the shared simulator"
 
 
+def test_fallback_unknown_claim_raises(sim: ClaimsProSim):
+    with pytest.raises(KeyError):
+        audit_view.claim_audit(sim, "IS-CLM-0000000000")
+
+
 def test_fallback_runs_once_and_shows_faulted_retries(sim: ClaimsProSim):
     sim.faults.set({"UpdateCustomFields": FaultConfig(failure_rate=1.0, max_failures=1)})
     [write] = audit_view.claim_audit(sim, CLAIM_4222).writes
