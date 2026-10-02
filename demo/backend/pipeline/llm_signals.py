@@ -209,8 +209,24 @@ def _fuzzy(value: str) -> str:
     return "".join(out)
 
 
-def _sub(pattern: str, token: str, text: str) -> str:
-    return re.sub(rf"(?<![\w-]){pattern}(?![\w-])", token, text, flags=re.IGNORECASE)
+# Tokens for names. A fuzzy match for one must contain a letter, so "Bob" can't take
+# "808" out of a dollar amount; numbers (policy, VIN, claim ID) match as they are.
+NAME_TOKENS = frozenset({"[CLAIMANT]", "[POLICYHOLDER]"})
+HAS_LETTER = re.compile(r"[^\W\d_]")
+
+
+def _matches(value: str, token: str, text: str, suffix: str = "") -> list[re.Match[str]]:
+    pattern = re.compile(rf"(?<![\w-]){_fuzzy(value)}{suffix}(?![\w-])", re.IGNORECASE)
+    found = list(pattern.finditer(text))
+    if token in NAME_TOKENS:
+        found = [m for m in found if HAS_LETTER.search(m.group(0))]
+    return found
+
+
+def _replace(text: str, matches: list[re.Match[str]], token: str) -> str:
+    for m in reversed(matches):  # right to left, so earlier offsets stay valid
+        text = text[: m.start()] + token + text[m.end() :]
+    return text
 
 
 # Words in business names that are ordinary English or US geography: masking them
@@ -256,8 +272,8 @@ def known_identifiers(claim: Claim) -> list[tuple[str, str]]:
 def mask(text: str, claim: Claim) -> str:
     """The claim's own names and numbers first (fuzzy), then anything shaped like one."""
     for value, token in known_identifiers(claim):
-        pattern = _fuzzy(value) + (SUFFIX if token == "[POLICYHOLDER]" else "")
-        text = _sub(pattern, token, text)
+        suffix = SUFFIX if token == "[POLICYHOLDER]" else ""
+        text = _replace(text, _matches(value, token, text, suffix), token)
     for pattern, token in PATTERNS:
         text = pattern.sub(token, text)
     return text
@@ -273,7 +289,7 @@ def leaks(text: str, claim: Claim) -> list[str]:
     for value, token in known_identifiers(claim):
         if token == "[CLAIM_ID]":
             value = re.sub(r"\D", "", value)  # the bare number counts too
-        if re.search(rf"(?<![\w-]){_fuzzy(value)}(?![\w-])", text, re.IGNORECASE):
+        if _matches(value, token, text):
             found.append(token)
     return found
 
@@ -285,14 +301,18 @@ def masked_documents(claim: Claim) -> dict[str, str]:
     return docs
 
 
+CLOSE_TAG = re.compile(r"</\s*(document)", re.IGNORECASE)
+
+
 def prompt(claim: Claim, docs: dict[str, str]) -> str:
     fields = (
         f"Claim type: {claim.claim_type}\nLoss state: {claim.state}\n"
         f"Intake channel: {claim.intake_channel}\nComplexity: {claim.complexity}"
     )
-    # Document text is data: a "</document>" inside it can't close the wrapper early.
+    # Document text is data: no "</document>" inside it, in any case or spacing, can
+    # close the wrapper early.
     body = "\n\n".join(
-        f'<document name="{n}">\n{t.replace("</document", "<\\/document")}\n</document>'
+        f'<document name="{n}">\n{CLOSE_TAG.sub(r"<\\/\1", t)}\n</document>'
         for n, t in docs.items()
     )
     return f"{fields}\n\n{body}\n\nList the complexity signals in these documents."
