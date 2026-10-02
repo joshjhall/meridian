@@ -68,6 +68,12 @@ def test_every_claim_has_the_shared_structure(client, claim_id):
     assert ("needs-attention" in order) == bool(summary(claim_id).needs_attention)
 
 
+def test_panel_self_hosts_its_fonts(client):
+    html = client.get(f"/panel?claim={SIX[0]}").text
+    assert "/static/fonts/fonts.css" in html
+    assert "googleapis" not in html and "gstatic" not in html
+
+
 @pytest.mark.parametrize("claim_id", SIX)
 def test_header_matches_the_spec(claim_id):
     expected = load_claim_fixtures()[claim_id].expected

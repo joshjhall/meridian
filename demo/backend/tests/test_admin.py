@@ -1,5 +1,7 @@
 """Admin pipeline monitor (#6): board state, page, cards and trace over the live replay."""
 
+import re
+
 import monitor
 import pytest
 from fastapi.testclient import TestClient
@@ -74,6 +76,23 @@ def test_admin_page_has_lanes_counters_and_stream():
     assert "Open exceptions" in html
     assert 'data-events-url="/api/events"' in html
     assert "/static/admin.js" in html
+
+
+def test_admin_page_self_hosts_its_fonts():
+    html = client.get("/admin").text
+    assert "/static/fonts/fonts.css" in html
+    assert "googleapis" not in html and "gstatic" not in html
+
+
+def test_every_vendored_font_is_served():
+    css = client.get("/static/fonts/fonts.css")
+    assert css.status_code == 200
+    urls = re.findall(r'url\("([^"]+)"\)', css.text)
+    assert len(urls) == 5  # Overpass 400/600/800, Overpass Mono 400/600
+    for url in urls:
+        font = client.get(url)
+        assert font.status_code == 200, url
+        assert font.content[:4] == b"wOF2", url
 
 
 def test_role_switch_leaves_admin_controls_out_for_managers():
