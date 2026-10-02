@@ -1,4 +1,4 @@
-/* Theme tokens + utilities only. Basecoat's CDN stylesheet (loaded first in
+/* Theme tokens + utilities only. Basecoat's stylesheet (vendored, loaded first in
    base.html) already carries Tailwind's preflight and the components, and
    loading preflight again after it would reset component styles. */
 @layer theme, base, components, utilities;
@@ -6,6 +6,9 @@
 @import "tailwindcss/utilities" layer(utilities);
 @source "../templates";
 @source "../static/*.js";
+/* Vendored minified builds and test prose would leak stray class names. */
+@source not "../static/vendor";
+@source not "../tests";
 
 /* Learning-loop charts (#8). Roles, not raw hex, in learning.js; values from
    the dataviz reference palette (series 1 blue, series 2 orange; rollback uses

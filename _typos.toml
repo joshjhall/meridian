@@ -15,4 +15,10 @@ extend-exclude = [
   # deliberate source errors); spell-checking it would flag the data itself.
   "reference/**",
   "sample_claims/**",
+  # Vendored third-party builds (minified; see its README).
+  "demo/backend/static/vendor/**",
 ]
+
+[default]
+# Subresource Integrity digests are base64; their substrings are not words.
+extend-ignore-re = ["sha384-[A-Za-z0-9+/=]{64}", "\"[A-Za-z0-9+/]{64}\""]
