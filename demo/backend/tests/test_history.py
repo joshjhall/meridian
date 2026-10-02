@@ -89,7 +89,12 @@ def test_releases_name_known_charts_and_have_notes():
         assert r.notes
         assert 0 <= r.week <= last_week, r.version
     versions = {r.version for r in load_history().releases}
-    assert {"router v0.3", "ocr-check v1.1", "signals-prompt v1.2"} <= versions
+    assert {
+        "router v0.3",
+        "ocr-check v1.1",
+        "signals-prompt v1.2",
+        "signals-prompt v1.3",
+    } <= versions
 
 
 def test_caption_marks_history_illustrative_and_axes_arbitrary():
