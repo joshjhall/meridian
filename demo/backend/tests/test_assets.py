@@ -84,8 +84,8 @@ def test_page_serves_every_vendored_asset_it_links(page):
     res = client.get(page)
     assert res.status_code == 200
     urls = vendored_urls(res.text)
-    assert "/static/vendor/basecoat/basecoat.cdn.min.css" in urls
-    assert "/static/vendor/htmx/htmx.min.js" in urls
+    for required in ("basecoat/basecoat.cdn.min.css", "basecoat/all.min.js", "htmx/htmx.min.js"):
+        assert f"/static/vendor/{required}" in urls
     for url in urls:
         asset = client.get(url)
         assert asset.status_code == 200, url
