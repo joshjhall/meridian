@@ -159,7 +159,7 @@ def admin_queues(request: Request, sim: Sim, view: Viewer = "admin"):
             "viewer": view,
             "groups": queues.board(sim, now),
             "now": now,
-            "fault_on": queues.TRANSFER in sim.faults.configs(),
+            "fault_on": queues.transfer_fault_on(sim),
             "format_left": queues.format_left,
         },
     )
@@ -206,15 +206,9 @@ def _write_status(request: Request, sim: Sim, claim_id: str, key: str, view: Vie
 
 @app.post("/admin/queues/faults", dependencies=[Depends(require_admin)])
 def admin_queue_faults(sim: Sim, on: bool) -> dict[str, bool]:
-    # Only the transfer op: the demo shows a move failing, not the whole simulator.
-    if on:
-        sim.faults.set({queues.TRANSFER: FaultConfig(failure_rate=1.0)})
-    else:
-        configs = sim.faults.configs()
-        configs.pop(queues.TRANSFER, None)
-        sim.faults.reset()
-        sim.faults.set(configs)
-    return {"on": queues.TRANSFER in sim.faults.configs()}
+    # Only the transfer op, in one set(): other ops' faults are never touched.
+    sim.faults.set({queues.TRANSFER: FaultConfig(failure_rate=1.0 if on else 0.0)})
+    return {"on": queues.transfer_fault_on(sim)}
 
 
 # --- Mock ClaimsPro (#10) ---

@@ -33,6 +33,11 @@ def run_in_thread(job: Callable[[], Any]) -> None:
     threading.Thread(target=job, daemon=True).start()
 
 
+def transfer_fault_on(sim: ClaimsProSim) -> bool:
+    config = sim.faults.configs().get(TRANSFER)
+    return config is not None and config.failure_rate > 0
+
+
 def is_regulated(claim: Claim) -> bool:
     # TODO(#3): switch to pipeline.rules.regulatory_check once #3 merges, and drop this copy.
     return claim.requires_human_by_regulation == "Yes" or (

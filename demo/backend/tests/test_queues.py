@@ -178,6 +178,7 @@ def test_fault_toggle_shows_retries_then_failure_with_alert(client: TestClient, 
     [alert] = sim.alerts()
     assert alert.operation == "TransferWorkItem"
 
+    # The failed write freed the claim, so it can move again once faults are off.
     assert client.post("/admin/queues/faults", params={"on": False}).json() == {"on": False}
     assert (
         'data-write-status="confirmed"'
@@ -186,10 +187,24 @@ def test_fault_toggle_shows_retries_then_failure_with_alert(client: TestClient, 
 
 
 def test_fault_toggle_off_keeps_other_faults(client: TestClient, sim: ClaimsProSim):
-    sim.faults.set({"AddNote": FaultConfig(failure_rate=0.5)})
+    note_fault = FaultConfig(failure_rate=0.5)
+    sim.faults.set({"AddNote": note_fault})
     client.post("/admin/queues/faults", params={"on": True})
     client.post("/admin/queues/faults", params={"on": False})
-    assert set(sim.faults.configs()) == {"AddNote"}
+    assert sim.faults.configs()["AddNote"] == note_fault
+    assert not queues.transfer_fault_on(sim)
+
+
+def test_runner_failure_frees_the_claim(sim: ClaimsProSim):
+    target = ROSTER[adjuster(Tier.T1, skip=owner(sim, SIMPLE))]
+
+    def broken(_job):
+        raise RuntimeError("no threads left")
+
+    with pytest.raises(RuntimeError):
+        queues.start_transfer(sim, SIMPLE, target, broken)
+    queues.start_transfer(sim, SIMPLE, target, lambda job: job())
+    assert owner(sim, SIMPLE) == target.id
 
 
 def test_retrying_chip_counts_attempts():
