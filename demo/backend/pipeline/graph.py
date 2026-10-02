@@ -25,6 +25,7 @@ from langgraph.types import interrupt
 from pydantic import BaseModel
 
 from claimspro_sim import ClaimsProSim
+from claimspro_sim.soap import SoapClientError
 from models import (
     Adjuster,
     AttentionItem,
@@ -290,7 +291,18 @@ def build_route_graph(loads: Loads, sim: ClaimsProSim | None):
         )
         rationale = f"{reason}. Assigned to {state['adjuster'].id} ({state['matched_on']})."
         audit = build_audit(claim, state["signals"], output, rationale)
-        written = write_custom_fields(sim, claim)
+        try:
+            written = write_custom_fields(sim, claim)
+        except SoapClientError as e:
+            issues = [f"ClaimsPro rejected the routing write: {e}"]
+            event = _event(
+                claim.claim_id,
+                Stage.EXCEPTION,
+                state["now"],
+                reason=ExceptionReason.FAILED_WRITE.value,
+                issues=issues,
+            )
+            return {"claim": claim, "issues": issues, "events": [event]}
         if written is not None:
             claim = claim.model_copy(update={"write_status": written.status})
         event = _event(
@@ -312,7 +324,7 @@ def build_route_graph(loads: Loads, sim: ClaimsProSim | None):
     g.add_conditional_edges(
         "validate_route", _fail_safe_to("audit_write"), ["audit_write", "exception"]
     )
-    g.add_edge("audit_write", END)
+    g.add_conditional_edges("audit_write", _fail_safe_to(END), [END, "exception"])
     g.add_edge("exception", END)
     return g.compile(checkpointer=InMemorySaver())
 

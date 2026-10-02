@@ -1,5 +1,8 @@
+import pytest
+
 from fixtures import load_claim_fixtures
-from pipeline.intake import check_correction, ocr_cross_check, validate
+from pipeline import intake
+from pipeline.intake import check_correction, intake_gaps, ocr_cross_check, validate
 
 CLAIM_2993 = load_claim_fixtures()["IS-CLM-2025002993"].claim
 
@@ -60,3 +63,51 @@ def test_malformed_row_names_its_reasons():
     assert claim is None
     assert any(i.startswith("claim_id:") for i in issues)
     assert any(i.startswith("state:") for i in issues)
+
+
+def _fax_claim(tmp_path, monkeypatch, *, edi_date: str, written: str):
+    """Claim 2993 pointed at copies of its fax and EDI with the dates swapped out."""
+    src = intake.REPO / "sample_claims" / "IS-CLM-2025002993"
+    ocr = (src / "ocr_output.txt").read_text().replace("2O25-O9-O5", written)
+    edi = (src / "edi_record.txt").read_text().replace("DTP*439*D8*20250908", edi_date)
+    (tmp_path / "ocr_output.txt").write_text(ocr)
+    (tmp_path / "edi_record.txt").write_text(edi)
+    monkeypatch.setattr(intake, "REPO", tmp_path)
+    return CLAIM_2993.model_copy(update={"sources": ["ocr_output.txt", "edi_record.txt"]})
+
+
+def test_unparsable_edi_date_becomes_an_attention_item(tmp_path, monkeypatch):
+    claim = _fax_claim(tmp_path, monkeypatch, edi_date="DTP*439*D8*20251345", written="2O25-O9-O5")
+    labels = [i.label for i in ocr_cross_check(claim)]
+    assert "Date of loss unreadable; unverified" in labels
+
+
+def test_impossible_ocr_estimate_date_becomes_an_attention_item(tmp_path, monkeypatch):
+    claim = _fax_claim(tmp_path, monkeypatch, edi_date="DTP*439*D8*20250908", written="2O25-13-45")
+    labels = [i.label for i in ocr_cross_check(claim)]
+    assert "Date of loss unreadable; unverified" in labels
+
+
+def test_short_dtp_segment_becomes_an_attention_item(tmp_path, monkeypatch):
+    claim = _fax_claim(tmp_path, monkeypatch, edi_date="DTP*439*D8", written="2O25-O9-O5")
+    labels = [i.label for i in ocr_cross_check(claim)]
+    assert "Date of loss unreadable; unverified" in labels
+
+
+def test_missing_or_escaping_source_raises_unreadable(tmp_path, monkeypatch):
+    monkeypatch.setattr(intake, "REPO", tmp_path)
+    gone = CLAIM_2993.model_copy(update={"sources": ["ocr_output.txt", "edi_record.txt"]})
+    with pytest.raises(intake.UnreadableSource, match="unreadable"):
+        ocr_cross_check(gone)
+    escaping = CLAIM_2993.model_copy(
+        update={"sources": ["../etc/ocr_output.txt", "../etc/edi_record.txt"]}
+    )
+    with pytest.raises(intake.UnreadableSource, match="outside the repo"):
+        ocr_cross_check(escaping)
+
+
+def test_intake_gaps_lists_known_missing_documents():
+    claim = load_claim_fixtures()["IS-CLM-2025002043"].claim
+    gaps = intake_gaps(claim)
+    assert [g.label for g in gaps] == claim.details["missing"]
+    assert {g.kind for g in gaps} == {"missing"}

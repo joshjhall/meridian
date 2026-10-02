@@ -5,6 +5,7 @@ from fixtures import load_claim_fixtures, load_roster
 from models import Adjuster, AdjusterRole, Signals, Skill, Tier
 from pipeline.assign import Loads, match, route_problems
 from pipeline.audit import PIPELINE_VERSION, build_audit, input_data_ref, write_custom_fields
+from pipeline.signals import complexity_signals
 
 CLAIM = load_claim_fixtures()["IS-CLM-2025000300"].claim
 
@@ -101,3 +102,13 @@ def test_custom_field_write_is_replayed_not_repeated():
 def test_roster_has_a_senior_for_every_skill():
     seniors = [a for a in load_roster() if a.role in {"senior", "lead"} and Tier.T3 in a.tiers]
     assert {s for a in seniors for s in a.skills} == set(Skill)
+
+
+def test_complexity_signals_recorded_for_fixtures_and_empty_otherwise():
+    fixtures = load_claim_fixtures()
+    recorded = complexity_signals(fixtures["IS-CLM-2025002993"].claim)
+    assert recorded.source == "recorded"
+    assert recorded.secondary_skills == [Skill.COLLISION]
+    assert recorded.injury and recorded.confidence == 0.69
+    plain = complexity_signals(CLAIM)
+    assert (plain.source, plain.secondary_skills, plain.confidence) == ("rules", [], 1.0)

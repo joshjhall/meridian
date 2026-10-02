@@ -179,3 +179,20 @@ def test_runs_are_independent():
     second = run_pipeline(claims, load_roster(), now=NOW)
     assert [r.adjuster_id for r in first.routed] == [r.adjuster_id for r in second.routed]
     assert len(first.events) == len(second.events)
+
+
+def test_rejected_claimspro_write_goes_to_exception_and_the_batch_still_routes():
+    # The sim knows only 0300, so ClaimsPro rejects the write for 4222 outright.
+    sim = ClaimsProSim(
+        [FIXTURES["IS-CLM-2025000300"].claim], sleep=lambda _s: None, now=lambda: NOW
+    )
+    claims = [FIXTURES["IS-CLM-2025000300"].claim, FIXTURES["IS-CLM-2025004222"].claim]
+    routed = run_pipeline(claims, load_roster(), now=NOW, sim=sim).by_id()
+    assert routed["IS-CLM-2025000300"].write_status == "confirmed"
+    rejected = routed["IS-CLM-2025004222"]
+    assert rejected.stage == Stage.EXCEPTION
+    assert rejected.issues[0].startswith("ClaimsPro rejected the routing write")
+    assert (
+        rejected.audit.output["routing_reason"]
+        == FIXTURES["IS-CLM-2025004222"].expected.routing_reason
+    )

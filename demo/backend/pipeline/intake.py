@@ -94,11 +94,8 @@ def ocr_cross_check(claim: Claim) -> list[AttentionItem]:
     edi_path = _source(claim, "edi_record.txt")
     if ocr_path is None or edi_path is None:
         return []
-    try:
-        ocr = (REPO / ocr_path).read_text()
-        edi = _segments((REPO / edi_path).read_text())
-    except OSError as e:
-        raise UnreadableSource(f"intake source unreadable: {e.filename or e}") from e
+    ocr = _read_source(ocr_path)
+    edi = _segments(_read_source(edi_path))
     ocr_ref = SourceRef(label="Fax OCR", path=ocr_path)
     edi_ref = SourceRef(label="EDI 837", path=edi_path)
     items = [
@@ -117,6 +114,17 @@ def ocr_cross_check(claim: Claim) -> list[AttentionItem]:
             )
         )
     return items
+
+
+def _read_source(path: str) -> str:
+    """Read a claim source, which must sit inside the repo; anything else goes to a person."""
+    resolved = (REPO / path).resolve()
+    if not resolved.is_relative_to(REPO.resolve()):
+        raise UnreadableSource(f"intake source outside the repo: {path}")
+    try:
+        return resolved.read_text()
+    except OSError as e:
+        raise UnreadableSource(f"intake source unreadable: {path}") from e
 
 
 def _source(claim: Claim, name: str) -> str | None:
