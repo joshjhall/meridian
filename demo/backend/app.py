@@ -3,6 +3,9 @@
 Run: uv run uvicorn app:app --reload --port 8000
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -11,7 +14,7 @@ import monitor
 import panel
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -29,14 +32,34 @@ from models import (
     CorrectionLogEntry,
     LearningHistory,
 )
+from pipeline import PIPELINE_VERSION
+from replay import Replay
+from replay.api import router as replay_router
 
 HERE = Path(__file__).resolve().parent
 
-app = FastAPI(title="Meridian demo")
-app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 templates.env.globals.update(format_left=queues.format_left, sentence=queues.sentence)
+
+
+def render_card(view: monitor.ClaimView) -> str:
+    return templates.get_template("admin/_card.html").module.card(view)  # type: ignore[attr-defined]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # The replay exists from import, so the trace endpoint and tests can read it;
+    # it only plays while the server runs.
+    app.state.replay.start()
+    yield
+    await app.state.replay.stop()
+
+
+app = FastAPI(title="Meridian demo", lifespan=lifespan)
+app.state.replay = Replay(render_card)
+app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 app.include_router(claimspro_router)
+app.include_router(replay_router)
 
 # The side panel extension calls the API from its own chrome-extension:// origin.
 app.add_middleware(
@@ -97,10 +120,6 @@ def index(request: Request):
 Viewer = Literal["admin", "manager"]
 
 
-def render_card(view: monitor.ClaimView) -> str:
-    return templates.get_template("admin/_card.html").module.card(view)  # type: ignore[attr-defined]
-
-
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request, view: Viewer = "admin"):
     return templates.TemplateResponse(
@@ -110,21 +129,9 @@ def admin(request: Request, view: Viewer = "admin"):
             "viewer": view,
             "lanes": monitor.LANES,
             "stories": monitor.STORIES,
-            "pipeline_version": monitor.PIPELINE_VERSION,
-            # The replay runner (#5) will serve /api/events; point this at it then.
-            "events_url": "/admin/events",
+            "pipeline_version": PIPELINE_VERSION,
+            "events_url": "/api/events",
         },
-    )
-
-
-@app.get("/admin/events")
-def admin_events(
-    speed: float = Query(1.0, gt=0, le=100), limit: int | None = Query(None, ge=1)
-) -> StreamingResponse:
-    return StreamingResponse(
-        monitor.event_stream(render_card, speed=speed, limit=limit),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache"},
     )
 
 
@@ -132,11 +139,11 @@ def admin_events(
 def admin_trace(request: Request, claim_id: str, upto: int | None = Query(None, ge=1)):
     # The card passes how many steps it has seen, so the trace never runs ahead
     # of the board. #9 replaces this with the expanded audit record.
-    view = monitor.replay().claims.get(claim_id)
+    view = request.app.state.replay.board.claims.get(claim_id)
     if view is None:
         raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
     if upto is not None:
-        view.trace = view.trace[:upto]
+        view = replace(view, trace=view.trace[:upto])  # the live board's card stays whole
     return templates.TemplateResponse(
         request,
         "admin/_trace.html",
