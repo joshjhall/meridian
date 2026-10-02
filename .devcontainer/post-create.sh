@@ -40,7 +40,7 @@ fi
 # `uv add --dev <pkg>` rather than pip/pipx so they land here automatically.
 echo "==> Installing demo Python environment..."
 just install
-echo "    $(cd demo/backend && uv run python --version) venv at demo/backend/.venv"
+echo "    $(cd demo/backend && uv run python --version) venv at demo/backend/.venv -> $(readlink demo/backend/.venv || echo in-tree)"
 
 # Build the codegraph index for the codegraph MCP server. It lives on a named
 # volume that survives rebuilds, so only initialize when missing.
