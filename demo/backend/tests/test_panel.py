@@ -393,6 +393,27 @@ def test_picker_keeps_the_dock(client):
     assert response.headers["location"] == "/claimspro/IS-CLM-2025000300?panel=docked"
 
 
+ANCHOR_CHECK = "/^[a-z0-9/-]{1,80}$/"
+
+
+@pytest.mark.parametrize("claim_id", SIX)
+def test_every_panel_anchor_passes_the_hosts_navigation_check(claim_id):
+    # Both hosts (extension shell, docked mock page) drop navigate messages whose
+    # anchor fails this check; every anchor the panel links to must pass it.
+    html = TestClient(app).get(f"/panel?claim={claim_id}").text
+    anchors = re.findall(r'data-nav="([^"]+)"', html)
+    assert anchors
+    assert all(re.fullmatch(r"[a-z0-9/-]{1,80}", a) for a in anchors)
+
+
+def test_both_hosts_validate_navigate_messages(client):
+    docked = client.get("/claimspro/IS-CLM-2025004222?panel=docked").text
+    extension = (EXTENSION / "panel.js").read_text()
+    for host in (docked, extension):
+        assert ANCHOR_CHECK in host
+        assert "IS-CLM-\\d{10}" in host
+
+
 def test_extension_is_a_side_panel_with_no_page_injection():
     manifest = json.loads((EXTENSION / "manifest.json").read_text())
     assert manifest["manifest_version"] == 3
