@@ -132,7 +132,9 @@ def test_schema_rejects_unknown_kind_and_mark(path, bad):
 def test_learning_js_never_writes_html():
     # Release notes and labels come from the API; the script must set text only.
     js = (DATA.parent / "backend" / "static" / "learning.js").read_text()
-    code = re.sub(r"//[^\n]*", "", js)  # comments may name the APIs they avoid
+    # Comments may name the APIs they avoid; strip only whole-line comments so a
+    # "//" inside a string (a URL) can't hide code after it.
+    code = re.sub(r"(?m)^\s*//[^\n]*", "", js)
     for sink in (
         r"(inner|outer)HTML",
         r"insertAdjacentHTML",

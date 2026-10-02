@@ -44,7 +44,8 @@ function yScale(series) {
   const values = series.points.map((p) => p.value).concat(series.target);
   const [lo, hi] = d3.extent(values);
   // Bars must grow from zero; lines get a padded domain so movement is visible.
-  const domain = series.mark === "bar" || lo <= 1 ? [0, hi * 1.1] : [lo - 6, Math.min(100, hi + 4)];
+  const top = series.unit === "%" ? Math.min(100, hi + 4) : hi + 4;
+  const domain = series.mark === "bar" || lo <= 1 ? [0, hi * 1.1] : [Math.max(0, lo - 6), top];
   return d3
     .scaleLinear()
     .domain(domain)
@@ -334,9 +335,19 @@ function drawChart(figure, chart, releases, weeks) {
 
 async function init() {
   const root = document.getElementById("learning-loop");
-  if (!root || typeof d3 === "undefined") return;
-  const history = await (await fetch("/api/history")).json();
-  document.getElementById("learning-caption").textContent = history.caption;
+  const caption = document.getElementById("learning-caption");
+  if (!root) return;
+  let history;
+  try {
+    if (typeof d3 === "undefined") throw new Error("D3 did not load");
+    const res = await fetch("/api/history");
+    if (!res.ok) throw new Error(`GET /api/history returned ${res.status}`);
+    history = await res.json();
+  } catch (err) {
+    caption.textContent = `Learning-loop history could not be loaded (${err.message}).`;
+    return;
+  }
+  caption.textContent = history.caption;
   const allWeeks = history.charts.flatMap((c) => c.primary.points.map((p) => p.week));
   const weeks = d3.extent(allWeeks);
   for (const chart of history.charts) {
