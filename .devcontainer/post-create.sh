@@ -15,13 +15,13 @@ require() {
 }
 
 echo "==> Verifying tooling..."
-require node node
-require npm node
+require python3 python
+require uv python-dev
 require op op
 require docker docker
 require lefthook dev-tools
 
-echo "    node $(node --version)"
+echo "    $(python3 --version)"
 
 if docker info >/dev/null 2>&1; then
     echo "    docker daemon reachable"
