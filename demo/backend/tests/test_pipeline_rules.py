@@ -81,3 +81,18 @@ def test_priority_puts_breached_first_then_review_required():
         "plain": rules.priority_key(base, Tier.T1, reg_none, now),
     }
     assert sorted(keys, key=keys.__getitem__) == ["late", "flagged", "plain"]
+
+
+@pytest.mark.parametrize(
+    ("state", "amount", "expected"),
+    [
+        ("NY", 10_000.00, False),
+        ("NY", 10_000.01, True),
+        ("NY", 9_999.99, False),
+        ("VA", 25_000, True),
+        ("TX", 25_000, False),
+    ],
+)
+def test_over_threshold_in_rule_state_boundary(state, amount, expected):
+    claim = _claim(state=state, claim_amount_usd=amount)
+    assert rules.over_threshold_in_rule_state(claim) is expected
