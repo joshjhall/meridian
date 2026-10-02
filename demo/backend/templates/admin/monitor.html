@@ -39,6 +39,10 @@
         </dd>
       </div>
     </dl>
+    <nav class="sign__role" aria-label="Admin views">
+      <a class="btn-sm" href="/admin?view={{ viewer }}" aria-current="page">Pipeline monitor</a>
+      <a class="btn-sm-ghost" href="/admin/queues?view={{ viewer }}">Queues</a>
+    </nav>
     <nav class="sign__role" aria-label="View as">
       <a class="{{ 'btn-sm' if viewer == 'admin' else 'btn-sm-ghost' }}"
          href="?view=admin"

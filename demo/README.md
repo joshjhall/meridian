@@ -34,7 +34,8 @@ ruff, pyright, and djlint are pinned dev dependencies in `uv.lock` (add new Pyth
 
 Then open:
 
-- <http://localhost:8000/admin>: admin monitor (#6, #7, #8, #9)
+- <http://localhost:8000/admin>: admin monitor (#6, #8, #9)
+- <http://localhost:8000/admin/queues>: every adjuster's queue, with drag-to-move and ClaimsPro write status (#7). Like the rest of the demo it is unauthenticated: `?view=admin` only gates the fault toggle for the demo. The move and toggle POSTs need an `X-Meridian-Board` header, which blocks cross-site requests, but that is not authentication, so run it locally only.
 - <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10), deliberately unstyled
 - <http://localhost:8000/panel?claim=IS-CLM-2025004222>: side panel (#11)
 
@@ -58,7 +59,8 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 
 - `backend/models.py`: the shared contracts and **the only schema**: `Claim`, `Skill`, `Tier`, `Stage`, `Adjuster`, `PipelineEvent`, `AuditRecord`, `PanelSummary`.
 - `backend/fixtures.py`: `load_claim_fixtures()` and `load_roster()`, validated through the models.
-- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`) and the pages (`/admin`, `/claimspro/{id}`, `/panel`).
+- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`) and the pages (`/admin`, `/admin/queues`, `/claimspro/{id}`, `/panel`).
+- `backend/queues.py`: the admin queues board (#7): the board grouped by tier, the review-lane guard (the pipeline's `regulatory_check` and `assign.match` eligibility), and moves sent through `reliable_write`.
 - `backend/templates/` and `backend/static/`: Jinja templates and CSS. `templates/components/` holds Basecoat's Jinja macros (MIT; see `BASECOAT_LICENSE.txt`) for its interactive components (tabs, dialog, dropdown, select, popover, toast and others).
 - `backend/styles/app.css`: Tailwind input. The built `static/app.css` is committed so a fresh clone runs without a CSS build; run `just css` after changing classes.
 - `data/claims/*.json`: the six side-panel claims. Each is a `ClaimFixture`: the `claim` plus an `expected` block (skills, tier, regulated, routing reason, SLA state) from the spec, for the pipeline to test against.

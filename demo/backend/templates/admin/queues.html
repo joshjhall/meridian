@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "admin/_queue_claim.html" import queue_claim %}
+{% block title %}Adjuster queues{% endblock %}
+{% block head %}
+  <script src="/static/queues.js" defer></script>
+{% endblock %}
+{% block body_attrs %}data-viewer="{{ viewer }}"{% endblock %}
+{% block main_class %}mx-auto max-w-[120rem] p-6{% endblock %}
+{% block content %}
+  <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold">Adjuster queues</h1>
+      <p class="text-muted-foreground text-sm">
+        Drag a claim to another adjuster to move it. Each move is a ClaimsPro write, confirmed by a read back.
+      </p>
+    </div>
+    <nav class="flex gap-2" aria-label="Admin views">
+      <a class="btn-sm-ghost" href="/admin?view={{ viewer }}">Pipeline monitor</a>
+      <a class="btn-sm"
+         href="/admin/queues?view={{ viewer }}"
+         aria-current="page">Queues</a>
+    </nav>
+    <nav class="flex gap-2" aria-label="View as">
+      <a class="{{ 'btn-sm' if viewer == 'admin' else 'btn-sm-ghost' }}"
+         href="?view=admin"
+         {% if viewer == 'admin' %}aria-current="page"{% endif %}>Tribe admin</a>
+      <a class="{{ 'btn-sm' if viewer == 'manager' else 'btn-sm-ghost' }}"
+         href="?view=manager"
+         {% if viewer == 'manager' %}aria-current="page"{% endif %}>Manager</a>
+    </nav>
+  </header>
+  {# Admin-only controls are left out of the page for managers, not hidden;
+     the route checks the role too. #}
+  {% if viewer == "admin" %}
+    <section class="mb-4 flex items-center gap-3" aria-label="Admin controls">
+      <label class="label gap-3">
+        <input type="checkbox"
+               role="switch"
+               class="input"
+               id="fault-toggle"
+               {% if fault_on %}checked{% endif %} />
+        Force ClaimsPro transfer writes to fail
+      </label>
+    </section>
+  {% endif %}
+  <div id="transfer-notice" class="mb-4" aria-live="polite"></div>
+  {% for group in groups %}
+    <section class="mb-8" aria-labelledby="tier-{{ group.tier }}">
+      <h2 id="tier-{{ group.tier }}" class="mb-3 text-lg font-semibold">
+        {{ group.tier }} · {{ group.label }}
+        <span class="text-muted-foreground text-sm font-normal">{{ group.queues | length }} adjusters</span>
+      </h2>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
+        {% for q in group.queues %}
+          {% set a = q.adjuster %}
+          <article class="card gap-2 py-3"
+                   data-queue="{{ a.id }}"
+                   data-tiers="{{ a.tiers | join(' ') }}"
+                   data-role="{{ a.role }}"
+                   data-name="{{ a.name }}">
+            <header class="flex items-start justify-between gap-2 px-3">
+              <div>
+                <h3 class="text-sm font-semibold">{{ a.name }}</h3>
+                <p class="text-muted-foreground text-xs">{{ a.id }} · {{ a.role }} · {{ a.tiers | join(", ") }}</p>
+              </div>
+              <span class="badge-secondary" title="Open claims">Load <span data-load>{{ q.load }}</span></span>
+            </header>
+            <div class="flex flex-wrap gap-1 px-3">
+              {% for s in a.skills %}<span class="badge-outline text-xs">{{ s }}</span>{% endfor %}
+            </div>
+            <ol class="flex min-h-10 flex-col gap-1.5 px-3" data-claims>
+              {% for qc in q.claims %}{{ queue_claim(qc) }}{% endfor %}
+            </ol>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+{% endblock %}
