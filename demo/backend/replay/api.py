@@ -8,9 +8,10 @@ EventSource sends no custom headers.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
+from replay import runner
 from replay.runner import Replay
 
 router = APIRouter(prefix="/api")
@@ -34,7 +35,14 @@ class Restart(BaseModel):
 
 
 @router.get("/events")
-async def events(replay: ReplayDep, limit: int | None = Query(None, ge=1)) -> StreamingResponse:
+async def events(replay: ReplayDep, limit: int | None = Query(None, ge=1)) -> Response:
+    # Checked here, not in `stream`: the headers go out before the stream's first read,
+    # which is where it subscribes. So the cap is soft: viewers accepted in the same
+    # instant can overshoot it until they read. The browser's EventSource retries.
+    if replay.viewers >= runner.MAX_VIEWERS:
+        return JSONResponse(
+            {"detail": "too many viewers"}, status_code=503, headers={"Retry-After": "5"}
+        )
     return StreamingResponse(
         replay.stream(limit=limit),
         media_type="text/event-stream",
