@@ -429,4 +429,5 @@ def test_malformed_extract_row_is_skipped_and_logged_not_fatal(monkeypatch, capl
         ids = {c.claim_id for c in seed_claims()}
 
     assert good["claim_id"] in ids and "IS-CLM-BAD" not in ids
-    assert any("IS-CLM-BAD" in r.getMessage() for r in caplog.records)
+    [warning] = [r.getMessage() for r in caplog.records if "IS-CLM-BAD" in r.getMessage()]
+    assert "claim_amount_usd:" in warning
