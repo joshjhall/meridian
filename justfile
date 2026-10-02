@@ -29,14 +29,19 @@ venv-link:
     target="/cache/venvs/$name"
     link="{{ backend }}/.venv"
     [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && exit 0
-    if [ -e "$link" ] || [ -L "$link" ]; then
+    # Recipes like `lint` run several `install` dependents at once, so serialize.
+    exec 9>"/cache/venvs/.$name.lock"
+    flock 9
+    [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && exit 0
+    if [ -e "$link" ] && [ ! -L "$link" ]; then
         rm -rf "$link" || {
             echo "venv-link: could not remove $link; run: unwedge-worktree $link" >&2
             exit 1
         }
     fi
     mkdir -p "$target"
-    ln -s "$target" "$link"
+    # -n: never follow an existing link into $target (that nests a self-link there).
+    ln -sfn "$target" "$link"
     echo "venv-link: $link -> $target"
 
 # API and pages on http://localhost:8000, rebuilding CSS as templates change
