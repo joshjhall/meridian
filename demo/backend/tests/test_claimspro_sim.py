@@ -1,4 +1,5 @@
 import inspect
+import logging
 import random
 from datetime import datetime
 
@@ -7,7 +8,7 @@ from fastapi.testclient import TestClient
 
 import clock
 from app import app
-from claimspro_sim import ALERT_RECIPIENTS, ClaimsProSim, FaultConfig, reliable_write
+from claimspro_sim import ALERT_RECIPIENTS, ClaimsProSim, FaultConfig, reliable_write, store
 from claimspro_sim.api import get_sim
 from claimspro_sim.soap import ClaimsProSoapClient, SoapClientError
 from claimspro_sim.store import IdempotencyKeyConflict, seed_claims
@@ -417,3 +418,15 @@ def test_seed_claims_takes_open_extract_work_and_fixtures_win():
     extract_only = [c for cid, c in seeded.items() if cid not in fixtures]
     assert extract_only
     assert {c.disposition for c in extract_only} == {"Pending Review"}
+
+
+def test_malformed_extract_row_is_skipped_and_logged_not_fatal(monkeypatch, caplog):
+    good = next(r for r in store.extract_rows() if r["disposition"] == "Pending Review")
+    bad = {**good, "claim_id": "IS-CLM-BAD", "claim_amount_usd": "not-a-number"}
+    monkeypatch.setattr(store, "extract_rows", lambda: iter([bad, good]))
+
+    with caplog.at_level(logging.WARNING, logger=store.__name__):
+        ids = {c.claim_id for c in seed_claims()}
+
+    assert good["claim_id"] in ids and "IS-CLM-BAD" not in ids
+    assert any("IS-CLM-BAD" in r.getMessage() for r in caplog.records)
