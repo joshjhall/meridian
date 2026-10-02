@@ -54,13 +54,16 @@ class ClaimsProSoapClient:
                 setattr(claim, name, value)
 
         return self._call(
-            "UpdateCustomFields", lambda: self._store.apply(idempotency_key, change, claim_id)
+            "UpdateCustomFields",
+            lambda: self._store.update_claim(
+                idempotency_key, "UpdateCustomFields", claim_id, change
+            ),
         )
 
     def AddNote(self, claim_id: str, text: str, author: str, idempotency_key: str) -> SoapResponse:
         self._require_claim(claim_id)
         note = ClaimNote(text=text, author=author, idempotency_key=idempotency_key, at=self._now())
-        return self._call("AddNote", lambda: self._store.add_note(idempotency_key, note, claim_id))
+        return self._call("AddNote", lambda: self._store.add_note(idempotency_key, claim_id, note))
 
     def TransferWorkItem(
         self, claim_id: str, to_adjuster_id: str, idempotency_key: str
@@ -72,7 +75,8 @@ class ClaimsProSoapClient:
             claim.adjuster_id = to_adjuster_id
 
         return self._call(
-            "TransferWorkItem", lambda: self._store.apply(idempotency_key, change, claim_id)
+            "TransferWorkItem",
+            lambda: self._store.update_claim(idempotency_key, "TransferWorkItem", claim_id, change),
         )
 
     # --- Dispatch by operation name, request checks, and the verify read for each ---
@@ -96,7 +100,11 @@ class ClaimsProSoapClient:
     def is_applied(
         self, op: SoapOperation, claim_id: str, payload: dict[str, Any], idempotency_key: str
     ) -> bool:
-        """REST-style read: does ClaimsPro now show the intended change?"""
+        """REST-style read: does ClaimsPro now show the intended change?
+
+        Notes are matched by key; field and transfer writes by state, so a change the
+        claim already reflects counts as confirmed.
+        """
         claim = self._store.get(claim_id)
         if claim is None:
             return False

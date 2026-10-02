@@ -141,9 +141,10 @@ def test_backoff_grows_between_retries(sim):
     sim.faults.set({"AddNote": FaultConfig(failure_rate=1, mode="fault")})
     reliable_write(
         sim, "AddNote", CLAIM, {"text": "x", "author": "pipeline"},
-        max_attempts=3, base_backoff_s=0.5,
+        max_attempts=3, verify_delay_s=0.2, base_backoff_s=0.5,
     )  # fmt: skip
-    assert slept == [0.5, 1.0]
+    # verify wait after every attempt; doubling backoff between attempts
+    assert slept == [0.2, 0.5, 0.2, 1.0, 0.2]
 
 
 def test_after_n_failed_attempts_item_is_write_failed_and_alert_emitted(client, sim):
@@ -172,13 +173,37 @@ def test_write_events_are_pipeline_events_visible_over_http(client, sim):
 # --- Idempotency ---
 
 
-def test_retry_after_lost_response_never_applies_the_change_twice(sim):
-    sim.faults.set({"AddNote": FaultConfig(failure_rate=1, mode="lost_response", max_failures=1)})
-    payload = {"text": "Routed to Collision T2", "author": "pipeline"}
-    result = reliable_write(sim, "AddNote", CLAIM, payload)
+def test_lost_response_is_confirmed_by_verify_read_not_reapplied(sim):
+    sim.faults.set({"AddNote": FaultConfig(failure_rate=1, mode="lost_response")})
+    result = reliable_write(sim, "AddNote", CLAIM, {"text": "Routed", "author": "pipeline"})
     assert result.status == "confirmed"
-    assert result.attempts == 2  # attempt 1 applied but returned a fault, so it was retried
+    assert result.attempts == 1  # the write landed; only its response was lost
     assert len(sim.store.notes(CLAIM)) == 1
+    assert sim.alerts() == []
+
+
+def test_resending_after_lost_response_never_applies_the_change_twice(sim):
+    sim.faults.set({"AddNote": FaultConfig(failure_rate=1, mode="lost_response")})
+    first = sim.soap.AddNote(CLAIM, "Routed", "pipeline", idempotency_key="k1")
+    assert not first.ok  # applied, but the caller can't tell
+    sim.faults.reset()
+    second = sim.soap.AddNote(CLAIM, "Routed", "pipeline", idempotency_key="k1")
+    assert second.ok
+    assert len(sim.store.notes(CLAIM)) == 1
+
+
+def test_retry_after_fault_then_silent_drop_applies_once(sim):
+    sim.faults.set({"AddNote": FaultConfig(failure_rate=1, mode="fault", max_failures=1)})
+    result = reliable_write(sim, "AddNote", CLAIM, {"text": "x", "author": "pipeline"})
+    assert result.attempts == 2
+    assert len(sim.store.notes(CLAIM)) == 1
+
+
+def test_key_reused_for_a_different_change_is_rejected(sim):
+    sim.soap.AddNote(CLAIM, "x", "pipeline", idempotency_key="k1")
+    with pytest.raises(ValueError, match="already used"):
+        sim.soap.TransferWorkItem(CLAIM, "ADJ-151", idempotency_key="k1")
+    assert sim.store.get(CLAIM).adjuster_id != "ADJ-151"  # type: ignore[union-attr]
 
 
 def test_replaying_the_same_key_never_applies_twice(sim):
@@ -241,3 +266,52 @@ def test_rejected_request_leaves_no_trace(sim):
         reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-999"})
     assert sim.store.get(CLAIM).write_status is None  # type: ignore[union-attr]
     assert sim.events() == []
+
+
+def test_notes_are_readable_over_http(client, sim):
+    reliable_write(sim, "AddNote", CLAIM, {"text": "Routed to Collision T2", "author": "pipeline"})
+    notes = client.get(f"/api/claimspro/claims/{CLAIM}/notes").json()
+    assert [n["text"] for n in notes] == ["Routed to Collision T2"]
+    assert client.get("/api/claimspro/claims/IS-CLM-0000000000/notes").status_code == 404
+
+
+def test_fault_switch_fractional_rate_is_seeded_and_mixed():
+    def outcomes(seed: int) -> list[bool]:
+        sim = ClaimsProSim(sleep=lambda _s: None, now=lambda: NOW, rng=random.Random(seed))
+        sim.faults.set({"AddNote": FaultConfig(failure_rate=0.5)})
+        return [sim.faults.roll("AddNote")[0] is not None for _ in range(40)]
+
+    assert outcomes(1) == outcomes(1)
+    assert 0 < sum(outcomes(1)) < 40
+
+
+def test_fault_latency_is_applied_whether_or_not_the_call_fails(sim):
+    slept: list[float] = []
+    sim.soap._sleep = slept.append
+    sim.faults.set({"AddNote": FaultConfig(latency_ms=250, failure_rate=1, max_failures=1)})
+    sim.soap.AddNote(CLAIM, "a", "p", idempotency_key="k1")
+    sim.soap.AddNote(CLAIM, "b", "p", idempotency_key="k2")
+    assert slept == [0.25, 0.25]
+
+
+def test_setting_faults_resets_the_failure_counter(sim):
+    config = FaultConfig(failure_rate=1, max_failures=1)
+    sim.faults.set({"AddNote": config})
+    assert sim.faults.roll("AddNote")[0] == "fault"
+    assert sim.faults.roll("AddNote")[0] is None
+    sim.faults.set({"AddNote": config})
+    assert sim.faults.roll("AddNote")[0] == "fault"
+
+
+@pytest.mark.parametrize(
+    "config", [{"failure_rate": 1.5}, {"latency_ms": -1}, {"latency_ms": 60_000}, {"mode": "x"}]
+)
+def test_invalid_fault_config_is_rejected(client, config):
+    assert client.post("/api/sim/faults", json={"AddNote": config}).status_code == 422
+
+
+def test_persistent_lost_response_on_transfer_still_confirms(sim):
+    sim.faults.set({"TransferWorkItem": FaultConfig(failure_rate=1, mode="lost_response")})
+    result = reliable_write(sim, "TransferWorkItem", CLAIM, {"to_adjuster_id": "ADJ-151"})
+    assert result.status == "confirmed"
+    assert statuses(sim) == ["pending", "confirmed"]

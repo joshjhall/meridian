@@ -64,12 +64,13 @@ def reliable_write(
     reason = ""
     for attempt in range(1, max_attempts + 1):
         response = sim.soap.call(op, claim_id, payload, key)
+        # Verify even after a fault: the write may have landed and only the response was lost.
+        sim.sleep(verify_delay_s)
+        if sim.soap.is_applied(op, claim_id, payload, key):
+            sim.store.set_write_status(claim_id, "confirmed")
+            emit("confirmed", attempt)
+            return WriteResult(status="confirmed", attempts=attempt, idempotency_key=key)
         if response.ok:
-            sim.sleep(verify_delay_s)
-            if sim.soap.is_applied(op, claim_id, payload, key):
-                sim.store.set_write_status(claim_id, "confirmed")
-                emit("confirmed", attempt)
-                return WriteResult(status="confirmed", attempts=attempt, idempotency_key=key)
             reason = "write returned OK but the verify read does not show it"
         else:
             reason = response.fault or "SOAP fault"

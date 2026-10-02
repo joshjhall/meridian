@@ -17,7 +17,7 @@ FaultMode = Literal["fault", "silent_drop", "lost_response"]
 class FaultConfig(BaseModel):
     failure_rate: float = Field(default=0.0, ge=0, le=1)
     mode: FaultMode = "fault"
-    latency_ms: int = Field(default=0, ge=0)
+    latency_ms: int = Field(default=0, ge=0, le=30_000)
     # Stop failing after this many injected failures (None = keep failing).
     max_failures: int | None = Field(default=None, ge=0)
 

@@ -38,7 +38,7 @@ class ClaimsProStore:
         source = seed_claims() if claims is None else claims
         self._claims = {c.claim_id: c.model_copy(deep=True) for c in source}
         self._notes: defaultdict[str, list[ClaimNote]] = defaultdict(list)
-        self._applied_keys: set[str] = set()
+        self._applied_keys: dict[str, tuple[str, str]] = {}
 
     # --- Reads (what the REST endpoints return; snapshots, never live objects) ---
 
@@ -57,26 +57,40 @@ class ClaimsProStore:
 
     def notes(self, claim_id: str) -> list[ClaimNote]:
         with self._lock:
-            return [n.model_copy() for n in self._notes[claim_id]]
+            return [n.model_copy() for n in self._notes.get(claim_id, [])]
 
     # --- Writes (only the SOAP operations and the reliable-write wrapper call these) ---
 
-    def apply(self, idempotency_key: str, change: Callable[[Claim], None], claim_id: str) -> bool:
-        """Apply `change` once per key. Returns False when the key was already applied."""
+    def apply(
+        self, idempotency_key: str, operation: str, claim_id: str, change: Callable[[], None]
+    ) -> bool:
+        """Run `change` once per key. Returns False when the key was already applied.
+
+        A key reused for a different claim or operation is a caller bug, so it raises
+        rather than silently dropping the second change.
+        """
+        scope = (claim_id, operation)
         with self._lock:
-            if idempotency_key in self._applied_keys:
+            seen = self._applied_keys.get(idempotency_key)
+            if seen == scope:
                 return False
-            change(self._claims[claim_id])
-            self._applied_keys.add(idempotency_key)
+            if seen is not None:
+                raise ValueError(f"idempotency key {idempotency_key} already used for {seen}")
+            change()
+            self._applied_keys[idempotency_key] = scope
             return True
 
-    def add_note(self, idempotency_key: str, note: ClaimNote, claim_id: str) -> bool:
-        with self._lock:
-            if idempotency_key in self._applied_keys:
-                return False
-            self._notes[claim_id].append(note)
-            self._applied_keys.add(idempotency_key)
-            return True
+    def update_claim(
+        self, idempotency_key: str, operation: str, claim_id: str, change: Callable[[Claim], None]
+    ) -> bool:
+        return self.apply(
+            idempotency_key, operation, claim_id, lambda: change(self._claims[claim_id])
+        )
+
+    def add_note(self, idempotency_key: str, claim_id: str, note: ClaimNote) -> bool:
+        return self.apply(
+            idempotency_key, "AddNote", claim_id, lambda: self._notes[claim_id].append(note)
+        )
 
     def set_write_status(self, claim_id: str, status: ClaimWriteStatus) -> None:
         # Demo shortcut: in production this status lives on our side, not in ClaimsPro.
