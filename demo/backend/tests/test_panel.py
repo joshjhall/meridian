@@ -14,6 +14,7 @@ from claimspro_sim import ClaimsProSim
 from claimspro_sim.api import get_sim
 from fixtures import DATA, load_claim_fixtures
 from models import CorrectionLogEntry, OcrCheck, OcrWord, PanelSummary, SourceRef
+from pipeline.intake import is_negation
 
 SIX = list(load_claim_fixtures())
 NOW = datetime(2025, 10, 15, 9, 0)  # clock.DEMO_START
@@ -108,7 +109,8 @@ def test_synthetic_claims_are_labelled(client):
 def test_clean_claim_gets_a_short_panel(client):
     clean = client.get("/panel?claim=IS-CLM-2025000300").text
     assert 'id="needs-attention"' not in clean
-    assert "<details >" in clean or "<details>" in clean  # key facts collapsed
+    key_facts = clean[clean.index('id="key-facts"') : clean.index('id="contents"')]
+    assert re.search(r"<details\s*>", key_facts)  # collapsed: no open attribute
     assert "Confirm intake is complete" in clean
     others = [
         len(text(client.get(f"/panel?claim={c}").text)) for c in SIX if c != "IS-CLM-2025000300"
@@ -172,6 +174,45 @@ def test_ocr_diff_marks_an_added_negation_on_the_corrected_side():
     assert not diff.verdict.accepted
     assert diff.words[0] == OcrWord(raw="", corrected="not", negation=True)
     assert (diff.words[1].raw, diff.words[1].corrected) == ("c0nsistent", "consistent")
+
+
+@pytest.mark.parametrize(
+    ("raw", "corrected", "accepted", "negations"),
+    [
+        ("is n0t covered", "is now covered", False, [("n0t", "")]),  # a different word
+        ("can't c0ver", "can cover", False, [("can't", "")]),  # contraction dropped
+        ("n0t, c0vered", "not, covered", True, [("n0t,", "not,")]),  # punctuation kept
+    ],
+)
+def test_ocr_diff_edge_cases(raw, corrected, accepted, negations):
+    diff = panel.ocr_diff(OcrCheck(label="x", raw=raw, corrected=corrected, source=OCR_REF))
+    assert diff.verdict.accepted is accepted
+    assert [(w.raw, w.corrected) for w in diff.words if w.negation] == negations
+
+
+@pytest.mark.parametrize(
+    ("word", "negation"),
+    [
+        ("not", True),
+        ("n0t", True),
+        ("N0T,", True),
+        ("don't", True),
+        ("never", True),
+        ("now", False),
+        ("note", False),
+        ("nothing", False),
+    ],
+)
+def test_is_negation(word, negation):
+    assert is_negation(word) is negation
+
+
+@pytest.mark.parametrize(
+    ("claim_id", "collapsed"),
+    [("IS-CLM-2025000300", True), ("IS-CLM-2025004222", False), ("IS-CLM-2025004518", False)],
+)
+def test_key_facts_collapse_only_when_nothing_is_unusual(claim_id, collapsed):
+    assert summary(claim_id).key_facts.collapsed is collapsed
 
 
 def test_4222_has_an_injury_timeline_and_marked_transcript_spans(client):
