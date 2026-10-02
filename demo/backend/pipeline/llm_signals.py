@@ -2,7 +2,12 @@
 
 Making the model's output safe to act on is the work here, not the call:
 
-- Names, policy numbers and claim numbers are masked before anything leaves the process.
+- Names, policy numbers and claim numbers are masked before anything leaves the process:
+  the claim's own people and numbers (fuzzy, for OCR), anything shaped like a phone,
+  email, address, VIN or plate, and EDI contact segments; then a second pass refuses to
+  send if any of the claim's known identifiers survived. Not covered: a third party
+  named only in free text (no record field, no fixed position). None of the demo
+  claims has one (tested); production needs entity recognition here.
 - Output is structured only: a JSON schema on the request, then strict Pydantic validation
   here. Anything else, including an extra field, is rejected.
 - The schema has no approve, deny or recommendation field. A signal can raise the tier
@@ -37,6 +42,7 @@ from models import Claim, SignalItem, SignalKind, Signals, Skill, Tier
 log = logging.getLogger(__name__)
 
 RECORDED_DIR = DATA / "recorded"
+SAMPLES = (REPO / "sample_claims").resolve()
 DEFAULT_MODEL = "claude-sonnet-5-5"
 DEFAULT_BASE_URL = "https://api.anthropic.com"
 TIMEOUT_S = 20.0
@@ -127,8 +133,9 @@ def documents(claim: Claim) -> dict[str, str]:
     """File name → text: the claim's text documents, or its story fields for the synthetic ones."""
     docs: dict[str, str] = {}
     for rel in claim.sources:
-        path = REPO / rel
-        if rel.startswith("sample_claims/") and path.suffix in {".md", ".txt"} and path.exists():
+        path = (REPO / rel).resolve()
+        # Only text files inside sample_claims/, whatever the source path says.
+        if path.is_relative_to(SAMPLES) and path.suffix in {".md", ".txt"} and path.exists():
             docs[path.name] = path.read_text()
     if not docs:
         story = {k: claim.details[k] for k in STORY_FIELDS if k in claim.details}
@@ -206,6 +213,17 @@ def _sub(pattern: str, token: str, text: str) -> str:
     return re.sub(rf"(?<![\w-]){pattern}(?![\w-])", token, text, flags=re.IGNORECASE)
 
 
+# Words in business names that are ordinary English or US geography: masking them
+# alone would blank out "State road" or "Pacific coast" and corrupt the quotes.
+COMMON_WORDS = frozenset({
+    "state", "states", "national", "american", "united", "general", "pacific", "atlantic",
+    "central", "coast", "north", "south", "east", "west", "northern", "southern", "eastern",
+    "western", "valley", "mountain", "river", "lake", "city", "county", "metro", "freight",
+    "logistics", "transport", "trucking", "carriers", "partners", "services", "group",
+    "holdings", "company", "express", "delivery", "fleet", "auto", "motor", "motors",
+})  # fmt: skip
+
+
 def known_identifiers(claim: Claim) -> list[tuple[str, str]]:
     """(value, token) for every name and number the claim record holds, longest first."""
     d = claim.details
@@ -214,7 +232,11 @@ def known_identifiers(claim: Claim) -> list[tuple[str, str]]:
         core = CORPORATE_SUFFIX.sub("", holder)
         # The full name, then each distinctive word ("Empire" in "Empire State Carriers").
         out += [(core, "[POLICYHOLDER]")]
-        out += [(w, "[POLICYHOLDER]") for w in core.split() if len(w) > 3 and w.istitle()]
+        out += [
+            (w, "[POLICYHOLDER]")
+            for w in core.split()
+            if len(w) > 3 and w.istitle() and w.lower() not in COMMON_WORDS
+        ]
     if claimant := d.get("claimant"):
         parts = claimant.split()
         # Either way round ("MENDEZ*GLORIA" in EDI), then each part ("Mr. Ellison").
@@ -301,6 +323,11 @@ def verify(response: LlmSignalsResponse, docs: dict[str, str]) -> list[SignalIte
     return items
 
 
+# Signals that can justify a higher tier. A verified low-confidence transcript span or
+# a second skill is real, but it isn't a reason to escalate.
+ESCALATING = frozenset({"injury", "onset_gap", "causation_gap", "dispute"})
+
+
 def _confidence(items: list[SignalItem], ok: list[SignalItem]) -> float:
     """The weakest verified signal bounds the step. Nothing found is a confident answer;
     signals offered with none verified are not, so they never read as certain."""
@@ -317,8 +344,8 @@ def to_signals(response: LlmSignalsResponse, docs: dict[str, str], **meta: Any) 
     return Signals(
         secondary_skills=list(dict.fromkeys(skills)),
         injury=any(i.kind == "injury" for i in ok),
-        # A tier suggestion with no verified evidence behind it is ignored.
-        suggested_tier=response.suggested_tier if ok else None,
+        # A tier suggestion stands only on verified evidence of the kind that escalates.
+        suggested_tier=response.suggested_tier if any(i.kind in ESCALATING for i in ok) else None,
         confidence=_confidence(items, ok),
         items=items,
         **meta,
@@ -336,13 +363,20 @@ def recorded(claim_id: str) -> Recorded | None:
 
 
 def from_recorded(claim: Claim) -> Signals:
-    """Replay and batch runs: the saved response, through the same checks as a live one."""
-    saved = recorded(claim.claim_id)
-    if saved is None:
-        return Signals(source="rules")
-    return to_signals(
-        saved.response, masked_documents(claim), source="recorded", llm_model=saved.model
-    )
+    """Replay and batch runs: the saved response, through the same checks as a live one.
+
+    A recording that can't be read or a document that can't be masked never stops the
+    run: the claim routes on the code rules alone, at no confidence, with the reason.
+    """
+    try:
+        saved = recorded(claim.claim_id)
+        if saved is None:
+            return Signals(source="rules")
+        docs = masked_documents(claim)
+    except (ValidationError, MaskingError) as e:
+        log.warning("recorded signals for %s unusable: %s", claim.claim_id, _reason(e))
+        return Signals(source="rules", confidence=0.0, fallback_reason=_reason(e))
+    return to_signals(saved.response, docs, source="recorded", llm_model=saved.model)
 
 
 # --- The live call ---
@@ -422,6 +456,8 @@ def _reason(e: Exception) -> str:
             return str(e)
         case MaskingError():
             return f"masking incomplete ({e}); not sent"
+        case ValidationError():
+            return f"recorded response invalid ({e.error_count()} errors)"
         case TypeError() if "authentication" in str(e):
             return "no credentials"
         case _:
@@ -440,7 +476,10 @@ def run_live(claim: Claim, client: Any = None) -> Signals:
     except Exception as e:  # every failure has the same safe answer: the recorded run
         reason = _reason(e)
         log.warning("complexity signals for %s fell back: %s", claim.claim_id, reason)
-        saved = recorded(claim.claim_id)
+        try:
+            saved = recorded(claim.claim_id)
+        except ValidationError:
+            saved = None  # a corrupt recording is no better than none
         meta: dict[str, Any] = {
             "source": "llm_fallback",
             "fallback": True,

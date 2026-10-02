@@ -494,3 +494,90 @@ def test_a_response_with_no_text_falls_back():
     empty = SimpleNamespace(stop_reason="end_turn", model="m", content=[])
     s = run_live(C4222, client=Stub(empty))
     assert s.fallback and s.fallback_reason == "no text in the response"
+
+
+# --- Review fixes, cycle 2 ---
+
+
+def test_a_corrupt_recording_does_not_stop_the_pipeline(tmp_path, monkeypatch):
+    (tmp_path / f"{C4222.claim_id}.json").write_text('{"model": "m", "response": {"bad": 1}}')
+    monkeypatch.setattr(llm_signals, "RECORDED_DIR", tmp_path)
+    s = complexity_signals(C4222)
+    assert (s.source, s.confidence, s.items) == ("rules", 0.0, [])
+    assert s.fallback_reason and s.fallback_reason.startswith("recorded response invalid")
+    live = run_live(C4222, client=Stub("garbage"))  # and the live fallback copes too
+    assert live.fallback and live.items == [] and live.confidence == 0.0
+
+
+def test_an_unmaskable_document_does_not_stop_the_pipeline(monkeypatch):
+    monkeypatch.setattr(llm_signals, "mask", lambda text, claim: text)
+    s = complexity_signals(C4222)
+    assert (s.source, s.confidence) == ("rules", 0.0)
+    assert s.fallback_reason and "masking incomplete" in s.fallback_reason
+
+
+def test_the_replay_pipeline_survives_a_bad_recording(tmp_path, monkeypatch):
+    from fixtures import load_roster
+    from pipeline import run_pipeline
+
+    (tmp_path / f"{C4222.claim_id}.json").write_text("not json")
+    monkeypatch.setattr(llm_signals, "RECORDED_DIR", tmp_path)
+    result = run_pipeline([C4222], load_roster(), now=C4222.received_at)
+    (routed,) = result.routed
+    assert routed.audit.model_version.endswith("+signals:rules")
+    assert routed.audit.confidence == 0.0
+
+
+NAME = re.compile(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b")
+# Two capitalised words that are places, businesses or labels, not people.
+NOT_PEOPLE = {
+    "Collision Center", "Estimate Approved", "First Notice", "Gulf Coast", "In Review",
+    "Insurance Services", "Meridian Holdings", "Payment Issued", "Bodily Injury",
+    "Inland Auto", "Medical Review", "Medium Duty", "Pending Additional", "Erie County",
+    "Genesys Cloud", "Interaction Transcript", "Jenner See", "Senior Review",
+    "Spine Associates",
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("claim_id", list(FIXTURES))
+def test_no_person_name_survives_masking_in_the_demo_claims(claim_id):
+    # Masking can't detect a third party named only in free text. This pins the demo
+    # data: a name added to a fixture fails here until it is masked or listed above.
+    blob = "\n".join(masked_documents(FIXTURES[claim_id].claim).values())
+    assert set(NAME.findall(blob)) <= NOT_PEOPLE
+
+
+def test_documents_outside_sample_claims_are_not_read():
+    escape = C4222.model_copy(update={"sources": ["sample_claims/../demo/README.md"]})
+    docs = llm_signals.documents(escape)
+    assert "README.md" not in docs and list(docs) == ["claim_details.txt"]
+
+
+def test_a_tier_raise_needs_escalating_evidence():
+    span = signal("low_confidence", "pulling off by Delford [*] Avenue", "call_excerpt.md")
+    weak = run_live(C4222, client=Stub(response(span, tier="T3")))
+    assert weak.items[0].verified and weak.suggested_tier is None
+    strong = run_live(
+        C4222, client=Stub(response(signal("onset_gap", ONSET, "adjuster_notes.md"), tier="T3"))
+    )
+    assert strong.suggested_tier == Tier.T3
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Raymond Ellison", "RAYMOND ELLISON", "Ellison Raymond", "Ell ison", "E11ison", "Mr. ELL1SON"],
+)
+def test_leaks_sees_ocr_and_case_variants(text):
+    if text == "Ell ison":
+        assert llm_signals.leaks(text, C4222) == []  # a split word isn't the name
+    else:
+        assert "[CLAIMANT]" in llm_signals.leaks(text, C4222)
+
+
+def test_masking_does_not_eat_ordinary_words():
+    # "Empire" is masked as a word, never inside one; short name parts are skipped.
+    text = llm_signals.mask("Empirical evidence; the empire's vans; a State road", C4222)
+    assert "Empirical" in text and "State road" in text
+    assert "the [POLICYHOLDER]'s vans" in text
+    # 2993's "Pacific Freight Partners": every word is common, so only the full name masks.
+    assert llm_signals.mask("Pacific coast freight", C2993) == "Pacific coast freight"

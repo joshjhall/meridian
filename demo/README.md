@@ -60,7 +60,7 @@ The server logs the base URL's host and whether credentials are set at startup; 
 
 What contains the output (`backend/pipeline/llm_signals.py`):
 
-- Names, policy numbers and claim numbers are masked before the call, including OCR-garbled forms in faxed documents.
+- Names, policy numbers and claim numbers are masked before the call, including OCR-garbled forms in faxed documents, along with anything shaped like a phone, email, address, VIN or plate and the EDI contact segments. A second pass refuses to send if any of the claim's known identifiers survived. Not covered: a third party named only in free text; none of the demo claims has one (a test pins this), and production would need entity recognition.
 - Output is structured only: a JSON schema on the request, then strict validation; anything off-schema, including an extra field, is rejected. The schema has no approve, deny or recommendation field, and a tier suggestion can only raise the tier.
 - Every signal quotes its source document. Code checks the quote is there; one that isn't is marked unverified, shown, and ignored for routing.
 - One call, 20 seconds, no retries. On a timeout, an unreachable endpoint, missing credentials or failed validation, the recorded response loads, goes through the same checks, and is marked as a fallback in the UI and the audit record.
