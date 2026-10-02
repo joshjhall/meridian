@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable, Iterable
 from datetime import datetime
 
+import clock
 from claimspro_sim.faults import FaultSwitch
 from claimspro_sim.soap import ClaimsProSoapClient
 from claimspro_sim.store import ClaimsProStore
@@ -20,7 +21,7 @@ class ClaimsProSim:
         claims: Iterable[Claim] | None = None,
         *,
         sleep: Callable[[float], None] = time.sleep,
-        now: Callable[[], datetime] = datetime.now,
+        now: Callable[[], datetime] = clock.now,
         rng: random.Random | None = None,
     ) -> None:
         self.sleep = sleep
