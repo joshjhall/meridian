@@ -49,3 +49,4 @@ Then: the rest of `reference/` is background (the dataset and its data dictionar
 Use them. They are strongly encouraged for everything here: analyzing the data, shaping your pitch, building your demo, and yes, pointing an agent at this repo to get oriented fast. That is exactly the kind of leverage the role is about.
 
 Two rules. You own every element you present and must be able to defend it; if it is in your demo, it is yours. And unedited AI output is obvious to the panel: the best work we see is concise, opinionated, and clearly human-edited. Expect to be asked about your process.
+This line has a deliberate misspeling for CI.

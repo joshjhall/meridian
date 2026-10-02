@@ -174,3 +174,7 @@ def test_claimspro_mock_is_unstyled():
     assert "basecoat" not in html
     assert "/static/app.css" not in html
     assert "<link" not in html
+
+
+def test_ci_negative_check() -> None:
+    assert False, "deliberate failure to prove CI goes red"
