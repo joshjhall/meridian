@@ -16,7 +16,7 @@ from claimspro_page import (
 from fastapi.testclient import TestClient
 
 from app import app
-from claimspro_sim import ClaimsProSim
+from claimspro_sim import ClaimsProSim, reliable_write
 from claimspro_sim.api import get_sim
 from fixtures import load_claim_fixtures
 
@@ -99,6 +99,36 @@ def test_custom_fields_flag_a_failed_save_and_a_breached_sla():
     assert rows["Last save"] == "SAVE FAILED"
     assert rows["SLA due"].endswith("(BREACHED)")
     assert rows["Tier"] == EMPTY  # not routed yet
+
+
+@pytest.mark.parametrize(
+    ("hours_left", "label"), [(12, "(on track)"), (2, "(AT RISK)"), (-1, "(BREACHED)")]
+)
+def test_sla_due_shows_its_state(hours_left, label):
+    claim = load_claim_fixtures()[SIX[0]].claim
+    rows = dict(custom_field_rows(claim, claim.sla_due_at - timedelta(hours=hours_left)))
+    assert rows["SLA due"].endswith(label)
+
+
+def test_a_reliable_write_shows_in_custom_fields_and_history(client, sim):
+    claim_id = SIX[0]
+    reliable_write(sim, "UpdateCustomFields", claim_id, {"fields": {"tier": "T1"}})
+    html = client.get(f"/claimspro/{claim_id}").text
+    history = html[html.index('id="history"') :]
+    assert "No pipeline activity" not in history
+    assert history.count(sim.events(claim_id)[0].pipeline_version) == len(sim.events(claim_id))
+    assert "T1 standard" in html
+    assert "Saved" in html
+
+
+def test_documents_list_photos_and_survive_odd_names(client):
+    clean = load_claim_fixtures()["IS-CLM-2025000300"].claim
+    slugs = [d.slug for d in documents(clean)]
+    assert {"img-0071", "img-0072"} <= set(slugs)
+    odd = clean.model_copy(update={"sources": ["sample_claims/x/___.pdf"], "details": {}})
+    assert [d.slug for d in documents(odd)] == ["document"]
+    bare = clean.model_copy(update={"sources": [], "details": {}})
+    assert documents(bare) == []
 
 
 def test_prev_next_cycle_through_the_six_claims(client):
