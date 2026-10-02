@@ -8,6 +8,11 @@
         href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&display=swap" />
   <link rel="stylesheet" href="/static/admin.css" />
   <script src="/static/admin.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"
+          integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i"
+          crossorigin="anonymous"
+          defer></script>
+  <script src="/static/learning.js" defer></script>
 {% endblock %}
 {% block body_attrs %}class="monitor-body" data-viewer="{{ viewer }}"{% endblock %}
 {% block main_class %}monitor{% endblock %}
@@ -86,6 +91,7 @@
       <span><code>{{ id[-4:] }}</code> {{ story | lower }}</span>
     {% endfor %}
   </footer>
+  {% include "admin/learning/charts.html" %}
   <dialog id="trace"
           class="dialog"
           aria-labelledby="trace-title"

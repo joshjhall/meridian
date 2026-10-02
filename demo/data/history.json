@@ -1,0 +1,524 @@
+{
+  "caption": "Illustrative history: mocked data, not measurements. Week 0 values come from the cited sources; end points are targets. The two y-axes on each chart are scaled independently, so where the line and the second series cross means nothing.",
+  "charts": [
+    {
+      "id": "routing",
+      "title": "Routing quality",
+      "subtitle": "Does the review flag agree with reviewers, and how fast do claims get a response?",
+      "primary": {
+        "key": "agreement",
+        "label": "Agreement with reviewers",
+        "unit": "%",
+        "mark": "line",
+        "source": "Current flag vs review_actually_needed, 500-claim calibration sample: (242 + 138) / 500 (analysis/review_floor.py, section 4)",
+        "target": 90,
+        "target_label": "Target ~90%",
+        "points": [
+          {
+            "week": 0,
+            "value": 76.0
+          },
+          {
+            "week": 1,
+            "value": 76.0
+          },
+          {
+            "week": 2,
+            "value": 76.2
+          },
+          {
+            "week": 3,
+            "value": 80.4
+          },
+          {
+            "week": 4,
+            "value": 81.6
+          },
+          {
+            "week": 5,
+            "value": 82.4
+          },
+          {
+            "week": 6,
+            "value": 82.9
+          },
+          {
+            "week": 7,
+            "value": 83.3
+          },
+          {
+            "week": 8,
+            "value": 83.6
+          },
+          {
+            "week": 9,
+            "value": 83.9
+          },
+          {
+            "week": 10,
+            "value": 80.1
+          },
+          {
+            "week": 11,
+            "value": 83.8
+          },
+          {
+            "week": 12,
+            "value": 84.2
+          },
+          {
+            "week": 13,
+            "value": 84.5
+          },
+          {
+            "week": 14,
+            "value": 86.1
+          },
+          {
+            "week": 15,
+            "value": 86.9
+          },
+          {
+            "week": 16,
+            "value": 87.3
+          },
+          {
+            "week": 17,
+            "value": 87.8
+          },
+          {
+            "week": 18,
+            "value": 88.2
+          },
+          {
+            "week": 19,
+            "value": 88.5
+          },
+          {
+            "week": 20,
+            "value": 88.9
+          },
+          {
+            "week": 21,
+            "value": 89.2
+          },
+          {
+            "week": 22,
+            "value": 89.4
+          },
+          {
+            "week": 23,
+            "value": 89.7
+          },
+          {
+            "week": 24,
+            "value": 90.0
+          }
+        ]
+      },
+      "secondary": {
+        "key": "response_hours",
+        "label": "Avg submit-to-response",
+        "unit": "h",
+        "mark": "bar",
+        "source": "68h average cycle time (docs/project/sow.md:17)",
+        "target": 24,
+        "target_label": "Target <24h (SOW, simple claims)",
+        "points": [
+          {
+            "week": 0,
+            "value": 68
+          },
+          {
+            "week": 1,
+            "value": 68
+          },
+          {
+            "week": 2,
+            "value": 67
+          },
+          {
+            "week": 3,
+            "value": 61
+          },
+          {
+            "week": 4,
+            "value": 57
+          },
+          {
+            "week": 5,
+            "value": 54
+          },
+          {
+            "week": 6,
+            "value": 51
+          },
+          {
+            "week": 7,
+            "value": 48
+          },
+          {
+            "week": 8,
+            "value": 45
+          },
+          {
+            "week": 9,
+            "value": 43
+          },
+          {
+            "week": 10,
+            "value": 47
+          },
+          {
+            "week": 11,
+            "value": 42
+          },
+          {
+            "week": 12,
+            "value": 40
+          },
+          {
+            "week": 13,
+            "value": 38
+          },
+          {
+            "week": 14,
+            "value": 35
+          },
+          {
+            "week": 15,
+            "value": 33
+          },
+          {
+            "week": 16,
+            "value": 31
+          },
+          {
+            "week": 17,
+            "value": 30
+          },
+          {
+            "week": 18,
+            "value": 29
+          },
+          {
+            "week": 19,
+            "value": 28
+          },
+          {
+            "week": 20,
+            "value": 27
+          },
+          {
+            "week": 21,
+            "value": 26
+          },
+          {
+            "week": 22,
+            "value": 25.5
+          },
+          {
+            "week": 23,
+            "value": 25
+          },
+          {
+            "week": 24,
+            "value": 24
+          }
+        ]
+      }
+    },
+    {
+      "id": "intake",
+      "title": "Intake quality",
+      "subtitle": "Are fax fields right, and do EDI failures reach a person?",
+      "primary": {
+        "key": "ocr_accuracy",
+        "label": "Fax OCR field accuracy",
+        "unit": "%",
+        "mark": "line",
+        "source": "~78% on faxed documents (memory/calltranscripts/w1-thu-michael-systems.md:143)",
+        "target": 95,
+        "target_label": "Target ~95%",
+        "points": [
+          {
+            "week": 0,
+            "value": 78.0
+          },
+          {
+            "week": 1,
+            "value": 78.0
+          },
+          {
+            "week": 2,
+            "value": 78.2
+          },
+          {
+            "week": 3,
+            "value": 77.9
+          },
+          {
+            "week": 4,
+            "value": 78.1
+          },
+          {
+            "week": 5,
+            "value": 85.0
+          },
+          {
+            "week": 6,
+            "value": 86.2
+          },
+          {
+            "week": 7,
+            "value": 87.0
+          },
+          {
+            "week": 8,
+            "value": 87.5
+          },
+          {
+            "week": 9,
+            "value": 88.0
+          },
+          {
+            "week": 10,
+            "value": 88.3
+          },
+          {
+            "week": 11,
+            "value": 88.6
+          },
+          {
+            "week": 12,
+            "value": 89.0
+          },
+          {
+            "week": 13,
+            "value": 89.2
+          },
+          {
+            "week": 14,
+            "value": 89.5
+          },
+          {
+            "week": 15,
+            "value": 89.7
+          },
+          {
+            "week": 16,
+            "value": 90.0
+          },
+          {
+            "week": 17,
+            "value": 93.1
+          },
+          {
+            "week": 18,
+            "value": 93.6
+          },
+          {
+            "week": 19,
+            "value": 94.0
+          },
+          {
+            "week": 20,
+            "value": 94.3
+          },
+          {
+            "week": 21,
+            "value": 94.5
+          },
+          {
+            "week": 22,
+            "value": 94.7
+          },
+          {
+            "week": 23,
+            "value": 94.9
+          },
+          {
+            "week": 24,
+            "value": 95.0
+          }
+        ]
+      },
+      "secondary": {
+        "key": "edi_silent_drops",
+        "label": "EDI silently dropped",
+        "unit": "%",
+        "mark": "line",
+        "source": "~1 in 8 partner submissions dropped silently (memory/calltranscripts/w1-thu-michael-systems.md:143)",
+        "target": 0,
+        "target_label": "Target 0%: failures go to the exceptions lane",
+        "points": [
+          {
+            "week": 0,
+            "value": 12.4
+          },
+          {
+            "week": 1,
+            "value": 12.1
+          },
+          {
+            "week": 2,
+            "value": 12.3
+          },
+          {
+            "week": 3,
+            "value": 11.9
+          },
+          {
+            "week": 4,
+            "value": 12.2
+          },
+          {
+            "week": 5,
+            "value": 12.0
+          },
+          {
+            "week": 6,
+            "value": 11.8
+          },
+          {
+            "week": 7,
+            "value": 4.1
+          },
+          {
+            "week": 8,
+            "value": 2.6
+          },
+          {
+            "week": 9,
+            "value": 1.8
+          },
+          {
+            "week": 10,
+            "value": 1.2
+          },
+          {
+            "week": 11,
+            "value": 0.9
+          },
+          {
+            "week": 12,
+            "value": 0.7
+          },
+          {
+            "week": 13,
+            "value": 0.5
+          },
+          {
+            "week": 14,
+            "value": 0.4
+          },
+          {
+            "week": 15,
+            "value": 0.3
+          },
+          {
+            "week": 16,
+            "value": 0.3
+          },
+          {
+            "week": 17,
+            "value": 0.2
+          },
+          {
+            "week": 18,
+            "value": 0.2
+          },
+          {
+            "week": 19,
+            "value": 0.1
+          },
+          {
+            "week": 20,
+            "value": 0.1
+          },
+          {
+            "week": 21,
+            "value": 0.1
+          },
+          {
+            "week": 22,
+            "value": 0.0
+          },
+          {
+            "week": 23,
+            "value": 0.0
+          },
+          {
+            "week": 24,
+            "value": 0.0
+          }
+        ]
+      }
+    }
+  ],
+  "releases": [
+    {
+      "week": 3,
+      "version": "router v0.3",
+      "kind": "release",
+      "charts": [
+        "routing"
+      ],
+      "notes": "Review flag rebuilt from the calibration labels: routes on the regulation flag and complexity signals instead of the 2021 score, with skill and tier routing to adjusters."
+    },
+    {
+      "week": 5,
+      "version": "ocr-check v1.1",
+      "kind": "release",
+      "charts": [
+        "intake"
+      ],
+      "notes": "Low-confidence fax OCR fields go to adjuster confirmation before they are written to ClaimsPro. Confirmed values become the accuracy measure."
+    },
+    {
+      "week": 7,
+      "version": "edi-exceptions v1.0",
+      "kind": "release",
+      "charts": [
+        "intake"
+      ],
+      "notes": "EDI submissions with missing fields go to the exceptions lane instead of being dropped silently."
+    },
+    {
+      "week": 10,
+      "version": "signals-prompt v1.2",
+      "kind": "release",
+      "charts": [
+        "routing"
+      ],
+      "notes": "New complexity-signals prompt. It over-flagged injury mentions: agreement fell 3.8 points and response time rose."
+    },
+    {
+      "week": 11,
+      "version": "signals-prompt v1.1",
+      "kind": "rollback",
+      "charts": [
+        "routing"
+      ],
+      "notes": "Rolled back to v1.1 after the v1.2 regression. v1.2 went back to evaluation."
+    },
+    {
+      "week": 14,
+      "version": "router v0.4",
+      "kind": "release",
+      "charts": [
+        "routing"
+      ],
+      "notes": "Reviewer overrides from weeks 3-13 added as labels; flag thresholds recalibrated."
+    },
+    {
+      "week": 17,
+      "version": "ocr-check v1.2",
+      "kind": "release",
+      "charts": [
+        "intake"
+      ],
+      "notes": "Field extractor retuned on adjuster-confirmed values."
+    }
+  ]
+}

@@ -274,3 +274,46 @@ class PanelSummary(BaseModel):
     needs_attention: list[AttentionItem] = []
     contents: list[ContentsEntry] = []
     footer: PanelFooter
+
+
+# --- Learning-loop history (admin view, #8) ---
+
+
+class HistoryPoint(BaseModel):
+    week: int  # weeks since kickoff
+    value: float
+
+
+class HistorySeries(BaseModel):
+    key: str
+    label: str
+    unit: str
+    mark: Literal["line", "bar"]
+    source: str  # where the week-0 value comes from
+    target: float
+    target_label: str
+    points: list[HistoryPoint]
+
+
+class HistoryChart(BaseModel):
+    """One chart with two series on independent y-axes (left: primary)."""
+
+    id: str
+    title: str
+    subtitle: str
+    primary: HistorySeries
+    secondary: HistorySeries
+
+
+class Release(BaseModel):
+    week: int
+    version: str
+    kind: Literal["release", "rollback"]
+    charts: list[str]  # HistoryChart ids the flag appears on
+    notes: str
+
+
+class LearningHistory(BaseModel):
+    caption: str
+    charts: list[HistoryChart]
+    releases: list[Release]
