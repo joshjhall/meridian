@@ -6,13 +6,16 @@ Run: uv run uvicorn app:app --reload --port 8000
 from pathlib import Path
 from typing import Literal
 
+import claimspro_page
 import monitor
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+import clock
+from claimspro_sim.api import Sim
 from claimspro_sim.api import router as claimspro_router
 from fixtures import load_claim_fixtures, load_history, load_roster
 from models import EXCEPTION_LABELS, Adjuster, Claim, LearningHistory
@@ -130,10 +133,37 @@ def admin_trace(request: Request, claim_id: str, upto: int | None = Query(None, 
     )
 
 
+# --- Mock ClaimsPro (#10) ---
+# Reads the simulator, not the fixtures, so pipeline writes show in the custom fields.
+
+
+@app.get("/claimspro")
+def claimspro_picker(claim: str = Query(pattern=r"^IS-CLM-\d{10}$")) -> RedirectResponse:
+    # The claim picker is a plain GET form; redirect so the URL carries the claim ID.
+    return RedirectResponse(f"/claimspro/{claim}", status_code=303)
+
+
 @app.get("/claimspro/{claim_id}", response_class=HTMLResponse)
-def claimspro(request: Request, claim_id: str):
+def claimspro(request: Request, sim: Sim, claim_id: str):
+    claim = sim.store.get(claim_id)
+    if claim is None:
+        raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
+    prev_id, next_id = claimspro_page.neighbours(claim_id)
     return templates.TemplateResponse(
-        request, "claimspro.html", {"claim": get_claim_or_404(claim_id)}
+        request,
+        "claimspro/page.html",
+        {
+            "claim": claim,
+            "claim_ids": list(load_claim_fixtures()),
+            "prev_id": prev_id,
+            "next_id": next_id,
+            "screens": claimspro_page.SCREENS,
+            "details": claimspro_page.details_by_screen(claim),
+            "documents": claimspro_page.documents(claim),
+            "custom_field_rows": claimspro_page.custom_field_rows(claim, clock.now()),
+            "notes": sim.store.notes(claim_id),
+            "events": sim.events(claim_id),
+        },
     )
 
 

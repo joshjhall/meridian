@@ -74,6 +74,7 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 - ClaimsPro custom fields (`skills`, `tier`, `routing_reason`, `review_lane`, `brief_status`) are empty in the fixtures; the pipeline (#3) fills them. `sla_due_at` is computed: `received_at` + 24h.
 - Pages are server-rendered. Reach for HTMX or a small script before adding a JavaScript framework.
 - The mock ClaimsPro page (`/claimspro/{id}`, #10) is plain HTML with no or minimal CSS and does not extend `base.html`, so it reads as a stand-in for Meridian's vendor system. Its custom fields are plain too: in v1 they are ClaimsPro fields, not new UI. Everything that is ours (admin views, side panel) uses Basecoat.
+- The mock ClaimsPro page reads the simulator (`claimspro_sim`), not the fixtures, so pipeline writes show in its custom fields ("not yet saved" while a write is pending). `backend/claimspro_page.py` defines its anchors for the side panel's Contents links: one per screen (`#summary`, `#policy`, `#parties`, `#loss`, `#documents`, `#notes`, `#payments`, `#history`) and one per document (`#documents/{slug}`, slug from the file stem, e.g. `#documents/medical-summary`).
 - Use Basecoat's classes (`btn`, `card`, `badge`, `alert`, `table` and so on) and its Jinja macros before hand-styling a component, and Tailwind utilities for layout. Load order matters: Basecoat's stylesheet first, then `app.css`. `base.html` already does this.
 - Basecoat sets up components inside HTMX swaps by itself. `base.html` forces a reset after an HTMX history restore.
 
