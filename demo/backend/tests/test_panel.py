@@ -9,6 +9,7 @@ import pytest
 from claimspro_page import SCREENS, documents, neighbours
 from fastapi.testclient import TestClient
 
+import clock
 from app import app
 from claimspro_sim import ClaimsProSim
 from claimspro_sim.api import get_sim
@@ -262,6 +263,33 @@ def test_sla_label_counts_down_and_clamps(left, label, used):
         assert got_used == pytest.approx(used)
 
 
+@pytest.mark.parametrize(
+    ("left", "state"),
+    [
+        (timedelta(hours=6), "on_track"),
+        (timedelta(hours=5, minutes=59), "at_risk"),
+        (timedelta(0), "breached"),
+    ],
+)
+def test_rendered_sla_turns_amber_under_6h(client, left, state):
+    due = summary("IS-CLM-2025000300").header.sla_due_at
+    clock.reset(due - left)
+    try:
+        html = client.get("/panel?claim=IS-CLM-2025000300").text
+    finally:
+        clock.reset()
+    assert f'data-sla="{state}"' in html
+
+
+def test_summary_is_stable_across_calls_and_clock_times():
+    first = summary("IS-CLM-2025004222").model_dump()
+    later = panel.build_summary("IS-CLM-2025004222", NOW + timedelta(hours=1))
+    assert later is not None and later.header.sla_state == "at_risk"
+    # Building another panel must not mutate the cached content or pipeline result.
+    assert summary("IS-CLM-2025004222").model_dump() == first
+    assert len(summary("IS-CLM-2025002993").needs_attention) == 6
+
+
 # --- Unknown claims and the correction log ---
 
 
@@ -290,6 +318,29 @@ def test_this_is_wrong_goes_to_the_correction_log(client):
     ]
     only = client.get("/api/corrections?claim=IS-CLM-2025002993").json()
     assert [e["item"] for e in only] == ["Policy number"]
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "section=",
+        "section=" + "x" * 41,
+        "section=panel&item=" + "x" * 201,
+        "section=panel&note=" + "x" * 501,
+    ],
+)
+def test_log_rejects_empty_or_oversize_fields(client, query):
+    assert client.post(f"/panel/IS-CLM-2025000300/log?{query}").status_code == 422
+    assert panel.corrections() == []
+
+
+def test_picker_rejects_malformed_claim_ids_and_redirects_plainly(client):
+    assert (
+        client.get("/claimspro?claim=https://evil.example", follow_redirects=False).status_code
+        == 422
+    )
+    response = client.get("/claimspro?claim=IS-CLM-2025000300", follow_redirects=False)
+    assert response.headers["location"] == "/claimspro/IS-CLM-2025000300"
 
 
 def test_correction_log_is_capped():
