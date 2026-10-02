@@ -349,26 +349,30 @@ def _gap_replay() -> tuple[Replay, schedule.Scheduled]:
     return r, nxt
 
 
-def test_clock_runs_between_events_and_speed_changes_keep_waited_time():
+def test_clock_runs_between_events_and_a_speed_change_keeps_waited_time():
     async def scenario():
         r, nxt = _gap_replay()
         hours = (nxt.at - r.sim_now) / timedelta(hours=1)
-        # Slow enough that the gap would take ~2 s, then speed up a few times mid-wait.
+        loop = asyncio.get_running_loop()
+        # The gap takes 2 s at this speed. Wait half of it, then double the speed:
+        # the remaining half takes 0.5 s, so it plays about 1.5 s in. Losing the
+        # waited time would make it 2 s (1 s + the whole gap at double speed).
         r.set(speed=hours / 2)
-        start = r.sim_now
+        start, t0 = r.sim_now, loop.time()
         r.start()
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(1.0)
         moved = r.sim_now
-        for _ in range(3):
-            r.set(speed=hours / 2)  # same speed: a control touch must not restart the wait
-            await asyncio.sleep(0.5)
-        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 2)
+        r.set(speed=hours)
+        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 3)
+        played = loop.time() - t0
         await r.stop()
-        return start, moved
+        return start, moved, played, nxt, r
 
-    start, moved = asyncio.run(scenario())
+    start, moved, played, nxt, r = asyncio.run(scenario())
     clock.reset()
-    assert moved > start  # the clock moved before the next event played
+    assert start < moved < nxt.at  # the clock ran between events
+    assert 1.3 < played < 1.8
+    assert r.board.claims[nxt.event.claim_id].trace[-1] == nxt.event
 
 
 def test_pause_mid_wait_holds_the_clock_and_resume_keeps_progress():

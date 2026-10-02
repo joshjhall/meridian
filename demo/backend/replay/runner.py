@@ -138,6 +138,11 @@ class Replay:
 
     def start(self) -> None:
         if self._task is None:
+            # Fresh events on the running loop: this Replay outlives any one loop
+            # (it is built at import), and an asyncio.Event binds to the loop it waits on.
+            self._resumed, self._woken = asyncio.Event(), asyncio.Event()
+            if not self.paused:
+                self._resumed.set()
             self._task = asyncio.create_task(self.run())
 
     async def stop(self) -> None:
