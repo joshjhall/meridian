@@ -1,0 +1,136 @@
+{
+  "what_matters": [
+    {
+      "text": "Fax OCR confidence 0.69. Three fields conflict with the EDI record.",
+      "source": {
+        "label": "Fax OCR, estimate p.2",
+        "path": "sample_claims/IS-CLM-2025002993/ocr_output.txt",
+        "anchor": "documents/ocr-output"
+      },
+      "unusual": true
+    },
+    {
+      "text": "Estimator noted corrosion and old paint edges on the rear quarter, not consistent with a fresh impact. Evidence to weigh, with the photos.",
+      "source": {
+        "label": "Fax OCR, estimate p.2",
+        "path": "sample_claims/IS-CLM-2025002993/ocr_output.txt",
+        "anchor": "documents/ocr-output"
+      }
+    },
+    {
+      "text": "Claimant contact is blank on both the fax and the EDI record.",
+      "source": {
+        "label": "EDI 837",
+        "path": "sample_claims/IS-CLM-2025002993/edi_record.txt",
+        "anchor": "documents/edi-record"
+      }
+    }
+  ],
+  "key_facts": [
+    {
+      "label": "Injured parties",
+      "value": "1: Gloria Mendez (claimant)",
+      "sources": [
+        {
+          "label": "EDI 837",
+          "path": "sample_claims/IS-CLM-2025002993/edi_record.txt",
+          "anchor": "documents/edi-record"
+        }
+      ]
+    },
+    {
+      "label": "Date of loss",
+      "value": "Unverified: cut off on the fax; EDI date is the receipt date",
+      "sources": [
+        {
+          "label": "Fax OCR, estimate p.2",
+          "path": "sample_claims/IS-CLM-2025002993/ocr_output.txt",
+          "anchor": "documents/ocr-output"
+        },
+        {
+          "label": "EDI 837",
+          "path": "sample_claims/IS-CLM-2025002993/edi_record.txt",
+          "anchor": "documents/edi-record"
+        }
+      ],
+      "unusual": true
+    },
+    {
+      "label": "Vehicles involved",
+      "value": "2018 Freightliner M2 106 and claimant's vehicle",
+      "sources": [
+        {
+          "label": "EDI 837",
+          "path": "sample_claims/IS-CLM-2025002993/edi_record.txt",
+          "anchor": "documents/edi-record"
+        }
+      ]
+    },
+    {
+      "label": "Point of impact",
+      "value": "Rear",
+      "sources": [
+        {
+          "label": "Fax OCR, estimate p.2",
+          "path": "sample_claims/IS-CLM-2025002993/ocr_output.txt",
+          "anchor": "documents/ocr-output"
+        }
+      ]
+    },
+    {
+      "label": "Causation documents",
+      "value": "None on file yet",
+      "sources": [
+        {
+          "label": "EDI 837",
+          "path": "sample_claims/IS-CLM-2025002993/edi_record.txt",
+          "anchor": "documents/edi-record"
+        }
+      ]
+    }
+  ],
+  "ocr_check": {
+    "label": "Estimator's note (raw OCR vs corrected)",
+    "raw": "N0TE rear quarter sh0ws c0rr0si0n and pri0r paint edges n0t c0nsistent with a fresh impact",
+    "corrected": "NOTE rear quarter shows corrosion and prior paint edges not consistent with a fresh impact",
+    "source": {
+      "label": "Fax OCR, estimate p.2",
+      "path": "sample_claims/IS-CLM-2025002993/ocr_output.txt",
+      "anchor": "documents/ocr-output"
+    }
+  },
+  "contents": [
+    {
+      "fact": "Estimate and estimator's note",
+      "location": {
+        "label": "Fax OCR, estimate p.2",
+        "path": "sample_claims/IS-CLM-2025002993/ocr_output.txt",
+        "anchor": "documents/ocr-output"
+      }
+    },
+    {
+      "fact": "Policy number, accident date",
+      "location": {
+        "label": "EDI 837",
+        "path": "sample_claims/IS-CLM-2025002993/edi_record.txt",
+        "anchor": "documents/edi-record"
+      }
+    },
+    {
+      "fact": "Original fax",
+      "location": {
+        "label": "Fax (original)",
+        "path": "sample_claims/IS-CLM-2025002993/fax_transmission.pdf",
+        "anchor": "documents/fax-transmission"
+      }
+    },
+    {
+      "fact": "Damage photos",
+      "location": {
+        "label": "Photos",
+        "path": "sample_claims/IS-CLM-2025002993/photos",
+        "anchor": "documents"
+      }
+    }
+  ]
+}

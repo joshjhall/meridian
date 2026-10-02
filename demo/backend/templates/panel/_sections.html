@@ -1,0 +1,221 @@
+{# The six sections of the side panel (docs/presentation/panel_examples.md), one
+   macro each. The panel shows evidence for a person to judge: no section offers
+   an approve or deny action, and every point links to its source. #}
+{% macro source_link(ref, claim_id) -%}
+  {%- if ref.anchor -%}
+    <a class="src{% if not ref.verified %} src--unverified{% endif %}"
+       href="/claimspro/{{ claim_id }}#{{ ref.anchor }}"
+       data-nav="{{ ref.anchor }}"
+       target="_top">{{ ref.label }}</a>
+  {%- else -%}
+    <span class="src{% if not ref.verified %} src--unverified{% endif %}">{{ ref.label }}</span>
+  {%- endif -%}
+  {%- if not ref.verified %}<span class="unverified">unverified</span>{% endif -%}
+{%- endmacro %}
+{% macro log_button(claim_id, section, action, label, item=none) -%}
+  <button type="button"
+          class="btn-sm-outline"
+          hx-post="/panel/{{ claim_id }}/log?{{ {'section': section, 'action': action, 'item': item or ''} | urlencode }}"
+          hx-swap="outerHTML">{{ label }}</button>
+{%- endmacro %}
+{% macro header(s, sla_label, sla_used, tier_labels) %}
+  {% set h = s.header %}
+  <header class="sign" id="header" data-sla="{{ h.sla_state }}">
+    <div class="sign__id">
+      <h1>{{ h.claim_id }}</h1>
+      {% if h.synthetic %}<span class="badge-outline sign__synthetic">Synthetic story</span>{% endif %}
+    </div>
+    <ul class="chips" aria-label="Skills">
+      {% for skill in h.skills %}<li class="chip">{{ skill }}</li>{% endfor %}
+      <li class="chip chip--tier">{{ h.tier }} {{ tier_labels[h.tier] }}</li>
+      {% if h.regulated %}<li class="chip chip--reg">Regulated: human review</li>{% endif %}
+    </ul>
+    <div class="sla">
+      <meter class="sla__road"
+             min="0"
+             max="1"
+             value="{{ sla_used }}"
+             aria-label="24-hour SLA used"
+             aria-valuetext="{{ sla_label }}">{{ sla_label }}</meter>
+      <p class="sla__label">
+        <strong>{{ sla_label }}</strong> on the 24h SLA, due {{ h.sla_due_at.strftime("%-m/%-d %H:%M") }}
+      </p>
+    </div>
+    <p class="sign__reason">{{ h.routing_reason }}</p>
+  </header>
+{% endmacro %}
+{% macro what_matters(s) %}
+  <section class="lane" id="what-matters" aria-labelledby="h-what-matters">
+    <h2 id="h-what-matters">What matters</h2>
+    <ul class="points">
+      {% for p in s.what_matters %}
+        <li class="point{% if p.unusual %} point--unusual{% endif %}">
+          <p>{{ p.text }}</p>
+          {{ source_link(p.source, s.header.claim_id) }}
+        </li>
+      {% endfor %}
+    </ul>
+    {% if s.fast_lane %}
+      <div class="fast-lane" id="fast-lane">
+        <p>Fast lane: one click from a person moves it on. Nothing happens automatically.</p>
+        {{ log_button(s.header.claim_id, "what-matters", "confirm", "Confirm intake is complete", "fast lane") }}
+      </div>
+    {% endif %}
+  </section>
+{% endmacro %}
+{% macro fact_rows(facts, claim_id) %}
+  <dl class="facts">
+    {% for f in facts %}
+      <div class="fact{% if f.unusual %} fact--unusual{% endif %}">
+        <dt>{{ f.label }}</dt>
+        <dd>
+          {{ f.value }}
+          <span class="fact__src">{% for ref in f.sources %}{{ source_link(ref, claim_id) }}{% endfor %}</span>
+        </dd>
+      </div>
+    {% endfor %}
+  </dl>
+{% endmacro %}
+{% macro timeline(entries, claim_id) %}
+  <ol class="timeline" aria-label="Injury timeline">
+    {% for e in entries %}
+      <li>
+        <span class="timeline__when">{{ e.when }}</span>
+        <span class="timeline__event">{{ e.event }}</span>
+        {{ source_link(e.source, claim_id) }}
+      </li>
+    {% endfor %}
+  </ol>
+{% endmacro %}
+{% macro accounts(items, claim_id) %}
+  <div class="accounts">
+    {% for a in items %}
+      <figure class="account">
+        <figcaption>{{ a.party }}</figcaption>
+        <blockquote>
+          {{ a.says }}
+        </blockquote>
+        {{ source_link(a.source, claim_id) }}
+      </figure>
+    {% endfor %}
+  </div>
+  <p class="hint">The panel lays out the dispute. Fault is the adjuster's call.</p>
+{% endmacro %}
+{% macro key_facts(s) %}
+  {% set k = s.key_facts %}
+  <section class="lane" id="key-facts" aria-labelledby="h-key-facts">
+    <details {% if not k.collapsed %}open{% endif %}>
+      <summary>
+        <h2 id="h-key-facts">Key facts</h2>
+        <span class="lane__meta">{% if k.collapsed %}Nothing unusual{% else %}{{ k.template }}{% endif %}</span>
+      </summary>
+      {% if k.timeline %}{{ timeline(k.timeline, s.header.claim_id) }}{% endif %}
+      {% if k.accounts %}{{ accounts(k.accounts, s.header.claim_id) }}{% endif %}
+      {{ fact_rows(k.facts, s.header.claim_id) }}
+    </details>
+  </section>
+{% endmacro %}
+{% macro ocr_word(text, w) -%}
+  {%- set kind = "neg" if w.negation else ("drop" if not w.corrected else ("add" if not w.raw else ("chg" if w.raw != w.corrected else ""))) -%}
+  <span {% if kind %}class="{{ kind }}"{% endif %}>{{ text }}</span>
+{%- endmacro %}
+{% macro ocr_view(diff) %}
+  <div class="ocr">
+    <div class="ocr__col">
+      <p class="ocr__head">Raw OCR</p>
+      <p class="ocr__text ocr__text--raw">
+        {% for w in diff.words if w.raw %}{{ ocr_word(w.raw, w) }}{{ " " if not loop.last }}{% endfor %}
+      </p>
+    </div>
+    <div class="ocr__col">
+      <p class="ocr__head">Corrected</p>
+      <p class="ocr__text">
+        {% for w in diff.words if w.corrected %}{{ ocr_word(w.corrected, w) }}{{ " " if not loop.last }}{% endfor %}
+      </p>
+    </div>
+  </div>
+  <p class="hint">
+    {% set negations = diff.words | selectattr("negation") | list %}
+    {% if diff.verdict.accepted %}
+      Characters changed, words did not.
+      {% if negations %}The negation “{{ negations[0].corrected }}” is kept.{% endif %}
+    {% else %}
+      Words changed ({{ diff.verdict.reason }}): this goes to a person, not the record.
+    {% endif %}
+  </p>
+{% endmacro %}
+{% macro needs_attention(s) %}
+  {% if s.needs_attention %}
+    {% set cid = s.header.claim_id %}
+    <section class="lane lane--attention"
+             id="needs-attention"
+             aria-labelledby="h-needs-attention">
+      <h2 id="h-needs-attention">
+        Needs attention <span class="count">{{ s.needs_attention | length }}</span>
+      </h2>
+      <ul class="items">
+        {% for item in s.needs_attention %}
+          <li class="item item--{{ item.kind }}">
+            <p class="item__label">
+              <span class="item__kind">{{ {'missing': 'Missing', 'conflict': 'Conflict', 'low_confidence': 'Low confidence'}[item.kind] }}</span>
+              {{ item.label }}
+            </p>
+            {% if item.ocr_diff %}
+              {{ ocr_view(item.ocr_diff) }}
+            {% elif item.values %}
+              <ul class="values">
+                {% for v in item.values %}<li>{{ v }}</li>{% endfor %}
+              </ul>
+            {% endif %}
+            {% if item.suggested %}
+              <p class="suggested">
+                Suggested: <strong>{{ item.suggested }}</strong>
+              </p>
+            {% endif %}
+            {% if item.sources %}
+              <p class="item__srcs">{% for ref in item.sources %}{{ source_link(ref, cid) }}{% endfor %}</p>
+            {% endif %}
+            <div class="item__actions">
+              {% if item.kind == "missing" %}
+                {{ log_button(cid, "needs-attention", "request", "Request it", item.label) }}
+              {% else %}
+                {{ log_button(cid, "needs-attention", "confirm", "Confirm suggested" if item.suggested else "Confirm", item.label) }}
+                {{ log_button(cid, "needs-attention", "correct", "Correct", item.label) }}
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endmacro %}
+{% macro contents(s) %}
+  <section class="lane" id="contents" aria-labelledby="h-contents">
+    <h2 id="h-contents">Contents</h2>
+    <ul class="contents">
+      {% for c in s.contents %}
+        <li>
+          <span>{{ c.fact }}</span>
+          {{ source_link(c.location, s.header.claim_id) }}
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endmacro %}
+{% macro footer(s) %}
+  {% set f = s.footer %}
+  <footer class="lane panel-footer" id="footer">
+    {% if f.note %}<p class="footer__note">{{ f.note }}</p>{% endif %}
+    <ol class="touches">
+      {% for t in f.touches %}
+        <li>
+          <time datetime="{{ t.at.isoformat() }}">{{ t.at.strftime("%-m/%-d %H:%M") }}</time> {{ t.actor }}
+        </li>
+      {% endfor %}
+    </ol>
+    <div class="footer__row">
+      <span class="lane__meta">Pipeline {{ f.pipeline_version }}</span>
+      {{ log_button(s.header.claim_id, "panel", "flag", "This is wrong") }}
+    </div>
+  </footer>
+{% endmacro %}

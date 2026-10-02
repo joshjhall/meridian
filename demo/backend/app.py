@@ -8,6 +8,7 @@ from typing import Annotated, Literal
 
 import claimspro_page
 import monitor
+import panel
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
@@ -20,7 +21,14 @@ from claimspro_sim import FaultConfig
 from claimspro_sim.api import Sim
 from claimspro_sim.api import router as claimspro_router
 from fixtures import load_claim_fixtures, load_history, load_roster
-from models import EXCEPTION_LABELS, Adjuster, Claim, LearningHistory
+from models import (
+    EXCEPTION_LABELS,
+    TIER_LABELS,
+    Adjuster,
+    Claim,
+    CorrectionLogEntry,
+    LearningHistory,
+)
 
 HERE = Path(__file__).resolve().parent
 
@@ -241,13 +249,22 @@ def admin_queue_faults(sim: Sim, on: bool) -> dict[str, bool]:
 
 
 @app.get("/claimspro")
-def claimspro_picker(claim: str = Query(pattern=r"^IS-CLM-\d{10}$")) -> RedirectResponse:
+def claimspro_picker(
+    claim: str = Query(pattern=r"^IS-CLM-\d{10}$"),
+    panel_mode: Literal["docked"] | None = Query(None, alias="panel"),
+) -> RedirectResponse:
     # The claim picker is a plain GET form; redirect so the URL carries the claim ID.
-    return RedirectResponse(f"/claimspro/{claim}", status_code=303)
+    dock = "?panel=docked" if panel_mode else ""
+    return RedirectResponse(f"/claimspro/{claim}{dock}", status_code=303)
 
 
 @app.get("/claimspro/{claim_id}", response_class=HTMLResponse)
-def claimspro(request: Request, sim: Sim, claim_id: str):
+def claimspro(
+    request: Request,
+    sim: Sim,
+    claim_id: str,
+    panel_mode: Literal["docked"] | None = Query(None, alias="panel"),
+):
     claim = sim.store.get(claim_id)
     if claim is None:
         raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
@@ -266,10 +283,74 @@ def claimspro(request: Request, sim: Sim, claim_id: str):
             "custom_field_rows": claimspro_page.custom_field_rows(claim, clock.now()),
             "notes": sim.store.notes(claim_id),
             "events": sim.events(claim_id),
+            "docked": panel_mode == "docked",
         },
     )
 
 
+# --- Side panel (#11) ---
+# Served here and embedded by the MV3 extension (demo/extension/) or, as a demo
+# safety net, docked beside the mock ClaimsPro page (?panel=docked).
+
+
 @app.get("/panel", response_class=HTMLResponse)
-def panel(request: Request, claim: str | None = None):
-    return templates.TemplateResponse(request, "panel.html", {"claim_id": claim})
+def panel_page(request: Request, claim: str | None = Query(None, pattern=r"^IS-CLM-\d{10}$")):
+    now = clock.now()
+    summary = panel.build_summary(claim, now) if claim else None
+    sla_label, sla_used = panel.sla_left(summary, now) if summary else ("", 0.0)
+    return templates.TemplateResponse(
+        request,
+        "panel/page.html",
+        {
+            "claim_id": claim,
+            "summary": summary,
+            "sla_label": sla_label,
+            "sla_used": sla_used,
+            "tier_labels": TIER_LABELS,
+            "claim_ids": list(load_claim_fixtures()),
+        },
+    )
+
+
+PanelAction = Literal["confirm", "correct", "request", "flag"]
+
+
+# Same CSRF guard as the queues board: the panel's HTMX requests carry this
+# header (hx-headers on the page), which a cross-site form can't send.
+PANEL_HEADER = "X-Meridian-Panel"
+
+
+def require_panel_request(x_meridian_panel: Annotated[str | None, Header()] = None) -> None:
+    if x_meridian_panel != "1":
+        raise HTTPException(status_code=403, detail=f"missing {PANEL_HEADER} header")
+
+
+@app.post(
+    "/panel/{claim_id}/log",
+    response_class=HTMLResponse,
+    dependencies=[Depends(require_panel_request)],
+)
+def panel_log(
+    request: Request,
+    claim_id: str,
+    section: str = Query(min_length=1, max_length=40),
+    action: PanelAction = "flag",
+    item: str | None = Query(None, max_length=200),
+    note: str | None = Query(None, max_length=500),
+):
+    """One click on a "Needs attention" item (confirm, correct, request), or a "this is wrong" flag.
+
+    Recorded in the correction log for the admin view; nothing is written to ClaimsPro.
+    """
+    get_claim_or_404(claim_id)
+    entry = panel.log_correction(
+        CorrectionLogEntry(
+            claim_id=claim_id, section=section, action=action, item=item, note=note, at=clock.now()
+        )
+    )
+    return templates.TemplateResponse(request, "panel/_logged.html", {"entry": entry})
+
+
+@app.get("/api/corrections")
+def corrections(claim: str | None = None) -> list[CorrectionLogEntry]:
+    return panel.corrections(claim)

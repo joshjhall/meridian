@@ -1,0 +1,12 @@
+{# Swapped in for the button that was clicked: what was recorded, by whom it goes to. #}
+<span class="logged" role="status">
+  {%- if entry.action == "flag" -%}
+    Flagged for the correction log
+  {%- elif entry.action == "request" -%}
+    Requested
+  {%- elif entry.action == "correct" -%}
+    Sent for correction
+  {%- else -%}
+    Confirmed by you
+  {%- endif %} at {{ entry.at.strftime("%H:%M") }}
+</span>

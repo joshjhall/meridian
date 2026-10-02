@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "panel/_sections.html" import header, what_matters, key_facts, needs_attention, contents, footer %}
+{% block title %}
+  {{ claim_id or "Claim panel" }}
+{% endblock title %}
+{% block head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        referrerpolicy="no-referrer"
+        href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="/static/panel.css" />
+  <script src="/static/panel.js" defer></script>
+{% endblock head %}
+{% block body_attrs %}
+  class="panel-body" hx-headers='{"X-Meridian-Panel": "1"}'
+{% endblock body_attrs %}
+{% block main_class %}panel{% endblock %}
+{% block content %}
+  {% if summary %}
+    {% set s = summary %}
+    <article class="sheet"
+             data-claim="{{ s.header.claim_id }}"
+             {% if s.leads_with_attention %}data-leads="attention"{% endif %}>
+      {{ header(s, sla_label, sla_used, tier_labels) }}
+      {% if s.leads_with_attention %}
+        {{ needs_attention(s) }}
+        {{ what_matters(s) }}
+      {% else %}
+        {{ what_matters(s) }}
+        {{ needs_attention(s) }}
+      {% endif %}
+      {{ key_facts(s) }}
+      {{ contents(s) }}
+      {{ footer(s) }}
+    </article>
+  {% else %}
+    <section class="empty">
+      <h1>{{ "No panel for " ~ claim_id if claim_id else "Open a claim in ClaimsPro" }}</h1>
+      <p>
+        {% if claim_id %}
+          The panel covers the six demo claims.
+        {% else %}
+          The panel follows the claim in the active ClaimsPro tab.
+        {% endif %}
+        Pick one to preview:
+      </p>
+      <ul>
+        {% for cid in claim_ids %}
+          <li>
+            <a href="/panel?claim={{ cid }}">{{ cid }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock content %}
