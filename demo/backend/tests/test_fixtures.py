@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app import app
-from fixtures import DATA, load_claim_fixtures, load_roster
+from fixtures import DATA, claim_from_row, extract_rows, load_claim_fixtures, load_roster
 from models import Adjuster, ClaimFixture, Skill, Tier
 
 REPO = DATA.parents[1]
@@ -174,3 +174,18 @@ def test_claimspro_mock_is_unstyled():
     assert "basecoat" not in html
     assert "/static/app.css" not in html
     assert "<link" not in html
+
+
+def test_claim_from_row_receives_at_start_of_filed_day():
+    row = next(extract_rows())
+    claim = claim_from_row(row)
+    assert claim.received_at.isoformat() == f"{row['filed_date']}T00:00:00"
+
+
+@pytest.mark.parametrize("filed", ["not-a-date", "2025-13-45", None])
+def test_claim_from_row_names_a_bad_or_missing_filed_date(filed):
+    row = next(extract_rows()) | {"filed_date": filed}
+    with pytest.raises(ValidationError) as caught:
+        claim_from_row(row)
+    fields = {err["loc"][0] for err in caught.value.errors()}
+    assert "received_at" in fields

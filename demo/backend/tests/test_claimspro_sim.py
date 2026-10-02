@@ -10,7 +10,7 @@ from app import app
 from claimspro_sim import ALERT_RECIPIENTS, ClaimsProSim, FaultConfig, reliable_write
 from claimspro_sim.api import get_sim
 from claimspro_sim.soap import ClaimsProSoapClient, SoapClientError
-from claimspro_sim.store import IdempotencyKeyConflict
+from claimspro_sim.store import IdempotencyKeyConflict, seed_claims
 from fixtures import load_claim_fixtures
 from models import Skill, Tier
 
@@ -407,3 +407,13 @@ def test_events_are_stamped_with_the_demo_clock_by_default():
     sim = ClaimsProSim(sleep=lambda _s: None)
     reliable_write(sim, "AddNote", CLAIM, {"text": "x", "author": "pipeline"})
     assert {e.timestamp for e in sim.events()} == {clock.now()}
+
+
+def test_seed_claims_takes_open_extract_work_and_fixtures_win():
+    seeded = {c.claim_id: c for c in seed_claims()}
+    fixtures = load_claim_fixtures()
+    for claim_id, fixture in fixtures.items():
+        assert seeded[claim_id] == fixture.claim
+    extract_only = [c for cid, c in seeded.items() if cid not in fixtures]
+    assert extract_only
+    assert {c.disposition for c in extract_only} == {"Pending Review"}
