@@ -17,7 +17,7 @@ make data   # regenerate claim fixtures and roster
 Then open:
 
 - <http://localhost:8000/admin>: admin monitor (#6, #7, #8, #9)
-- <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10)
+- <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10), deliberately unstyled
 - <http://localhost:8000/panel?claim=IS-CLM-2025004222>: side panel (#11)
 
 ## Stack
@@ -54,6 +54,7 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 - Skill, Tier and Stage are enums. Iterate them instead of listing members, so a fourth or fifth tier means editing only `models.py`.
 - ClaimsPro custom fields (`skills`, `tier`, `routing_reason`, `review_lane`, `brief_status`) are empty in the fixtures; the pipeline (#3) fills them. `sla_due_at` is computed: `received_at` + 24h.
 - Pages are server-rendered. Reach for HTMX or a small script before adding a JavaScript framework.
+- The mock ClaimsPro page (`/claimspro/{id}`, #10) is plain HTML with no or minimal CSS and does not extend `base.html`, so it reads as a stand-in for Meridian's vendor system. Its custom fields are plain too: in v1 they are ClaimsPro fields, not new UI. Everything that is ours (admin views, side panel) uses Basecoat.
 - Use Basecoat's classes (`btn`, `card`, `badge`, `alert`, `table` and so on) and its Jinja macros before hand-styling a component, and Tailwind utilities for layout. Load order matters: Basecoat's stylesheet first, then `app.css`. `base.html` already does this.
 - Basecoat sets up components inside HTMX swaps by itself. `base.html` forces a reset after an HTMX history restore.
 

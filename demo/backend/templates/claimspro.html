@@ -1,10 +1,20 @@
-{% extends "base.html" %}
-{% block title %}ClaimsPro — {{ claim.claim_id }}{% endblock %}
-{% block content %}
-{# Placeholder: the mock ClaimsPro screen is #10. #}
-<h1>ClaimsPro — {{ claim.claim_id }}</h1>
-<p>
-  {{ claim.claim_type }} · {{ claim.state }} · ${{ "{:,.2f}".format(claim.claim_amount_usd) }} ·
-  SLA due {{ claim.sla_due_at.isoformat() }}
-</p>
-{% endblock %}
+<!doctype html>
+{# Mock of Meridian's ClaimsPro (vendor system). Deliberately unstyled HTML:
+   it must read as a stand-in for another system, not part of the demo UI.
+   Does not extend base.html, so no Basecoat or Tailwind. Built out in #10. #}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ClaimsPro - {{ claim.claim_id }}</title>
+  </head>
+  <body>
+    <p><b>ClaimsPro</b> (mock) | Claim {{ claim.claim_id }}</p>
+    <hr />
+    <table border="1" cellpadding="3">
+      <tr><th align="left">Claim type</th><td>{{ claim.claim_type }}</td></tr>
+      <tr><th align="left">Loss state</th><td>{{ claim.state }}</td></tr>
+      <tr><th align="left">Claim amount</th><td>${{ "{:,.2f}".format(claim.claim_amount_usd) }}</td></tr>
+      <tr><th align="left">Filed</th><td>{{ claim.filed_date }}</td></tr>
+    </table>
+  </body>
+</html>

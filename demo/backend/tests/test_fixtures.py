@@ -160,3 +160,10 @@ def test_basecoat_macros_render():
 def test_pages_load_basecoat_before_app_css():
     html = client.get("/").text
     assert html.index("basecoat.cdn.min.css") < html.index("/static/app.css")
+
+
+def test_claimspro_mock_is_unstyled():
+    html = client.get("/claimspro/IS-CLM-2025004222").text
+    assert "basecoat" not in html
+    assert "/static/app.css" not in html
+    assert "<link" not in html
