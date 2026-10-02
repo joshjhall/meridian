@@ -119,3 +119,10 @@ def test_invalid_fixture_is_rejected():
     del payload["claim"]["received_at"]
     with pytest.raises(ValidationError):
         ClaimFixture.model_validate(payload)
+
+
+def test_cors_allows_only_the_vite_origin():
+    allowed = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
+    assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
+    other = client.get("/api/health", headers={"Origin": "http://evil.example"})
+    assert "access-control-allow-origin" not in other.headers
