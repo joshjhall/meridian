@@ -2,7 +2,7 @@
 
 - [The deliverable is a UX POV, deck, and running demo](deliverable-is-ux-pov-deck-and-demo.md) — read first: README scopes this as a UX designer exercise; PM-style analysis is not the output
 - [Next steps before Monday](next-steps-before-monday.md) — read second after a restart: what's done, open decisions, what to build next
-- [Demo plan: routing pipeline + overlay](demo-plan-routing-pipeline-and-overlay.md) — claim 4222 end to end; LangGraph with one contained LLM node; ~2h50 build
+- [Demo plan: admin monitor + side panel](demo-plan-routing-pipeline-and-overlay.md) — two views, learning-loop chart, panel per claim type; assumptions (24h SLA, skills/tiers)
 - [Panel and case-owner guidance](interview-panel-and-case-owner-guidance.md) — who asks what on Monday; go deep on one journey; show the learning loop
 - [Working positions from discovery read](working-positions-from-discovery-read.md) — three legs, no co-pilot, no auto-approve (one-click fast lane instead), skill routing at P2
 - [<20% review rate depends on which regulation data you trust](review-rate-target-below-regulatory-floor.md) — 12.9% floor as stated vs 25.4% labeled; open with the route-on-both-flags quick win

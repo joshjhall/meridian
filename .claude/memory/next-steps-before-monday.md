@@ -13,7 +13,7 @@ stale_check: "check git log and docs/presentation/ for progress since this was w
 
 The user will move the slides into Keynote.
 
-**Slide order:** 1 regulatory gap → 2 SOW targets read honestly → 3 five legacy approaches → 5 stakeholders, flows and OKRs → 4 first-pass focus → demo.
+**Slide order (revised):** 1 POV → 2 regulatory gap (437 = 85 + 352) → 3 SOW targets → 4 five approaches (the box) → 5 what we're not building yet → 6 stakeholders and flows → 7 first pass → 8 process → demo. The demo plan section in the slides draft is marked pending until the monitor paradigm is settled.
 
 **Open decisions:**
 

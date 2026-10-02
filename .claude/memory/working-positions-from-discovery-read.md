@@ -28,3 +28,5 @@ Across all three: the five-field audit record, a human-readable rationale, drift
 **Why:** Future sessions should build on these positions rather than re-derive or contradict them.
 
 **How to apply:** Treat these as the default design direction. The open questions in `docs/discovery/open_questions.md` (C3, C4, M4, M7, T2) can still move them; if an answer lands, update this file.
+
+**Design assumption, stated up front (user's call):** Custom fields are prominent on ClaimsPro's existing screens and make sense there, so adjusters can use the routing and pre-processing output without changing how they work. The demo is built on this. If it proves false or awkward, the content moves into the side panel for display, but it is still stored as custom fields in ClaimsPro. Open question for Michael: where custom fields render (I3 confirmed only that they exist).

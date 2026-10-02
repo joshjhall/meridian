@@ -1,31 +1,30 @@
 ---
 type: project
-title: Demo plan: routing pipeline in LangGraph plus a mocked overlay
-description: The agreed 2-3 hour demo cut, the one live LLM node, and how it's contained.
+title: Demo plan: admin/monitor app plus a Chrome side panel on a mock ClaimsPro
+description: The agreed demo views, assumptions, and what each shows; supersedes the overlay-centred 2h50 plan.
 status: draft
 ---
 
-Agreed scope for the demo (full detail in `docs/presentation/slides_draft.md`, "Demo plan"):
+Revised after the restructure discussion (supersedes the earlier queue-view/overlay plan). Demo is ~20 min of the 30; slides ~10.
 
-- **One claim, one adjuster, end to end:** IS-CLM-2025004222, the second-year adjuster's NY bodily-injury claim ($59.5K, 117h queue wait, 4 days in senior review, injury timeline built by hand).
-- **Builds (~2h50 total):**
-  - queue view with reason chips (~30 min)
-  - routing pipeline (~60 min)
-  - mocked ClaimsPro page with the overlay (~45 min)
-  - custom-field write-back (~15 min)
-  - one correction loop that catches the 84 similar claims (~20 min; cut to a static before/after if short on time)
-- **Not building:** a real browser extension, live ClaimsPro API calls, multiple users.
-- **Routing pipeline in LangGraph, justified by decomposition:** four dimensions in parallel feed a merge node, then a validate node. The four are regulatory (code), urgency (code), complexity signals (the **only LLM node**; reads notes and transcript, quotes its source) and adjuster fit (code). Validate fails safe to a human queue. The user's framing: production routing is discrete code plus LLM calls for ambiguity. Python or TypeScript is enough at ~1,100 claims/day. Add a rules engine only if Compliance must edit rules themselves.
-- **Containing the live call:**
-  - schema-validated output only
-  - every quote checked against the source
-  - no approve/deny field in the schema
-  - PII masked
-  - recorded fallback on failure or timeout (~20s)
-  - one button-triggered call
-  - five-field audit record written per run
-  - Bifrost as a local gateway only if it takes ≤15 min to set up; otherwise call the provider directly
+**Release framing:** MVP = legs 1–2 (data quality, routing), surfaced through custom fields with no adjuster UI change. The side panel is shown as the fast follow (days–weeks), built in parallel; rapid echo-back of floor feedback is part of the trust story.
 
-**Why:** The case owner advised going deep on one journey. Pooja asks about the hardest part and the unhappy paths, and the live node gives engineers something real to inspect.
+**View 1: Admin / pipeline monitor** (separate full-screen app; managers + Tribe; ACL-differentiated):
 
-**How to apply:** Build in this order: pipeline, then overlay, then queue, then fields, then the loop. Keep the LLM confined to the one node. See [next steps](/next-steps-before-monday.md) for open decisions.
+- Claims animate through stages (received → validated → enriched → prioritized → assigned) from an emulated live feed; exceptions lane for fail-safes.
+- All adjusters' queues; managers can move work manually while routing matures.
+- Learning loop front and center: line chart of agreement-with-reviewers over time, flags at each versioned model/prompt/rule release, columns on a second axis (handling time or submit-to-response). Mocked history. No live rule/prompt editing (compliance); changes ship as versioned, auditable releases.
+- Second learning-loop chart: intake quality over time, with the same release flags. Fax OCR field accuracy, starting from ~78% today, measured against adjuster-confirmed values. The EDI silent-drop rate (~12% today) can sit alongside it.
+- Per-claim expanded audit record: five fields plus temporal data (opened/closed, review intervals by whom, skills/tier assigned).
+
+**View 2: Mock ClaimsPro page + Chrome side panel** (`chrome.sidePanel`, own DOM; never covers legacy content). Navigating between claims updates the panel. Same information architecture across claims; content varies by type. Progressive-disclosure animations.
+
+**Not building:** an adjuster queue (assume ClaimsPro's own queues), a real extension, live ClaimsPro APIs.
+
+**Assumptions:** SLA = 24h from receipt. Each claim gets skills (array; enum = the five claim types) and a tier (enum, 3 levels to start, expandable) in pre-processing, stored as custom fields; adjuster skills/tiers are one-to-many in a small side store keyed on adjuster ID. Claim types limited to the extract's five.
+
+**Why:** User's design decisions in discussion; the panel examples should span every skill.
+
+**How to apply:** Build to these views; see [next steps](/next-steps-before-monday.md). Chat is P2+; if raised, claim-owned history is the user's leaning.
+
+**Decided since:** six panel examples, one per skill (spec in `docs/presentation/panel_examples.md`). Agreement chart: line = agreement with reviewers (up), bars = average submit-to-response time (down), release flags on both. Manual queue moves show the SOAP write-verify-retry cycle (write → delayed REST read → retry N times → error to user + alert to Tribe engineering and client IT). Roster is synthetic.

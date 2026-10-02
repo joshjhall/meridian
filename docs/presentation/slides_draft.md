@@ -2,38 +2,76 @@
 
 Draft content for transfer to Keynote. Each slide has a headline (the claim the slide makes), body content, and speaker notes with sources. Numbers are reproducible with `python3 analysis/review_floor.py`; section numbers refer to its output.
 
-Suggested order: 1 → 2 → 3 → 5 → 4 → demo. Slides 1 and 2 answer "are the goals realistic?" before anyone asks. Slide 5 (stakeholders and flows) comes before slide 4 so the focus follows from the people it serves; it's numbered 5 only because it was added later.
+**Order and timing (30 min talk):**
+
+| # | Slide | Role | Time |
+|---|---|---|---|
+| 1 | The point of view | Design | 2 min |
+| 2 | The regulatory gap | Context (PM) | 3 min |
+| 3 | The SOW targets, read honestly | Context (PM) | 2 min |
+| 4 | Five ways to work with a legacy system | Context (architect): the box every design lives in | 2 min |
+| 5 | What we're not building yet | Design decisions | 3 min |
+| 6 | Who this changes, and how we'll know | Design | 3 min |
+| 7 | Where the first pass goes | Design | 2 min |
+| 8 | How we got here | Process | 2 min |
+| — | Demo | | ~10 min |
+
+Slides 2–4 are deliberate: about 5 minutes of PM and architect context, because the design decisions on 5–7 can't be judged without it. Keep them to time.
 
 ---
 
-## Slide 1: We found a regulatory gap before building anything
+## Slide 1: The best change is one the adjuster barely notices
 
-**Headline:** 85 claims in the sample needed a human by regulation and may never have been routed to one.
+**Headline:** The car runs better; the dashboard doesn't change.
+
+**Body:**
+
+- **Who:** 95 adjusters on ClaimsPro, eight screens deep. The primary user is the second-year adjuster: claim IS-CLM-2025004222 took him 208 hours, 117 of them waiting in a queue.
+- **The point of view:** fix what happens *before* the adjuster opens a claim: intake, validation, prioritization, routing to the right person. Show the result in ClaimsPro's own fields. Add new interface only where the existing one hits a wall.
+- **The human stays in the loop:** the adjuster makes every decision. The system prepares, orders, explains, and records; it never approves or denies.
+- **The ideal, set aside:** an adjuster opens ClaimsPro and sees one thing, the next right claim for them. ClaimsPro can't be made to work that way, but every step moves toward it.
+
+**Speaker notes:**
+
+- Ground it in 4222 before any numbers: phone intake, a rough auto-transcript, a timeline built by hand, unsure on coverage, four days in senior review (Ops, 56:10–62:15).
+- "Don't build us an eighth screen" (Ops, 86:20). Sandra's own bet: "half my cycle-time problem is a dispatch problem" (Ops, 20:15).
+- Sources: `sample_claims/IS-CLM-2025004222/`; `memory/calltranscripts/w1-tue-sandra-ops-walkthrough.md`.
+
+---
+
+## Slide 2: We found a possible regulatory gap before building anything
+
+**Headline:** Up to 437 claims in the sample needed a human by regulation and may never have been routed to one.
 
 **Body:**
 
 - Two flags on every claim:
-  - `requires_human_by_regulation`: rules engine, over $10K in 12 states
+  - `requires_human_by_regulation`: set by rules; matches "over $10K in a listed state" exactly in 12 states
   - `flagged_for_human_review`: a second-opinion signal, from a person or low AI confidence
-- 85 claims (1.7%) have the regulation flag set and no review flag.
-- If routing reads only the review flag, they skipped a required review: **~6,800 claims a year** at 400K volume.
-- **Fix:** route to a human when *either* flag is set. One condition in the routing rule.
-- **Also found:** 628 claims (~30% of volume) in 8 other states are labeled regulated with no rule anyone has described.
+- **437 claims (8.7%)** have the regulation flag and no review flag:
+  - **85** are over $10K in one of the 12 states: the stated rule, clearly required
+  - **352** are in 8 other states (AZ, IN, MO, NC, TN, TX, WA, WI), 340 of them $10K or under. No known rule explains them
+- **The question for engineering:** which flag decides whether a claim reaches a human?
+  - **Either flag:** nothing is skipped, but the 352 reach humans for reasons nobody can explain. That's a feasibility problem for the review-rate target, not a compliance one.
+  - **Review flag only:** at least 85 required reviews skipped, ~6,800 a year at 400K volume; up to 437, ~35,000 a year.
+  - **Neither directly** (for example, the 2021 score): ask open-ended.
+- **The fix, if needed:** route to a human when *either* flag is set. One condition in the routing rule. Value before any AI.
 
-**Visual:** a 2×2 of the two flags (regulated yes/no × flagged yes/no), with the 85 cell highlighted.
+**Visual:** a 2×2 of the two flags (regulated yes/no × flagged yes/no); the "regulated, not flagged" cell split 85 / 352.
 
 **Speaker notes:**
 
-- Lead with this. It's value before any AI, and it's the kind of evidence Michael said makes him a champion (Systems, 37:45).
-- Framing: "we need engineering to confirm how routing filters (M14)". Either answer is useful. Don't claim the gap is confirmed.
-- The 628: rank the explanations. Legacy rules still running fits best; the ~30% is uniform across all 8 states, which independent state laws wouldn't produce. Point: nobody can say why the flag is set on those claims.
-- Tension to name before Pooja does: the fix *raises* the review rate (45.6% → 47.3%).
-- It's Meridian's change: rules-engine configuration in a SaaS system, through CAB. Raise with Michael privately first.
+- Lead the context section with this. It's the kind of evidence Michael said makes him a champion (Systems, 37:45). Raise it with him privately first; it's a gap in his system.
+- Framing: "we need engineering to confirm how routing filters (M14)". Don't claim the gap is confirmed.
+- The 12 states: 8 named in discovery (CA, NY, NJ, FL, IL, PA, OH, GA), 4 inferred from the data (MA, MD, MI, VA: every claim over $10K is flagged, none under). Confirm the list.
+- The 352 (part of the 628 in those 8 states flagged regulated): the ~30% rate is uniform across all 8, less spread than chance. One leftover rule fits best; eight independent state laws don't. Point: nobody can say why the flag is set.
+- Tension to name before Pooja does: the fix *raises* the review rate (45.6% → 47.3% under the stated rule; 54.3% on the labels as they stand).
+- It's Meridian's change: rules-engine configuration in a SaaS system, through CAB.
 - Sources: `docs/discovery/open_questions.md` ("Quick win", "Review floor, revised"); script sections 6 and 9.
 
 ---
 
-## Slide 2: The SOW targets, read honestly
+## Slide 3: The SOW targets, read honestly
 
 **Headline:** One target is within reach, one is hard, and two need redefining.
 
@@ -58,9 +96,9 @@ Suggested order: 1 → 2 → 3 → 5 → 4 → demo. Slides 1 and 2 answer "are 
 
 ---
 
-## Slide 3: Five ways to work with a legacy system; two fit here
+## Slide 4: Five ways to work with a legacy system; two fit here
 
-**Headline:** We build beside ClaimsPro, not inside or instead of it.
+**Headline:** We build beside ClaimsPro, not inside or instead of it. This is the box every design has to live in.
 
 **Body:**
 
@@ -76,38 +114,43 @@ Suggested order: 1 → 2 → 3 → 5 → 4 → demo. Slides 1 and 2 answer "are 
 
 **Speaker notes:**
 
-- 4 and 5 work together: the custom fields are the record (and feed ClaimsPro's own rules and reports); the overlay is the experience. If the extension is down, the fields still show in ClaimsPro.
+- This is strategy, not plumbing: it rules out every design that depends on replacing or re-skinning ClaimsPro. The next slide is the design choices made inside this box.
+- 4 and 5 work together, in that order: custom fields come first, as the record and the adjuster's v1 view (they also feed ClaimsPro's own rules and reports). The overlay comes only when the fields hit a wall. If the extension is ever down, the fields still show in ClaimsPro.
 - Also rejected: bots driving the ClaimsPro screens. They break on every vendor release and would route around the deliberate decisioning gap.
 - Not a UI path, but worth one line: fixing fax OCR *before* it enters ClaimsPro (it lands today with no human check).
-- "Don't build us an eighth screen" (Ops, 86:20). The overlay sits on the screen they already use.
+- If OCR correction comes up: today the LLM may fix characters only, never words, and code checks the corrected text word by word against the raw OCR. On 2993, dropping `n0t` as noise would flip "not consistent with a fresh impact", the evidence behind the denial. Horizon: models that predict meaning rather than the next token (JEPA-style) may handle this more reliably; none are ready for documents, so it's one to watch over the next couple of years, not to build on now.
+- "Don't build us an eighth screen" (Ops, 86:20). Neither path adds one: the fields live in ClaimsPro, and the overlay sits on the screen adjusters already use.
 - Sources: Systems, 4:40 and 5:45; clarification call (SaaS, no SDK, custom fields, force-installable extensions).
 
 ---
 
-## Slide 4: Where the first pass goes
+## Slide 5: What we're not building yet, and when it would come back
 
-**Headline:** Get the right claim to the right adjuster, ready to decide.
+**Headline:** No new interface for adjusters until the existing one hits a wall.
 
-**Body:** three layers, each feeding the next:
+**The assumption everything rests on:** ClaimsPro's custom fields are prominent on the screens adjusters already use, and make sense there. The first version is built on that. If it's wrong, or the fields read badly in the legacy UI, the same content moves into the side panel for display, and stays stored as custom fields in ClaimsPro.
 
-1. **Routing (deep):** route on both flags; order queues by age and deadline; send hard claims to the right adjuster first. Moves cycle time, the one reachable target.
-2. **Custom fields (light):** store *why* a claim was routed, its review lane, and what's been prepared. It's the record, and the hook for later enrichment.
-3. **Overlay (draft):** on each claim, a summary, a timeline, the open questions, and why the claim is here. The adjuster decides; nothing is automated.
+**Body:**
 
-**The loop:** every correction an adjuster makes (wrong route, wrong summary, missing review) feeds back into routing and the rules, so the next hundred claims don't need the same fix.
+| Rejected for now | Why | Where it could come back |
+|---|---|---|
+| **A separate app in another tab** | Adds the ninth screen; splits attention | Managers only: the pipeline monitor is its own page. A link from ClaimsPro's own menus is P3, only if adoption lags |
+| **Rebuilding the eight-screen experience** | No decision API, SOAP-only writes; not doable in six months | A side-panel summary and table of contents: reads the claim, raises what matters, links to where each point lives. **The first side-panel version** |
+| **A chat agent** | An interface looking for a problem; we try no new interface first | P2/P3, in the same side panel. Also the visible "AI" executives can point to |
+| **A training and precedent tool** | Pre-processing notes in custom fields cover part of the need first | Added to the side panel later: the second-year adjuster's top ask |
 
-**Out of scope for now:** auto-approval (no reliable consent data), precedent search, complex-claim write-ups.
+**Sequence:** no new adjuster UI (pre-processing, routing, custom fields) → one side panel (summary and table of contents) → the same panel gains research, then chat if it earns a place.
 
 **Speaker notes:**
 
-- Why routing: Sandra's own first fix ("half my cycle-time problem is a dispatch problem", Ops, 20:15), and it moves the one target within reach.
-- Why the overlay is a draft: what belongs in the summary needs time with adjusters to find the patterns that matter. What we learn there also improves routing.
-- Human in the loop: the adjuster owns every decision. The overlay prepares, explains, and records; it never denies or approves.
-- Learning loop: Trevor raised it; the panel will look for it. Example: fix the routing rule once, and the other 84 claims are caught in bulk.
+- Name the tension before Carlos does: "We spent $5M and nobody sees anything different." The answer: the change is visible where it's measured, in the pipeline monitor for Sandra, leadership, and us. The side panel is the tangible thing on the adjuster's screen, once routing has earned trust.
+- Also rejected: auto-approval. A one-click, human-confirmed fast lane instead. Consent for automated adjudication is untracked in 8 states, and claims over $10K need human review in 12.
+- Precedent search is deferred, not dismissed. Built from old notes, it copies past judgment forward, bias included; the NAIC bias-testing commitment applies.
+- Open question for Michael: where do custom fields render (I3 confirmed they exist, not where they show)?
 
 ---
 
-## Slide 5: Who this changes, and how we'll know
+## Slide 6: Who this changes, and how we'll know
 
 **Headline:** Five groups, three flows that change, and a measure for each at design time and in production.
 
@@ -115,7 +158,7 @@ Suggested order: 1 → 2 → 3 → 5 → 4 → demo. Slides 1 and 2 answer "are 
 
 | Who | What they need | What changes for them |
 |---|---|---|
-| **Adjusters** (95; the second-year is the primary user) | Claims that arrive ready to decide; a reference for hard calls; no eighth screen | Queue arrives ordered with reasons; an overlay prepares each claim; corrections take one click |
+| **Adjusters** (95; the second-year is the primary user) | Claims that arrive ready to decide; a reference for hard calls; no eighth screen | Queue arrives ordered; custom fields say why a claim is theirs and what's prepared or missing; a side panel later, if earned; corrections take one click |
 | **Senior adjusters and leads** (16) | Time back for complex files; fewer interruptions | Hard claims arrive already routed to them; fewer "can you look at this" escalations |
 | **Sandra, claims ops** | Cycle time down without burning people out | A dispatcher she can tune; visibility into why claims sit |
 | **Michael and Compliance** | "Show me how you know it's right, and keep showing me" | Every route and summary explained and logged; the regulatory gap closed; drift visible |
@@ -128,7 +171,7 @@ Not direct users but affected: claimants (faster, better-explained outcomes) and
 | Flow | Change | Design-time measure (prototype, pilot) | Production measure (OKR) |
 |---|---|---|---|
 | **Routing: claim arrives → queue → adjuster** | *Change:* round-robin becomes ordered and matched; routes on both flags | Replay the extract: simulated queue wait vs actual; 0 regulated claims unrouted; adjusters agree with the route on sampled claims | **O:** Claims reach the right adjuster without waiting. **KR:** simple-claim median cycle <24h (today 34.7h; 34% under 24h); 0 regulated claims without a review step; escalations to senior review down X% |
-| **Preparation: claim opened → ready to decide** | *Create:* the overlay brief, timeline, open questions | Adjuster task test on sample claims: time to first decision, fields re-keyed, "I trust this" rating; extraction accuracy vs adjuster-corrected values | **O:** Adjusters decide, not reassemble. **KR:** handling minutes per claim down X%; second opinions down (26% needed today); brief accuracy ≥ agreed bar on audited sample |
+| **Preparation: claim opened → ready to decide** | *Create:* pre-processing results in custom fields (v1); the side-panel summary and table of contents (v2) | Adjuster task test on sample claims: time to first decision, fields re-keyed, "I trust this" rating; extraction accuracy vs adjuster-corrected values | **O:** Adjusters decide, not reassemble. **KR:** handling minutes per claim down X%; second opinions down (26% needed today); brief accuracy ≥ agreed bar on audited sample |
 | **Correction: adjuster disagrees → system learns** | *Create:* the learning loop | Corrections take one action; a rule fix finds the similar claims in bulk (the 85) | **O:** The system gets more right each month, visibly. **KR:** correction rate trending down; drift alerts reviewed within a week; no silent rule changes |
 
 **Speaker notes:**
@@ -139,7 +182,53 @@ Not direct users but affected: claimants (faster, better-explained outcomes) and
 
 ---
 
+## Slide 7: Where the first pass goes
+
+**Headline:** Get the right claim to the right adjuster, ready to decide.
+
+**Body:** three layers, each feeding the next:
+
+1. **Pre-processing and routing (deep):** validate intake and catch what's missing; route on both flags; order queues by age and deadline; send hard claims to the right adjuster first. Moves cycle time, the one reachable target.
+2. **Custom fields (the adjuster's view, v1):** why the claim was routed, its review lane, what's been prepared or is missing. The record in ClaimsPro, and all the adjuster sees change.
+3. **Pipeline monitor (managers and us):** claims moving through intake, validation, enrichment, prioritization, assignment; exceptions that need a human before an adjuster sees them.
+
+**The loop:** every correction (wrong route, missed review, bad extraction) feeds back into the rules, so the next hundred claims don't need the same fix.
+
+**Next, if earned:** the side panel (summary and table of contents). **Out of scope for now:** auto-approval, precedent search, chat.
+
+**Speaker notes:**
+
+- Why routing: Sandra's own first fix (Ops, 20:15), and it moves the one target within reach.
+- Human in the loop: the adjuster owns every decision. Exceptions go to a person, never to a default.
+- Learning loop example: fix the routing rule once, and the 85 are caught in bulk.
+
+---
+
+## Slide 8: How we got here
+
+**Headline:** From the transcripts to a decision, in five steps, checking each one.
+
+**Body:**
+
+1. **Read the record:** SOW, three discovery calls, the analytics memo, the three sample claims.
+2. **Wrote down every question,** with who could answer it and why it mattered; a clarification call closed the ones that blocked design (`docs/discovery/open_questions.md`).
+3. **Tested the claims in the data,** in a script anyone can re-run, instead of trusting the memo or ourselves (`analysis/review_floor.py`). This is where the flag gap and the target reads came from.
+4. **Took positions, then revised them:** auto-approval became a one-click fast lane; skill routing moved from P3 to P2; the review floor changed from 25% to 13% once the stated rule came in.
+5. **Picked one adjuster and one claim** and built it end to end, rather than sketching everything.
+
+**Tools:** AI agents for reading, analysis, and building, with every number sourced to a file and checked by a script. Everything shown here is mine to defend.
+
+**Speaker notes:**
+
+- For Charles: the iterations matter more than the steps. Have the before/after of each revised position ready.
+- Odd patterns found along the way: the flag gap; 628 regulated labels with no rule; 20 of the 500 calibration labels still pending; `handling_hours` is time open, not effort (`reference/data_dictionary.md:93`).
+- Sources: git history of this repo; `docs/discovery/open_questions.md`.
+
+---
+
 ## Demo plan (not a slide): the 2–3 hour cut
+
+> **Pending revision:** the demo is being reframed around a pipeline monitor (managers and Tribe), custom fields as the adjuster's v1 view, and a correction loop triggered from one of the 85 (4222 was flagged *and* regulated, so it isn't one of them). The plan below predates that.
 
 **One claim, one adjuster, end to end:** IS-CLM-2025004222, the second-year adjuster's New York bodily-injury claim ($59.5K). It waited 117h in queue, took 4 days in senior review, and the notes say he built the injury timeline by hand from a rough transcript.
 
