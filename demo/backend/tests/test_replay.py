@@ -3,6 +3,7 @@
 import asyncio
 import itertools
 import json
+import re
 from datetime import timedelta
 from pathlib import Path
 
@@ -360,52 +361,141 @@ def _gap_replay() -> tuple[Replay, schedule.Scheduled]:
     return r, nxt
 
 
-def test_clock_runs_between_events_and_a_speed_change_keeps_waited_time():
+class _VirtualClock:
+    """Stands in for `Replay._wait`: virtual seconds, with actions at scripted times.
+
+    Each wait yields once to the loop, then runs the next action if it falls inside
+    the wait (cutting the wait short, as a control change does) or waits it out.
+    `played` is the virtual time at which `done` first held, read as each wait starts.
+    """
+
+    def __init__(self, r: Replay, script=(), done=lambda: False):
+        self.now = 0.0
+        self.waits = 0
+        self.played: float | None = None
+        self.script = sorted(script, key=lambda a: a[0])
+        self.done = done
+        r._wait = self.wait
+
+    async def wait(self, timeout: float) -> float:
+        await asyncio.sleep(0)
+        if self.played is None and self.done():
+            self.played = self.now
+        self.waits += 1
+        if self.script and self.script[0][0] <= self.now + timeout:
+            at, action = self.script.pop(0)
+            elapsed, self.now = at - self.now, at
+            action()
+            return elapsed
+        self.now += timeout
+        return timeout
+
+
+@pytest.mark.parametrize(
+    ("change_at", "plays_at"),
+    [
+        (1.0, 1.5),  # on a tick boundary
+        (1.1, 1.55),  # mid-tick: the 0.1 s waited before the change still counts
+    ],
+)
+def test_a_speed_change_mid_gap_keeps_the_time_already_waited(change_at, plays_at):
     async def scenario():
         r, nxt = _gap_replay()
         hours = (nxt.at - r.sim_now) / timedelta(hours=1)
-        loop = asyncio.get_running_loop()
-        # The gap takes 2 s at this speed. Wait half of it, then double the speed:
-        # the remaining half takes 0.5 s, so it plays about 1.5 s in. Losing the
-        # waited time would make it 2 s (1 s + the whole gap at double speed).
+        moved = []
+        # The gap takes 2 s at this speed. Doubling it at `change_at` leaves
+        # (2 - change_at) / 2 to go. Losing the waited time would play it at
+        # change_at + 1, the whole gap at double speed.
+        vc = _VirtualClock(
+            r,
+            [(change_at, lambda: (moved.append(r.sim_now), r.set(speed=hours)))],
+            done=lambda: r.sim_now >= nxt.at,
+        )
         r.set(speed=hours / 2)
-        start, t0 = r.sim_now, loop.time()
+        start = r.sim_now
         r.start()
-        await asyncio.sleep(1.0)
-        moved = r.sim_now
-        r.set(speed=hours)
-        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 3)
-        played = loop.time() - t0
+        await asyncio.wait_for(_until(lambda: vc.played is not None), 5)
         await r.stop()
-        return start, moved, played, nxt, r
+        return start, moved[0], vc.played, nxt, r
 
     start, moved, played, nxt, r = asyncio.run(scenario())
     clock.reset()
     assert start < moved < nxt.at  # the clock ran between events
-    assert 1.3 < played < 1.8
-    assert r.board.claims[nxt.event.claim_id].trace[-1] == nxt.event
+    assert played == pytest.approx(plays_at, abs=1e-3)
+    assert nxt.event in r.board.claims[nxt.event.claim_id].trace
 
 
 def test_pause_mid_wait_holds_the_clock_and_resume_keeps_progress():
     async def scenario():
         r, nxt = _gap_replay()
         hours = (nxt.at - r.sim_now) / timedelta(hours=1)
+        # The gap takes 1.5 s; pause mid-tick at 0.8, so 0.7 s is left on resume.
+        vc = _VirtualClock(r, [(0.8, lambda: r.set(paused=True))], done=lambda: r.sim_now >= nxt.at)
         r.set(speed=hours / 1.5)
         r.start()
-        await asyncio.sleep(0.8)
-        r.set(paused=True)
-        await asyncio.sleep(0.1)
-        held = r.sim_now
-        await asyncio.sleep(0.6)
-        assert r.sim_now == held  # paused: no time passes
+        await asyncio.wait_for(_until(lambda: r.paused), 5)
+        await asyncio.sleep(0.05)
+        held, waits = r.sim_now, vc.waits
+        for _ in range(100):
+            await asyncio.sleep(0)
+        assert (r.sim_now, vc.waits, vc.now) == (held, waits, 0.8)  # paused: no time passes
         assert held < nxt.at
         r.set(paused=False)
-        # About half the gap was already waited, so it plays well before a full 1.5 s.
-        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 1.2)
+        await asyncio.wait_for(_until(lambda: vc.played is not None), 5)
         await r.stop()
+        return vc.played
 
-    asyncio.run(scenario())
+    played = asyncio.run(scenario())
     clock.reset()
+    assert played == pytest.approx(1.5, abs=1e-3)
+
+
+def test_restart_mid_wait_drops_the_stale_event_and_waited_time():
+    async def scenario():
+        r, nxt = _gap_replay()
+        hours = (nxt.at - r.sim_now) / timedelta(hours=1)
+        after = []
+
+        def restart():
+            r.restart(schedule.SEED + 1)
+            # Runs once the runner has handled the wait cut short by the restart.
+            asyncio.get_running_loop().call_soon(lambda: after.append(r.sim_now))
+
+        _VirtualClock(r, [(0.6, restart)])
+        r.set(speed=hours / 2)
+        r.start()
+        # The gap replay already has a card up, so wait for the restart's first card.
+        await asyncio.wait_for(_until(lambda: bool(after and r.board.claims)), 5)
+        await r.stop()
+        return r, nxt, after
+
+    r, nxt, after = asyncio.run(scenario())
+    clock.reset()
+    assert after == [DEMO_START]  # the old pass's waited time was not added to the new
+    first = next(iter(r.board.claims.values())).trace[0]
+    assert first == next(events(schedule.SEED + 1)).event
+    assert all(nxt.event not in v.trace for v in r.board.claims.values())
+
+
+def test_runner_clock_runs_on_the_real_loop():
+    # The deterministic tests above stand in for `_wait`; this one keeps it honest.
+    async def scenario():
+        r, nxt = _gap_replay()
+        hours = (nxt.at - r.sim_now) / timedelta(hours=1)
+        start = r.sim_now
+        r.set(speed=hours / 1.5)
+        r.start()
+        # Sample the first move rather than after a fixed sleep: a tick is 0.25 s of
+        # a 1.5 s gap, so even a stalled runner sees the clock between the two events.
+        await asyncio.wait_for(_until(lambda: r.sim_now > start), 3)
+        moved = r.sim_now
+        await asyncio.wait_for(_until(lambda: r.sim_now >= nxt.at), 5)
+        await r.stop()
+        return start, moved, nxt
+
+    start, moved, nxt = asyncio.run(scenario())
+    clock.reset()
+    assert start < moved < nxt.at
 
 
 async def _until(done) -> None:
@@ -430,6 +520,73 @@ def test_a_stalled_viewer_is_dropped_without_stopping_the_feed(monkeypatch):
 
     asyncio.run(scenario())
     clock.reset()
+
+
+def test_frames_never_step_a_card_backwards_across_the_subscribe_boundary():
+    order = list(Stage)
+
+    async def scenario():
+        r = Replay(render_card)
+        done = {Stage.WITH_ADJUSTER, Stage.EXCEPTION}
+        while sum(v.stage not in done for v in r.board.claims.values()) < 3:
+            r.step()  # until some cards are mid-pipeline, so later frames move them on
+        live = 200
+        stream = r.stream(limit=len(r.board.claims) + live)
+        assert (await anext(stream)).startswith("event: reset")  # snapshot taken, subscribed
+        snapshot = set(r.board.claims)
+        for _ in range(live):
+            r.step()  # newer than the snapshot, queued behind it
+        return r, snapshot, "".join([t async for t in stream])
+
+    r, snapshot, text = asyncio.run(scenario())
+    clock.reset()
+    seen: dict[str, list[int]] = {}
+    for name, data in _frames(text):
+        if name == "claim":
+            seen.setdefault(data["claim_id"], []).append(order.index(Stage(data["stage"])))
+    crossed = [cid for cid in snapshot if len(seen.get(cid, [])) > 1]
+    assert crossed  # some cards moved on after the snapshot, so the boundary was exercised
+    for cid, stages in seen.items():
+        assert stages == sorted(stages), cid
+        if cid in r.board.claims:
+            assert stages[-1] == order.index(r.board.claims[cid].stage)
+
+
+def test_event_stream_turns_viewers_away_over_the_cap(monkeypatch, replay):
+    monkeypatch.setattr(runner, "MAX_VIEWERS", 1)
+    replay.step()
+    watching: asyncio.Queue[str | None] = asyncio.Queue()
+    replay._subscribers.add(watching)
+    try:
+        response = TestClient(app).get("/api/events?limit=1")
+        assert response.status_code == 503
+        assert response.headers["retry-after"]
+    finally:
+        replay._subscribers.discard(watching)
+    response = TestClient(app).get("/api/events?limit=1")
+    assert response.status_code == 200
+    assert [name for name, _ in _frames(response.text)] == ["reset", "control", "claim"]
+    assert replay.viewers == 0  # a finished viewer frees its place
+
+
+def test_admin_page_reconnects_after_the_feed_refuses_it(monkeypatch, replay):
+    # An EventSource gives up on a non-200 (the 503 over the cap); the page must retry,
+    # and only then: the browser already retries a stream that merely dropped.
+    script = (Path(__file__).parents[1] / "static" / "admin.js").read_text()
+    assert re.search(
+        r"if \(source\.readyState === EventSource\.CLOSED\) setTimeout\(connect, RETRY_MS\)",
+        script,
+    )
+    retry_ms = re.search(r"const RETRY_MS = (\d+);", script)
+    assert retry_ms
+    monkeypatch.setattr(runner, "MAX_VIEWERS", 1)
+    watching: asyncio.Queue[str | None] = asyncio.Queue()
+    replay._subscribers.add(watching)
+    try:
+        refused = TestClient(app).get("/api/events?limit=1")
+    finally:
+        replay._subscribers.discard(watching)
+    assert int(retry_ms[1]) == int(refused.headers["retry-after"]) * 1000
 
 
 def test_current_sim_is_the_served_passes_claimspro(replay):

@@ -13,6 +13,7 @@ never retired.
 import asyncio
 import contextlib
 import json
+import os
 from collections.abc import AsyncIterator, Callable, Iterator
 from datetime import datetime, timedelta
 from typing import Any
@@ -29,6 +30,9 @@ MAX_DONE = 30  # with-adjuster cards kept on the board
 MAX_EXCEPTIONS = 8  # open exceptions kept on the board
 QUEUE_FRAMES = 1000  # a viewer this far behind is dropped; its browser reconnects
 TICK_S = 0.25  # the demo clock moves at least this often between events
+# Concurrent feed viewers; GET /api/events turns away the rest. A demo-sized limit,
+# not a defense: put a proxy in front if the demo leaves a trusted network.
+MAX_VIEWERS = max(1, int(os.environ.get("REPLAY_MAX_VIEWERS", "50")))  # 0 would refuse everyone
 
 
 def frame(event: str, data: dict[str, Any]) -> str:
@@ -127,7 +131,6 @@ class Replay:
 
     async def run(self) -> None:
         """Play forever: wait out each event's simulated gap at the current speed."""
-        loop = asyncio.get_running_loop()
         while True:
             await self._resumed.wait()
             events = self._events
@@ -144,18 +147,28 @@ class Replay:
             self._woken.clear()
             gap = (s.at - self.sim_now) / timedelta(hours=1) / self.speed
             if gap > 0:
-                started, speed = loop.time(), self.speed
-                with contextlib.suppress(TimeoutError):
-                    await asyncio.wait_for(self._woken.wait(), min(gap, TICK_S))
+                speed = self.speed
+                elapsed = await self._wait(min(gap, TICK_S))
                 if self._events is not events or self._next is not s:
                     continue  # restarted while waiting
                 # Time waited counts at the speed it was waited at, whatever woke us,
                 # so the clock runs between events and a control change loses nothing.
-                waited = timedelta(hours=(loop.time() - started) * speed)
+                waited = timedelta(hours=elapsed * speed)
                 self._advance_to(min(s.at, self.sim_now + waited))
                 continue
             if not self.paused:
                 self.step()
+
+    async def _wait(self, timeout: float) -> float:
+        """Wait up to `timeout` seconds or until woken; the seconds actually waited.
+
+        The one place `run` reads the wall clock, so tests can drive it virtually.
+        """
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(self._woken.wait(), timeout)
+        return loop.time() - started
 
     def start(self) -> None:
         if self._task is None:
@@ -197,6 +210,10 @@ class Replay:
         )
 
     # --- Viewers ---
+
+    @property
+    def viewers(self) -> int:
+        return len(self._subscribers)
 
     def _broadcast(self, text: str) -> None:
         for q in list(self._subscribers):

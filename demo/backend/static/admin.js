@@ -16,6 +16,7 @@
   const restart = document.getElementById("restart");
   const simNow = document.getElementById("sim-now");
   const trace = document.getElementById("trace");
+  const RETRY_MS = 5000; // matches the feed's Retry-After when it is over the viewer cap
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let source = null;
@@ -112,7 +113,12 @@
     clear();
     source = new EventSource(new URL(road.dataset.eventsUrl, window.location.origin));
     source.onopen = () => setLive("live", "Live");
-    source.onerror = () => setLive("connecting", "Reconnecting");
+    source.onerror = () => {
+      setLive("connecting", "Reconnecting");
+      // The browser retries a dropped stream itself, but a refusal (503 over the
+      // viewer cap) closes the source for good, so try again from here.
+      if (source.readyState === EventSource.CLOSED) setTimeout(connect, RETRY_MS);
+    };
     source.addEventListener("claim", (e) => {
       const data = JSON.parse(e.data);
       move(data);
