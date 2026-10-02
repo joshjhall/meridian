@@ -1,0 +1,1421 @@
+[
+  {
+    "id": "ADJ-101",
+    "name": "Wren Vance",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 10,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-102",
+    "name": "Darius Jensen",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-103",
+    "name": "Tess Osei",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 12,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-104",
+    "name": "Hana Castillo",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 4,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-105",
+    "name": "Victor Quintero",
+    "skills": [
+      "Collision",
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-106",
+    "name": "Avery Abbott",
+    "skills": [
+      "Collision",
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 6,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-107",
+    "name": "Priya Fischer",
+    "skills": [
+      "Collision",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 1,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-108",
+    "name": "Priya Jensen",
+    "skills": [
+      "Collision"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 8,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-109",
+    "name": "Xavier Ibarra",
+    "skills": [
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 1,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-110",
+    "name": "Jada Moreno",
+    "skills": [
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 11,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-111",
+    "name": "Camila Ramirez",
+    "skills": [
+      "Collision",
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 11,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-112",
+    "name": "Priya Quintero",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 4,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-113",
+    "name": "Quinn Kowalski",
+    "skills": [
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-114",
+    "name": "Elena Abbott",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "lead",
+    "current_load": 4,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-115",
+    "name": "Blake Thornton",
+    "skills": [
+      "Collision"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 11,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-116",
+    "name": "Elena Vance",
+    "skills": [
+      "Collision",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-117",
+    "name": "Isaac Quintero",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-118",
+    "name": "Zane Ramirez",
+    "skills": [
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 3,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-119",
+    "name": "Elena Bishop",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 7,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-120",
+    "name": "Quinn Vance",
+    "skills": [
+      "Comprehensive",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 3,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-121",
+    "name": "Camila Abbott",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 1,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-122",
+    "name": "Zane Castillo",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-123",
+    "name": "Blake Delgado",
+    "skills": [
+      "Comprehensive",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 10,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-124",
+    "name": "Wren Ramirez",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "lead",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-125",
+    "name": "Uma Whitaker",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 6,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-126",
+    "name": "Camila Sato",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 4,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-127",
+    "name": "Hana Yilmaz",
+    "skills": [
+      "Comprehensive"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 5,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-128",
+    "name": "Hana Sato",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-129",
+    "name": "Blake Castillo",
+    "skills": [
+      "Collision"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-130",
+    "name": "Jada Ibarra",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 7,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-131",
+    "name": "Quinn Hoang",
+    "skills": [
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-132",
+    "name": "Samir Vance",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 1,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-133",
+    "name": "Omar Moreno",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-134",
+    "name": "Victor Hoang",
+    "skills": [
+      "Collision",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-135",
+    "name": "Blake Grant",
+    "skills": [
+      "Comprehensive",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 8,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-136",
+    "name": "Yara Jensen",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 9,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-137",
+    "name": "Elena Nakamura",
+    "skills": [
+      "Collision",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 10,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-138",
+    "name": "Wren Jensen",
+    "skills": [
+      "Collision",
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 3,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-139",
+    "name": "Isaac Castillo",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 9,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-140",
+    "name": "Isaac Nakamura",
+    "skills": [
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 7,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-141",
+    "name": "Elena Zimmerman",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-142",
+    "name": "Jada Zimmerman",
+    "skills": [
+      "Collision",
+      "Comprehensive"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 10,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-143",
+    "name": "Blake Ibarra",
+    "skills": [
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-144",
+    "name": "Elena Sato",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 10,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-145",
+    "name": "Farah Osei",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "lead",
+    "current_load": 0,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-146",
+    "name": "Wren Park",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 9,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-147",
+    "name": "Priya Bishop",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-148",
+    "name": "Darius Nakamura",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 9,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-149",
+    "name": "Yara Abbott",
+    "skills": [
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 11,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-150",
+    "name": "Yara Sato",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 12,
+    "extract_code": true
+  },
+  {
+    "id": "ADJ-151",
+    "name": "Lena Jensen",
+    "skills": [
+      "Comprehensive"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 5,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-152",
+    "name": "Samir Delgado",
+    "skills": [
+      "Collision",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 6,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-153",
+    "name": "Xavier Quintero",
+    "skills": [
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 12,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-154",
+    "name": "Hana Fischer",
+    "skills": [
+      "Comprehensive"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 9,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-155",
+    "name": "Nadia Grant",
+    "skills": [
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 0,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-156",
+    "name": "Victor Park",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 2,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-157",
+    "name": "Samir Hoang",
+    "skills": [
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 12,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-158",
+    "name": "Victor Thornton",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-159",
+    "name": "Samir Ramirez",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 5,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-160",
+    "name": "Quinn Ibarra",
+    "skills": [
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 8,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-161",
+    "name": "Camila Zimmerman",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 7,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-162",
+    "name": "Xavier Bishop",
+    "skills": [
+      "Comprehensive",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-163",
+    "name": "Rosa Quintero",
+    "skills": [
+      "Comprehensive"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 10,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-164",
+    "name": "Blake Ellis",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 4,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-165",
+    "name": "Nadia Osei",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-166",
+    "name": "Kenji Abbott",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 4,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-167",
+    "name": "Omar Castillo",
+    "skills": [
+      "Collision",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 12,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-168",
+    "name": "Jada Hoang",
+    "skills": [
+      "Comprehensive",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 5,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-169",
+    "name": "Wren Hoang",
+    "skills": [
+      "Comprehensive"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 6,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-170",
+    "name": "Victor Sato",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 4,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-171",
+    "name": "Marcus Thornton",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 5,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-172",
+    "name": "Gavin Osei",
+    "skills": [
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 10,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-173",
+    "name": "Lena Lindqvist",
+    "skills": [
+      "Collision",
+      "Comprehensive",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 9,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-174",
+    "name": "Xavier Kowalski",
+    "skills": [
+      "Collision",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 5,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-175",
+    "name": "Marcus Bishop",
+    "skills": [
+      "Comprehensive",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 8,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-176",
+    "name": "Omar Thornton",
+    "skills": [
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 4,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-177",
+    "name": "Darius Castillo",
+    "skills": [
+      "Collision",
+      "Comprehensive",
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 11,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-178",
+    "name": "Zane Zimmerman",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 3,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-179",
+    "name": "Gavin Abbott",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "lead",
+    "current_load": 5,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-180",
+    "name": "Lena Hoang",
+    "skills": [
+      "Collision",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 12,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-181",
+    "name": "Wren Ibarra",
+    "skills": [
+      "Collision",
+      "Comprehensive",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-182",
+    "name": "Lena Grant",
+    "skills": [
+      "Comprehensive",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 8,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-183",
+    "name": "Gavin Bishop",
+    "skills": [
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 11,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-184",
+    "name": "Zane Thornton",
+    "skills": [
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 6,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-185",
+    "name": "Omar Jensen",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 8,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-186",
+    "name": "Wren Lindqvist",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 3,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-187",
+    "name": "Wren Castillo",
+    "skills": [
+      "Collision",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 6,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-188",
+    "name": "Gavin Hoang",
+    "skills": [
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-189",
+    "name": "Uma Osei",
+    "skills": [
+      "Collision",
+      "Comprehensive"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 0,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-190",
+    "name": "Priya Ramirez",
+    "skills": [
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 5,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-191",
+    "name": "Omar Bishop",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury"
+    ],
+    "tiers": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "role": "senior",
+    "current_load": 9,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-192",
+    "name": "Victor Bishop",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 4,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-193",
+    "name": "Kenji Castillo",
+    "skills": [
+      "Bodily Injury",
+      "Liability"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 8,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-194",
+    "name": "Marcus Osei",
+    "skills": [
+      "Bodily Injury",
+      "Property Damage",
+      "Liability"
+    ],
+    "tiers": [
+      "T1"
+    ],
+    "role": "adjuster",
+    "current_load": 10,
+    "extract_code": false
+  },
+  {
+    "id": "ADJ-195",
+    "name": "Blake Abbott",
+    "skills": [
+      "Comprehensive",
+      "Bodily Injury",
+      "Property Damage"
+    ],
+    "tiers": [
+      "T1",
+      "T2"
+    ],
+    "role": "adjuster",
+    "current_load": 2,
+    "extract_code": false
+  }
+]

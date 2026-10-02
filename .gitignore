@@ -47,3 +47,7 @@ Thumbs.db
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Python virtualenvs and build output
+.venv/
+dist/

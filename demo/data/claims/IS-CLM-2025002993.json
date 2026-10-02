@@ -1,0 +1,58 @@
+{
+  "claim": {
+    "claim_id": "IS-CLM-2025002993",
+    "filed_date": "2025-09-08",
+    "claim_type": "Bodily Injury",
+    "state": "CA",
+    "intake_channel": "Fax/EDI",
+    "cost_per_claim_usd": 637.95,
+    "claim_amount_usd": 48959.36,
+    "complexity": "Complex",
+    "automation_eligibility_score": 49,
+    "flagged_for_human_review": "Yes",
+    "requires_human_by_regulation": "Yes",
+    "queue_wait_hours": 137.8,
+    "handling_hours": 78.8,
+    "total_cycle_time_hours": 216.6,
+    "disposition": "Denied",
+    "denial_reason": "Pre-existing damage",
+    "adjuster_id": "ADJ-125",
+    "document_count": 18,
+    "customer_satisfaction_1to5": 3.0,
+    "review_actually_needed": null,
+    "received_at": "2025-09-08T15:00:00",
+    "synthetic": false,
+    "sources": [
+      "sample_claims/IS-CLM-2025002993/intake.md",
+      "sample_claims/IS-CLM-2025002993/ocr_output.txt",
+      "sample_claims/IS-CLM-2025002993/edi_record.txt",
+      "sample_claims/IS-CLM-2025002993/adjuster_notes.md",
+      "sample_claims/IS-CLM-2025002993/status_history.md",
+      "sample_claims/IS-CLM-2025002993/fax_transmission.pdf"
+    ],
+    "details": {
+      "policyholder": "Pacific Freight Partners Inc.",
+      "policy_number": "CA-CA-88123-18",
+      "claimant": "Gloria Mendez",
+      "vehicle": "2018 Freightliner M2 106",
+      "loss_description": "Reported rear-end collision involving the insured commercial vehicle; claimant alleges bodily injury and vehicle damage. Received by fax from Inland Auto Body; OCR'd on receipt and loaded via EDI 837.",
+      "ocr_confidence": 0.69,
+      "date_of_loss": null
+    },
+    "skills": [],
+    "tier": null,
+    "routing_reason": null,
+    "review_lane": null,
+    "brief_status": null
+  },
+  "expected": {
+    "skills": [
+      "Bodily Injury",
+      "Collision"
+    ],
+    "tier": "T3",
+    "regulated": true,
+    "routing_reason": "BI over $10K in CA, messy fax/EDI intake → T3 senior",
+    "sla_in_demo": "at_risk"
+  }
+}

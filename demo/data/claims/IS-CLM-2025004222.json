@@ -1,0 +1,72 @@
+{
+  "claim": {
+    "claim_id": "IS-CLM-2025004222",
+    "filed_date": "2025-09-25",
+    "claim_type": "Bodily Injury",
+    "state": "NY",
+    "intake_channel": "Phone",
+    "cost_per_claim_usd": 1312.79,
+    "claim_amount_usd": 59533.85,
+    "complexity": "Complex",
+    "automation_eligibility_score": 32,
+    "flagged_for_human_review": "Yes",
+    "requires_human_by_regulation": "Yes",
+    "queue_wait_hours": 117.2,
+    "handling_hours": 90.8,
+    "total_cycle_time_hours": 208.0,
+    "disposition": "Paid in Full",
+    "denial_reason": null,
+    "adjuster_id": "ADJ-106",
+    "document_count": 15,
+    "customer_satisfaction_1to5": 3.0,
+    "review_actually_needed": null,
+    "received_at": "2025-09-25T10:00:00",
+    "synthetic": false,
+    "sources": [
+      "sample_claims/IS-CLM-2025004222/intake.md",
+      "sample_claims/IS-CLM-2025004222/call_excerpt.md",
+      "sample_claims/IS-CLM-2025004222/adjuster_notes.md",
+      "sample_claims/IS-CLM-2025004222/status_history.md",
+      "sample_claims/IS-CLM-2025004222/medical_summary.pdf"
+    ],
+    "details": {
+      "policyholder": "Empire State Carriers Inc.",
+      "policy_number": "CA-NY-30712-20",
+      "claimant": "Raymond Ellison",
+      "date_of_loss": "2025-09-19",
+      "loss_description": "Insured commercial vehicle rear-ended the claimant's vehicle on I-90 in the Buffalo area. Claimant, a restrained driver, reports neck and lower-back injury.",
+      "police_report": "NYSP",
+      "medical_summary": {
+        "provider": "Erie County Orthopaedic & Spine Associates",
+        "date_of_service": "2025-09-22",
+        "date_of_loss": "2025-09-19",
+        "chief_complaint": "Neck and lower-back pain following motor-vehicle collision (rear impact, restrained driver).",
+        "assessment": [
+          "Cervical strain (S13.4XXA)",
+          "Lumbar strain (S33.5XXA)",
+          "R/O disc involvement; MRI ordered"
+        ],
+        "plan": "NSAIDs; physical therapy 3x/wk x 6 wks; re-eval 4 wks.",
+        "work_status": "Out of work pending re-evaluation. No lifting > 10 lb, no operation of commercial vehicles until cleared.",
+        "charges_usd": {
+          "visit": 485.0,
+          "mri_estimated": 2150.0
+        }
+      }
+    },
+    "skills": [],
+    "tier": null,
+    "routing_reason": null,
+    "review_lane": null,
+    "brief_status": null
+  },
+  "expected": {
+    "skills": [
+      "Bodily Injury"
+    ],
+    "tier": "T3",
+    "regulated": true,
+    "routing_reason": "BI over $10K in NY → T3 senior first",
+    "sla_in_demo": "at_risk"
+  }
+}

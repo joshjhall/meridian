@@ -1,0 +1,49 @@
+{
+  "claim": {
+    "claim_id": "IS-CLM-2025000375",
+    "filed_date": "2025-10-14",
+    "claim_type": "Comprehensive",
+    "state": "GA",
+    "intake_channel": "E-Portal",
+    "cost_per_claim_usd": 401.87,
+    "claim_amount_usd": 13369.28,
+    "complexity": "Moderate",
+    "automation_eligibility_score": 37,
+    "flagged_for_human_review": "No",
+    "requires_human_by_regulation": "Yes",
+    "queue_wait_hours": 269.7,
+    "handling_hours": 13.4,
+    "total_cycle_time_hours": 283.1,
+    "disposition": "Paid in Full",
+    "denial_reason": null,
+    "adjuster_id": "ADJ-110",
+    "document_count": 7,
+    "customer_satisfaction_1to5": 4.0,
+    "review_actually_needed": "No",
+    "received_at": "2025-10-14T09:00:00",
+    "synthetic": true,
+    "sources": [
+      "docs/presentation/panel_examples.md"
+    ],
+    "details": {
+      "story": "A hailstorm damaged the insured's box truck while parked overnight at a depot. Shop estimate and 5 photos on file.",
+      "peril": "weather (hail)",
+      "photos_count": 5,
+      "weather_corroboration": "Hail confirmed at the depot ZIP on the date of loss"
+    },
+    "skills": [],
+    "tier": null,
+    "routing_reason": null,
+    "review_lane": null,
+    "brief_status": null
+  },
+  "expected": {
+    "skills": [
+      "Comprehensive"
+    ],
+    "tier": "T2",
+    "regulated": true,
+    "routing_reason": "Regulated (GA, over $10K): required review was missing; added",
+    "sla_in_demo": "breached"
+  }
+}

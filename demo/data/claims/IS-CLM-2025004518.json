@@ -1,0 +1,62 @@
+{
+  "claim": {
+    "claim_id": "IS-CLM-2025004518",
+    "filed_date": "2025-09-27",
+    "claim_type": "Liability",
+    "state": "PA",
+    "intake_channel": "Phone",
+    "cost_per_claim_usd": 786.41,
+    "claim_amount_usd": 11270.63,
+    "complexity": "Moderate",
+    "automation_eligibility_score": 55,
+    "flagged_for_human_review": "No",
+    "requires_human_by_regulation": "Yes",
+    "queue_wait_hours": 159.5,
+    "handling_hours": 14.1,
+    "total_cycle_time_hours": 173.6,
+    "disposition": "Paid in Full",
+    "denial_reason": null,
+    "adjuster_id": "ADJ-146",
+    "document_count": 11,
+    "customer_satisfaction_1to5": 4.0,
+    "review_actually_needed": null,
+    "received_at": "2025-09-27T09:00:00",
+    "synthetic": true,
+    "sources": [
+      "docs/presentation/panel_examples.md"
+    ],
+    "details": {
+      "story": "Collision at a signalled intersection; each driver says the other ran the light. The other driver's carrier has sent a third-party demand.",
+      "police_report": "No fault assigned",
+      "witnesses": 1,
+      "third_party_demand": true,
+      "accounts": [
+        {
+          "party": "Insured driver",
+          "says": "Other driver ran the red light",
+          "source": "call transcript"
+        },
+        {
+          "party": "Claimant",
+          "says": "Insured driver ran the red light",
+          "source": "claimant statement"
+        }
+      ]
+    },
+    "skills": [],
+    "tier": null,
+    "routing_reason": null,
+    "review_lane": null,
+    "brief_status": null
+  },
+  "expected": {
+    "skills": [
+      "Liability",
+      "Collision"
+    ],
+    "tier": "T2",
+    "regulated": true,
+    "routing_reason": "Regulated (PA, over $10K): required review was missing; added",
+    "sla_in_demo": "on_track"
+  }
+}
