@@ -69,7 +69,7 @@
               {% for s in a.skills %}<span class="badge-outline text-xs">{{ s }}</span>{% endfor %}
             </div>
             <ol class="flex min-h-10 flex-col gap-1.5 px-3" data-claims>
-              {% for qc in q.claims %}{{ queue_claim(qc, format_left) }}{% endfor %}
+              {% for qc in q.claims %}{{ queue_claim(qc) }}{% endfor %}
             </ol>
           </article>
         {% endfor %}

@@ -14,18 +14,17 @@ from datetime import datetime, timedelta
 from functools import cache
 from typing import Any
 
-import monitor
-
 from claimspro_sim import ClaimsProSim, reliable_write
 from claimspro_sim.faults import SoapOperation
 from claimspro_sim.reliable import SIM_VERSION
 from claimspro_sim.store import seed_claims
 from fixtures import load_claim_fixtures, load_roster
 from models import TIER_LABELS, Adjuster, Claim, PipelineEvent, SlaState, Stage, Tier
+from pipeline.assign import SENIOR_ROLES
+from pipeline.rules import regulatory_check
 
 TRANSFER: SoapOperation = "TransferWorkItem"
 MAX_ATTEMPTS = 3
-REVIEW_ROLES = {"senior", "lead"}  # who may take a regulated T3 claim
 
 Runner = Callable[[Callable[[], Any]], None]
 
@@ -40,12 +39,14 @@ def transfer_fault_on(sim: ClaimsProSim) -> bool:
     return config is not None and config.failure_rate > 0
 
 
-def is_regulated(claim: Claim) -> bool:
-    # TODO(#3): switch to pipeline.rules.regulatory_check once #3 merges, and drop this copy.
-    return claim.requires_human_by_regulation == "Yes" or (
-        claim.state in monitor.REGULATED_STATES
-        and claim.claim_amount_usd > monitor.REGULATED_OVER_USD
-    )
+def sentence(text: str) -> str:
+    """First letter up, the rest untouched (str.capitalize would lower "GA" and "$10K")."""
+    return text[:1].upper() + text[1:]
+
+
+def needs_review(claim: Claim) -> bool:
+    """The pipeline's rule (#3): regulated by label or state rule, or flagged for review."""
+    return regulatory_check(claim).review_required
 
 
 def claim_tier(claim: Claim) -> Tier | None:
@@ -57,7 +58,7 @@ def claim_tier(claim: Claim) -> Tier | None:
 
 
 def review_tier(claim: Claim) -> Tier:
-    # A regulated claim with no tier yet is held to the strictest lane, never a looser one.
+    # A claim needing review with no tier yet is held to the strictest lane, never a looser one.
     return claim_tier(claim) or list(Tier)[-1]
 
 
@@ -73,15 +74,17 @@ def block_reason(claim: Claim, target: Adjuster | None) -> str | None:
         return f"Already in {target.name}'s queue."
     if claim.write_status == "pending":
         return f"A ClaimsPro write for {claim.claim_id} is still in flight."
-    if not is_regulated(claim):
+    regulation = regulatory_check(claim)
+    if not regulation.review_required:
         return None
-    # Mirrors #3's routing: regulated work goes to the review lane of an adjuster
-    # holding the claim's tier; T3 review is senior or lead only.
+    # Same eligibility as the pipeline's assign.match: the adjuster holds the claim's
+    # tier, and senior review (every T3 claim) is senior or lead only.
     tier = review_tier(claim)
+    why = sentence(regulation.reason or "needs review")
     if tier not in target.tiers:
-        return f"Regulated claim needs human review: {target.name} has no {tier} review lane."
-    if tier is Tier.T3 and target.role not in REVIEW_ROLES:
-        return f"Regulated {tier} claim needs a senior or lead reviewer; {target.name} is not."
+        return f"{why}: {target.name} has no {tier} review lane."
+    if tier is Tier.T3 and target.role not in SENIOR_ROLES:
+        return f"{why}: {tier} needs a senior or lead reviewer; {target.name} is not."
     return None
 
 
@@ -177,7 +180,8 @@ def write_progress(sim: ClaimsProSim, claim_id: str, key: str) -> dict[str, Any]
 @dataclass
 class QueueClaim:
     claim: Claim
-    regulated: bool
+    needs_review: bool
+    review_reason: str | None
     tier: Tier | None
     review_tier: Tier
     sla: SlaState
@@ -210,9 +214,11 @@ def load_for(adjuster: Adjuster, open_here: int) -> int:
 
 
 def queue_claim(claim: Claim, now: datetime) -> QueueClaim:
+    regulation = regulatory_check(claim)
     return QueueClaim(
         claim=claim,
-        regulated=is_regulated(claim),
+        needs_review=regulation.review_required,
+        review_reason=regulation.reason,
         tier=claim_tier(claim),
         review_tier=review_tier(claim),
         sla=claim.sla_state(now),

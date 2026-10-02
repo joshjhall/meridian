@@ -1,6 +1,6 @@
 // Admin queues board (#7): drag a claim to another adjuster. The server renders
 // every status chip and blocks any move it shouldn't send; this file mirrors the
-// regulated-claim rule on dragover so a blocked drop is refused before it's sent.
+// review-lane rule on dragover so a blocked drop is refused before it's sent.
 
 (() => {
   const notice = document.getElementById("transfer-notice");
@@ -11,17 +11,19 @@
   const reviewRoles = new Set(["senior", "lead"]);
   let dragged = null;
 
-  // Keep in step with queues.block_reason.
+  // Keep in step with queues.block_reason (and the pipeline's assign.match).
   const blockReason = (claim, queue) => {
     if (claim.closest("[data-queue]") === queue) return "Already in this queue.";
-    if (claim.dataset.regulated !== "true") return null;
+    if (claim.dataset.needsReview !== "true") return null;
     const tier = claim.dataset.reviewTier;
     const name = queue.dataset.name;
+    const reason = claim.dataset.reviewReason;
+    const why = reason.charAt(0).toUpperCase() + reason.slice(1);
     if (!queue.dataset.tiers.split(" ").includes(tier)) {
-      return `Regulated claim needs human review: ${name} has no ${tier} review lane.`;
+      return `${why}: ${name} has no ${tier} review lane.`;
     }
     if (tier === "T3" && !reviewRoles.has(queue.dataset.role)) {
-      return `Regulated ${tier} claim needs a senior or lead reviewer; ${name} is not.`;
+      return `${why}: ${tier} needs a senior or lead reviewer; ${name} is not.`;
     }
     return null;
   };

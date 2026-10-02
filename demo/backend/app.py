@@ -27,6 +27,7 @@ HERE = Path(__file__).resolve().parent
 app = FastAPI(title="Meridian demo")
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
+templates.env.globals.update(format_left=queues.format_left, sentence=queues.sentence)
 app.include_router(claimspro_router)
 
 # The side panel extension calls the API from its own chrome-extension:// origin.
@@ -172,7 +173,6 @@ def admin_queues(request: Request, sim: Sim, view: Viewer = "admin"):
             "groups": queues.board(sim, now),
             "now": now,
             "fault_on": queues.transfer_fault_on(sim),
-            "format_left": queues.format_left,
         },
     )
 

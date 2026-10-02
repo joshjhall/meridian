@@ -16,8 +16,9 @@ from claimspro_sim import ClaimsProSim, FaultConfig
 from claimspro_sim.api import get_sim
 from fixtures import load_roster
 from models import Tier
+from pipeline.rules import regulatory_check
 
-SIMPLE = "IS-CLM-2025000300"  # FL, under $10K, T1: not regulated
+SIMPLE = "IS-CLM-2025000300"  # FL, under $10K, T1: needs no review
 REGULATED_T2 = "IS-CLM-2025000375"  # GA, over $10K, T2
 REGULATED_T3 = "IS-CLM-2025004222"  # NY bodily injury, T3
 
@@ -297,21 +298,76 @@ def test_regulated_claim_without_a_tier_is_held_to_t3(sim: ClaimsProSim):
 
 
 @pytest.mark.parametrize(
-    ("flag", "state", "amount", "regulated"),
+    ("label", "flagged", "state", "amount", "review"),
     [
-        ("Yes", "TN", 500.0, True),  # the regulation flag alone is enough
-        ("No", "CA", 10_000.0, False),  # over $10K means strictly over
-        ("No", "CA", 10_000.01, True),
-        ("No", "TN", 90_000.0, False),  # not a named state
+        ("Yes", "No", "TN", 500.0, True),  # the regulation label alone is enough
+        ("No", "No", "CA", 10_000.0, False),  # over $10K means strictly over
+        ("No", "No", "CA", 10_000.01, True),
+        ("No", "No", "MA", 50_000.0, True),  # a rule state beyond the 8 named (#3)
+        ("No", "Yes", "TN", 500.0, True),  # flagged for review, not regulated
+        ("No", "No", "TN", 90_000.0, False),  # not a rule state
     ],
 )
-def test_is_regulated(sim: ClaimsProSim, flag: str, state: str, amount: float, regulated: bool):
+def test_needs_review_follows_the_pipeline(
+    sim: ClaimsProSim, label: str, flagged: str, state: str, amount: float, review: bool
+):
     base = sim.store.get(SIMPLE)
     assert base is not None
     claim = base.model_copy(
-        update={"requires_human_by_regulation": flag, "state": state, "claim_amount_usd": amount}
+        update={
+            "requires_human_by_regulation": label,
+            "flagged_for_human_review": flagged,
+            "state": state,
+            "claim_amount_usd": amount,
+        }
     )
-    assert queues.is_regulated(claim) is regulated
+    assert queues.needs_review(claim) is review
+    assert queues.needs_review(claim) is regulatory_check(claim).review_required
+
+
+def test_rule_state_claim_beyond_the_named_eight_is_guarded(sim: ClaimsProSim):
+    # Unlabeled and unflagged: only #3's 12-state rule catches it.
+    base = sim.store.get(SIMPLE)
+    assert base is not None
+    claim = base.model_copy(
+        update={
+            "claim_id": "IS-CLM-9999999998",
+            "state": "MA",
+            "claim_amount_usd": 25_000.0,
+            "requires_human_by_regulation": "No",
+            "flagged_for_human_review": "No",
+            "tier": Tier.T2,
+        }
+    )
+    t1 = ROSTER[adjuster(Tier.T1, only=True, skip=claim.adjuster_id)]
+    t2 = ROSTER[adjuster(Tier.T2, only=True, skip=claim.adjuster_id)]
+    assert queues.block_reason(claim, t1) == (
+        f"Regulated (MA, over $10K): {t1.name} has no T2 review lane."
+    )
+    assert queues.block_reason(claim, t2) is None
+
+
+def test_flagged_claim_needs_an_adjuster_with_its_tier(sim: ClaimsProSim):
+    base = sim.store.get(SIMPLE)
+    assert base is not None
+    claim = base.model_copy(
+        update={
+            "claim_id": "IS-CLM-9999999997",
+            "requires_human_by_regulation": "No",
+            "flagged_for_human_review": "Yes",
+            "claim_amount_usd": 500.0,
+            "tier": Tier.T2,
+        }
+    )
+    t1 = ROSTER[adjuster(Tier.T1, only=True, skip=claim.adjuster_id)]
+    assert "Flagged for review" in (queues.block_reason(claim, t1) or "")
+
+
+def test_board_marks_claims_needing_review(client: TestClient, sim: ClaimsProSim):
+    html = client.get("/admin/queues").text
+    expected = sum(regulatory_check(c).review_required for c in sim.store.list_claims())
+    assert html.count('data-needs-review="true"') == expected
+    assert "Regulated (GA, over $10K)" in html
 
 
 def test_second_move_is_blocked_while_the_first_is_in_flight(client: TestClient, sim: ClaimsProSim):
