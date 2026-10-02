@@ -4,9 +4,10 @@ import json
 from itertools import pairwise
 
 import monitor
+import pytest
 from fastapi.testclient import TestClient
 
-from app import app
+from app import app, render_card
 from fixtures import load_claim_fixtures
 from models import ExceptionReason, Stage
 
@@ -106,15 +107,17 @@ def test_event_stream_sends_rendered_cards_and_counters():
     response = client.get(f"/admin/events?speed=100&limit={limit}")
     assert response.headers["content-type"].startswith("text/event-stream")
     frames = _frames(response.text)
-    assert len(frames) == limit
-    assert {name for name, _ in frames} == {"claim"}
-    last = {d["claim_id"]: d for _, d in frames}
+    # Each pass opens with a reset, so a reconnecting browser clears its board.
+    assert frames[0] == ("reset", {"counters": {"routed": 0, "exceptions": 0}})
+    claims = [d for name, d in frames if name == "claim"]
+    assert len(claims) == limit == len(frames) - 1
+    last = {d["claim_id"]: d for d in claims}
     card = last[CLAIM_2993]
     assert card["stage"] == "exception"
     assert 'id="card-IS-CLM-2025002993"' in card["html"]
     assert "claim--pinned" in card["html"]
     assert "Policy number" in card["html"]
-    final = frames[-1][1]["counters"]
+    final = claims[-1]["counters"]
     assert final == monitor.replay().counters()
 
 
@@ -123,6 +126,30 @@ def test_trace_lists_the_exception_step_with_conflicts():
     assert "OCR conflicts with EDI" in html
     assert "CA-CA-88l23-l8" in html
     assert "routing-v0.4.0" in html
+
+
+def test_trace_stops_where_the_card_is():
+    html = client.get(f"/admin/claims/{CLAIM_2993}/trace?upto=1").text
+    assert "Received" in html
+    assert "OCR conflicts with EDI" not in html
+
+
+@pytest.mark.parametrize("query", ["speed=0", "speed=101", "limit=0"])
+def test_event_stream_rejects_out_of_range_params(query):
+    assert client.get(f"/admin/events?{query}").status_code == 422
+
+
+def test_card_escapes_feed_text():
+    view = monitor.ClaimView(
+        claim_id="IS-CLM-2025000001",
+        stage=Stage.ASSIGNED,
+        pinned=False,
+        story=None,
+        facts={"adjuster": "<script>alert(1)</script>"},
+    )
+    html = render_card(view)
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
 
 
 def test_trace_unknown_claim_is_404():

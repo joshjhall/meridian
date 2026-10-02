@@ -283,12 +283,15 @@ async def event_stream(
 ) -> AsyncIterator[str]:
     """Server-sent events for the monitor: one `claim` frame per pipeline event.
 
-    Loops the script forever (sending a `reset` frame between passes) unless
-    `limit` caps the number of claim frames, which tests use.
+    Every pass, including the first, opens with a `reset` frame so the client
+    clears its board; a browser auto-reconnect replays from the start and must
+    not leave the previous pass's cards behind. Loops forever unless `limit`
+    caps the number of claim frames, which tests use.
     """
     sent = 0
     while True:
         state = MonitorState()
+        yield _frame("reset", {"counters": state.counters()})
         clock = 0.0
         for s in fixture_script():
             await asyncio.sleep(max(0.0, s.at - clock) / speed)
@@ -307,4 +310,3 @@ async def event_stream(
             if limit is not None and sent >= limit:
                 return
         await asyncio.sleep(HOLD_S / speed)
-        yield _frame("reset", {"counters": MonitorState().counters()})

@@ -108,10 +108,14 @@ def admin_events(
 
 
 @app.get("/admin/claims/{claim_id}/trace", response_class=HTMLResponse)
-def admin_trace(request: Request, claim_id: str):
+def admin_trace(request: Request, claim_id: str, upto: int | None = Query(None, ge=1)):
+    # The card passes how many steps it has seen, so the trace never runs ahead
+    # of the board. #9 replaces this with the expanded audit record.
     view = monitor.replay().claims.get(claim_id)
     if view is None:
         raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
+    if upto is not None:
+        view.trace = view.trace[:upto]
     return templates.TemplateResponse(
         request,
         "admin/_trace.html",
