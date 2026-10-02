@@ -11,7 +11,10 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 
 @cache
 def load_claim_fixtures() -> dict[str, ClaimFixture]:
-    fixtures = (ClaimFixture.model_validate_json(p.read_text()) for p in sorted((DATA / "claims").glob("*.json")))
+    fixtures = (
+        ClaimFixture.model_validate_json(p.read_text())
+        for p in sorted((DATA / "claims").glob("*.json"))
+    )
     return {f.claim.claim_id: f for f in fixtures}
 
 

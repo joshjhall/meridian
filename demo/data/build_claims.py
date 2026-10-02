@@ -9,7 +9,6 @@ Run: uv run --project demo/backend python demo/data/build_claims.py
 """
 
 import csv
-import json
 import sys
 from pathlib import Path
 
@@ -171,8 +170,16 @@ OVERLAYS: dict[str, dict] = {
             "witnesses": 1,
             "third_party_demand": True,
             "accounts": [
-                {"party": "Insured driver", "says": "Other driver ran the red light", "source": "call transcript"},
-                {"party": "Claimant", "says": "Insured driver ran the red light", "source": "claimant statement"},
+                {
+                    "party": "Insured driver",
+                    "says": "Other driver ran the red light",
+                    "source": "call transcript",
+                },
+                {
+                    "party": "Claimant",
+                    "says": "Insured driver ran the red light",
+                    "source": "claimant statement",
+                },
             ],
         },
         "expected": {
@@ -224,7 +231,11 @@ def build() -> list[ClaimFixture]:
     for claim_id, overlay in OVERLAYS.items():
         overlay = dict(overlay)
         expected = overlay.pop("expected")
-        fixtures.append(ClaimFixture.model_validate({"claim": {**rows[claim_id], **overlay}, "expected": expected}))
+        fixtures.append(
+            ClaimFixture.model_validate(
+                {"claim": {**rows[claim_id], **overlay}, "expected": expected}
+            )
+        )
     return fixtures
 
 
@@ -234,6 +245,7 @@ def main() -> None:
         path = OUT / f"{fixture.claim.claim_id}.json"
         path.write_text(fixture.model_dump_json(indent=2, exclude={"claim": {"sla_due_at"}}) + "\n")
         print(f"wrote {path.relative_to(REPO)}")
+
 
 if __name__ == "__main__":
     main()

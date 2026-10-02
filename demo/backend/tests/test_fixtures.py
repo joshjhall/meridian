@@ -12,8 +12,12 @@ from models import Adjuster, ClaimFixture, Skill, Tier
 
 REPO = DATA.parents[1]
 SIX = {
-    "IS-CLM-2025000300", "IS-CLM-2025004222", "IS-CLM-2025002993",
-    "IS-CLM-2025000375", "IS-CLM-2025004518", "IS-CLM-2025002043",
+    "IS-CLM-2025000300",
+    "IS-CLM-2025004222",
+    "IS-CLM-2025002993",
+    "IS-CLM-2025000375",
+    "IS-CLM-2025004518",
+    "IS-CLM-2025002043",
 }
 SYNTHETIC = {"IS-CLM-2025000375", "IS-CLM-2025004518", "IS-CLM-2025002043"}
 
@@ -152,7 +156,10 @@ def test_claimspro_page_unknown_claim_is_404():
 def test_basecoat_macros_render():
     from app import templates
 
-    source = '{% from "components/tabs.html.jinja" import tabs %}{{ tabs(id="t", tabsets=[{"tab": "A", "panel": "x"}]) }}'
+    source = (
+        '{% from "components/tabs.html.jinja" import tabs %}'
+        '{{ tabs(id="t", tabsets=[{"tab": "A", "panel": "x"}]) }}'
+    )
     html = templates.env.from_string(source).render()
     assert 'role="tablist"' in html
 

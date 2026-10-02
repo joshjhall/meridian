@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 {# Mock of Meridian's ClaimsPro (vendor system). Deliberately unstyled HTML:
    it must read as a stand-in for another system, not part of the demo UI.
    Does not extend base.html, so no Basecoat or Tailwind. Built out in #10. #}
@@ -11,10 +11,22 @@
     <p><b>ClaimsPro</b> (mock) | Claim {{ claim.claim_id }}</p>
     <hr />
     <table border="1" cellpadding="3">
-      <tr><th align="left">Claim type</th><td>{{ claim.claim_type }}</td></tr>
-      <tr><th align="left">Loss state</th><td>{{ claim.state }}</td></tr>
-      <tr><th align="left">Claim amount</th><td>${{ "{:,.2f}".format(claim.claim_amount_usd) }}</td></tr>
-      <tr><th align="left">Filed</th><td>{{ claim.filed_date }}</td></tr>
+      <tr>
+        <th align="left">Claim type</th>
+        <td>{{ claim.claim_type }}</td>
+      </tr>
+      <tr>
+        <th align="left">Loss state</th>
+        <td>{{ claim.state }}</td>
+      </tr>
+      <tr>
+        <th align="left">Claim amount</th>
+        <td>${{ "{:,.2f}".format(claim.claim_amount_usd) }}</td>
+      </tr>
+      <tr>
+        <th align="left">Filed</th>
+        <td>{{ claim.filed_date }}</td>
+      </tr>
     </table>
   </body>
 </html>

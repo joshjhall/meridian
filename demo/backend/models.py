@@ -94,7 +94,7 @@ class Claim(BaseModel):
     review_lane: ReviewLane | None = None
     brief_status: BriefStatus | None = None
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]  # Pydantic's documented pattern
     @property
     def sla_due_at(self) -> datetime:
         return self.received_at + timedelta(hours=SLA_HOURS)

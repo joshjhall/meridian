@@ -74,7 +74,9 @@ def admin(request: Request):
 
 @app.get("/claimspro/{claim_id}", response_class=HTMLResponse)
 def claimspro(request: Request, claim_id: str):
-    return templates.TemplateResponse(request, "claimspro.html", {"claim": get_claim_or_404(claim_id)})
+    return templates.TemplateResponse(
+        request, "claimspro.html", {"claim": get_claim_or_404(claim_id)}
+    )
 
 
 @app.get("/panel", response_class=HTMLResponse)

@@ -16,20 +16,65 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "demo" / "backend"))
 
-from models import Adjuster, Skill, Tier  # noqa: E402
+from models import Adjuster, AdjusterRole, Skill, Tier  # noqa: E402
 
 SEED = 2025
 OUT = Path(__file__).resolve().parent / "roster.json"
 
 FIRST = [
-    "Avery", "Blake", "Camila", "Darius", "Elena", "Farah", "Gavin", "Hana", "Isaac", "Jada",
-    "Kenji", "Lena", "Marcus", "Nadia", "Omar", "Priya", "Quinn", "Rosa", "Samir", "Tess",
-    "Uma", "Victor", "Wren", "Xavier", "Yara", "Zane",
+    "Avery",
+    "Blake",
+    "Camila",
+    "Darius",
+    "Elena",
+    "Farah",
+    "Gavin",
+    "Hana",
+    "Isaac",
+    "Jada",
+    "Kenji",
+    "Lena",
+    "Marcus",
+    "Nadia",
+    "Omar",
+    "Priya",
+    "Quinn",
+    "Rosa",
+    "Samir",
+    "Tess",
+    "Uma",
+    "Victor",
+    "Wren",
+    "Xavier",
+    "Yara",
+    "Zane",
 ]
 LAST = [
-    "Abbott", "Bishop", "Castillo", "Delgado", "Ellis", "Fischer", "Grant", "Hoang", "Ibarra",
-    "Jensen", "Kowalski", "Lindqvist", "Moreno", "Nakamura", "Osei", "Park", "Quintero",
-    "Ramirez", "Sato", "Thornton", "Underwood", "Vance", "Whitaker", "Yilmaz", "Zimmerman",
+    "Abbott",
+    "Bishop",
+    "Castillo",
+    "Delgado",
+    "Ellis",
+    "Fischer",
+    "Grant",
+    "Hoang",
+    "Ibarra",
+    "Jensen",
+    "Kowalski",
+    "Lindqvist",
+    "Moreno",
+    "Nakamura",
+    "Osei",
+    "Park",
+    "Quintero",
+    "Ramirez",
+    "Sato",
+    "Thornton",
+    "Underwood",
+    "Vance",
+    "Whitaker",
+    "Yilmaz",
+    "Zimmerman",
 ]
 
 TOTAL = 95
@@ -40,14 +85,17 @@ LEADS = 4
 def build(seed: int = SEED) -> list[Adjuster]:
     rng = random.Random(seed)
     ids = [f"ADJ-{n}" for n in range(101, 101 + TOTAL)]
-    names = rng.sample([f"{f} {l}" for f in FIRST for l in LAST], TOTAL)
-    roles = ["lead"] * LEADS + ["senior"] * SENIORS + ["adjuster"] * (TOTAL - LEADS - SENIORS)
+    names = rng.sample([f"{first} {last}" for first in FIRST for last in LAST], TOTAL)
+    leads: list[AdjusterRole] = ["lead"] * LEADS
+    seniors: list[AdjusterRole] = ["senior"] * SENIORS
+    adjusters: list[AdjusterRole] = ["adjuster"] * (TOTAL - LEADS - SENIORS)
+    roles = leads + seniors + adjusters
     rng.shuffle(roles)
     tiers = list(Tier)
     skills = list(Skill)
 
     roster = []
-    for adj_id, name, role in zip(ids, names, roles):
+    for adj_id, name, role in zip(ids, names, roles, strict=True):
         if role == "adjuster":
             top = rng.choice(tiers[:-1])
             adj_tiers = tiers[: tiers.index(top) + 1]

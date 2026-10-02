@@ -1,17 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="flex flex-col gap-6">
-  <h1 class="text-2xl font-semibold">Meridian demo</h1>
-  <div class="grid gap-4 sm:grid-cols-3">
-    <a class="card" href="/admin">
-      <header><h2>Admin monitor</h2><p>Pipeline, queues, learning loop, audit.</p></header>
-    </a>
-    <a class="card" href="/claimspro/IS-CLM-2025004222">
-      <header><h2>Mock ClaimsPro</h2><p>Claim 4222 with custom fields.</p></header>
-    </a>
-    <a class="card" href="/panel?claim=IS-CLM-2025004222">
-      <header><h2>Side panel</h2><p>The six-section claim summary.</p></header>
-    </a>
+  <div class="flex flex-col gap-6">
+    <h1 class="text-2xl font-semibold">Meridian demo</h1>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <a class="card" href="/admin">
+        <header>
+          <h2>Admin monitor</h2>
+          <p>Pipeline, queues, learning loop, audit.</p>
+        </header>
+      </a>
+      <a class="card" href="/claimspro/IS-CLM-2025004222">
+        <header>
+          <h2>Mock ClaimsPro</h2>
+          <p>Claim 4222 with custom fields.</p>
+        </header>
+      </a>
+      <a class="card" href="/panel?claim=IS-CLM-2025004222">
+        <header>
+          <h2>Side panel</h2>
+          <p>The six-section claim summary.</p>
+        </header>
+      </a>
+    </div>
   </div>
-</div>
 {% endblock %}
