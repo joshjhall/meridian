@@ -16,10 +16,11 @@ import json
 import random
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import timedelta
 from functools import cache
 from typing import Any
 
+from clock import DEMO_START
 from fixtures import load_claim_fixtures, load_roster
 from models import EXCEPTION_LABELS, ExceptionReason, PipelineEvent, Skill, Stage, Tier
 
@@ -52,7 +53,7 @@ CONFLICTS_2993: list[dict[str, str]] = [
 
 REVIEW_LANES = {"regulatory_review", "senior_review"}
 
-START = datetime(2025, 9, 8, 9, 0)
+START = DEMO_START  # event timestamps sit on the demo clock, like the fixture claims
 CLAIM_GAP_S = 1.6  # seconds between claims entering the feed
 STEP_S = 2.2  # seconds a claim spends per stage, before jitter
 HOLD_S = 8.0  # pause at the end of the script before it loops
