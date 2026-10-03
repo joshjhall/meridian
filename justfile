@@ -28,6 +28,9 @@ venv-link:
     fi
     target="/cache/venvs/$name"
     link="{{ backend }}/.venv"
+    # The link lives in the workspace but the target lives on a volume, so a
+    # fresh volume leaves the link dangling; uv then fails with "File exists".
+    mkdir -p "$target"
     [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && exit 0
     # Recipes like `lint` run several `install` dependents at once, so serialize.
     exec 9>"/cache/venvs/.$name.lock"
@@ -39,7 +42,6 @@ venv-link:
             exit 1
         }
     fi
-    mkdir -p "$target"
     # -n: never follow an existing link into $target (that nests a self-link there).
     ln -sfn "$target" "$link"
     echo "venv-link: $link -> $target"
