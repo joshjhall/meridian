@@ -114,7 +114,13 @@ def test_load_moves_with_a_transfer(client: TestClient, sim: ClaimsProSim):
     transfer(client, SIMPLE, to)
     after = {q.adjuster.id: q.load for g in queues.board(sim, clock.now()) for q in g.queues}
     assert after[to] == before[to] + 1
-    assert after[src] == max(0, before[src] - 1)
+    assert after[src] == before[src] - 1
+
+
+def test_load_badge_counts_the_cards_in_each_queue(sim: ClaimsProSim):
+    for g in queues.board(sim, clock.now()):
+        for q in g.queues:
+            assert q.load == len(q.claims), q.adjuster.id
 
 
 @pytest.mark.parametrize(
