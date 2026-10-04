@@ -8,14 +8,16 @@
   </header>
   <p id="learning-caption"
      class="text-sm text-muted-foreground">Illustrative history: mocked data, not measurements.</p>
-  {% for chart_id in ["routing", "intake"] %}
+  {# Panels per box: routing has a third (second opinions); learning.js fills the
+     ones its chart has data for and leaves the rest hidden. #}
+  {% for chart_id, panels in [("routing", ["primary", "secondary", "tertiary"]), ("intake", ["primary", "secondary"])] %}
     <figure class="card learning-chart" data-chart="{{ chart_id }}">
       <header>
         <h3 data-role="title"></h3>
         <p data-role="subtitle"></p>
       </header>
       <section>
-        {% for series in ["primary", "secondary"] %}
+        {% for series in panels %}
           <div class="learning-panel" data-series="{{ series }}">
             <h4 data-role="series-title" class="text-sm font-semibold"></h4>
             <svg data-role="plot" role="img" class="w-full" viewBox="0 0 720 220">

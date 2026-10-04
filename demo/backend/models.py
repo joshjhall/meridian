@@ -517,13 +517,18 @@ class HistorySeries(BaseModel):
 
 
 class HistoryChart(BaseModel):
-    """One chart box: two series, each drawn on its own single-axis plot (primary on top)."""
+    """One chart box: two or three series, each on its own single-axis plot, top down."""
 
     id: str
     title: str
     subtitle: str
     primary: HistorySeries
     secondary: HistorySeries
+    tertiary: HistorySeries | None = None
+
+    @property
+    def series(self) -> list[HistorySeries]:
+        return [s for s in (self.primary, self.secondary, self.tertiary) if s is not None]
 
 
 class Release(BaseModel):

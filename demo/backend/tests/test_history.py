@@ -125,9 +125,10 @@ def test_learning_page_includes_learning_charts():
     assert re.search(r'integrity="sha384-[A-Za-z0-9+/=]+"', d3_tag.group())
     assert 'data-chart="routing"' in html
     assert 'data-chart="intake"' in html
-    # Four single-axis plots: each box splits its two series into two panels.
-    assert html.count('data-role="plot"') == 4
+    # Five single-axis plots: routing has three panels, intake two.
+    assert html.count('data-role="plot"') == 5
     assert html.count('data-series="primary"') == html.count('data-series="secondary"') == 2
+    assert html.count('data-series="tertiary"') == 1
 
 
 @pytest.mark.parametrize(
@@ -160,3 +161,27 @@ def test_learning_js_never_writes_html():
         r"setAttribute\(\s*[\"']on",
     ):
         assert not re.search(sink, code), sink
+
+
+def test_second_opinion_starts_between_its_measured_bounds_and_trends_down():
+    # The union (unregulated reviews + regulated ones with 2+ reviewers) can't be
+    # measured: the extract has no reviewer count. Its bounds can. Lower: flagged but
+    # not regulation-required (docs/discovery/open_questions.md:139). Upper: all flagged.
+    with (REPO / "reference" / "claims_processing.csv").open(newline="") as f:
+        rows = list(csv.DictReader(f))
+    flagged = [r for r in rows if r["flagged_for_human_review"] == "Yes"]
+    lower = 100 * sum(r["requires_human_by_regulation"] == "No" for r in flagged) / len(rows)
+    upper = 100 * len(flagged) / len(rows)
+    assert (round(lower, 1), round(upper, 1)) == (28.9, 45.6)
+
+    second = charts()["routing"].tertiary
+    assert second is not None
+    assert lower < second.points[0].value < upper
+    assert "28.9%" in second.source and "45.6%" in second.source
+    assert "not a measurement" in second.source
+    assert second.points[-1].value <= second.target + 1
+    assert [p.week for p in second.points] == [p.week for p in charts()["routing"].primary.points]
+
+
+def test_intake_has_no_third_series():
+    assert charts()["intake"].tertiary is None

@@ -4,7 +4,7 @@
     {
       "id": "routing",
       "title": "Routing quality",
-      "subtitle": "Does the review flag agree with reviewers, and how fast do claims get a response?",
+      "subtitle": "Does the review flag agree with reviewers, how fast do claims get a response, and how often does a claim need a second opinion?",
       "primary": {
         "key": "agreement",
         "label": "Agreement with reviewers",
@@ -224,6 +224,117 @@
           {
             "week": 24,
             "value": 24
+          }
+        ]
+      },
+      "tertiary": {
+        "key": "second_opinion",
+        "label": "Second opinion needed",
+        "unit": "%",
+        "mark": "line",
+        "source": "Estimated, between two measured bounds from the extract (reference/claims_processing.csv): at least 28.9% (flagged for review but not required by regulation, 1,445 / 5,000; docs/discovery/open_questions.md:139) and at most 45.6% (every flagged claim). Regulated claims count only when 2+ people reviewed them, and the extract has no reviewer count, so the start is an illustrative midpoint, not a measurement.",
+        "target": 15,
+        "target_label": "Target ~15% (optimistic)",
+        "points": [
+          {
+            "week": 0,
+            "value": 34.8
+          },
+          {
+            "week": 1,
+            "value": 34.8
+          },
+          {
+            "week": 2,
+            "value": 34.7
+          },
+          {
+            "week": 3,
+            "value": 34.5
+          },
+          {
+            "week": 4,
+            "value": 32.9
+          },
+          {
+            "week": 5,
+            "value": 31.7
+          },
+          {
+            "week": 6,
+            "value": 30.7
+          },
+          {
+            "week": 7,
+            "value": 30.1
+          },
+          {
+            "week": 8,
+            "value": 29.7
+          },
+          {
+            "week": 9,
+            "value": 29.4
+          },
+          {
+            "week": 10,
+            "value": 27.5
+          },
+          {
+            "week": 11,
+            "value": 28.7
+          },
+          {
+            "week": 12,
+            "value": 28.2
+          },
+          {
+            "week": 13,
+            "value": 27.8
+          },
+          {
+            "week": 14,
+            "value": 25.5
+          },
+          {
+            "week": 15,
+            "value": 24.0
+          },
+          {
+            "week": 16,
+            "value": 22.7
+          },
+          {
+            "week": 17,
+            "value": 21.8
+          },
+          {
+            "week": 18,
+            "value": 21.1
+          },
+          {
+            "week": 19,
+            "value": 20.5
+          },
+          {
+            "week": 20,
+            "value": 18.7
+          },
+          {
+            "week": 21,
+            "value": 17.4
+          },
+          {
+            "week": 22,
+            "value": 16.4
+          },
+          {
+            "week": 23,
+            "value": 15.5
+          },
+          {
+            "week": 24,
+            "value": 15.1
           }
         ]
       }

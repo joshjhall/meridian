@@ -189,8 +189,16 @@ function drawFlags(svg, x, releases, chartId, glyphs) {
   }
 }
 
+// A chart's series top down, each with its panel key and categorical slot (1-based):
+// two per box, a third on routing. Slots follow the reference palette's fixed order.
+const SLOTS = ["primary", "secondary", "tertiary"];
+function seriesOf(chart) {
+  return SLOTS.map((key, i) => ({ key, series: chart[key], slot: i + 1 })).filter((s) => s.series);
+}
+
 function drawCrosshair(svg, x, chart) {
-  const { primary, secondary } = chart;
+  const all = seriesOf(chart);
+  const { primary } = chart;
   const rule = svg
     .append("line")
     .attr("class", "crosshair")
@@ -208,13 +216,13 @@ function drawCrosshair(svg, x, chart) {
       const [px] = d3.pointer(event);
       const week = Math.max(0, Math.min(primary.points.length - 1, Math.round(x.invert(px))));
       rule.attr("x1", x(week)).attr("x2", x(week)).attr("visibility", "visible");
-      const a = primary.points[week];
-      const b = secondary.points[week];
       showTooltip(
         [
           [`Week ${week}`, "font-semibold"],
-          [`${primary.label}: ${fmt(a.value, primary.unit)}`, "swatch swatch-1"],
-          [`${secondary.label}: ${fmt(b.value, secondary.unit)}`, "swatch swatch-2"],
+          ...all.map(({ series, slot }) => [
+            `${series.label}: ${fmt(series.points[week].value, series.unit)}`,
+            `swatch swatch-${slot}`,
+          ]),
         ],
         event.clientX,
         event.clientY,
@@ -228,11 +236,8 @@ function drawCrosshair(svg, x, chart) {
 
 function drawLegend(figure, chart) {
   const legend = figure.querySelector("[data-role=legend]");
-  const items = [
-    [chart.primary, "swatch-1", chart.primary.mark],
-    [chart.secondary, "swatch-2", chart.secondary.mark],
-  ].map(([s, cls, mark]) => {
-    const item = el("span", undefined, `legend-item ${cls} legend-${mark}`);
+  const items = seriesOf(chart).map(({ series: s, slot }) => {
+    const item = el("span", undefined, `legend-item swatch-${slot} legend-${s.mark}`);
     item.append(el("span", undefined, "legend-key"));
     item.append(el("span", `${s.label} (${s.unit})`));
     return item;
@@ -246,19 +251,19 @@ function drawTable(figure, chart) {
   const details = el("details", undefined, "mt-3 text-sm");
   details.append(el("summary", "Data table"));
   const table = el("table", undefined, "table");
+  const all = seriesOf(chart).map((s) => s.series);
   const head = table.createTHead().insertRow();
-  for (const h of ["Week", chart.primary.label, chart.secondary.label]) {
+  for (const h of ["Week", ...all.map((s) => s.label)]) {
     head.append(el("th", h));
   }
   const body = table.createTBody();
   chart.primary.points.forEach((p, i) => {
     const row = body.insertRow();
     row.insertCell().textContent = String(p.week);
-    row.insertCell().textContent = fmt(p.value, chart.primary.unit);
-    row.insertCell().textContent = fmt(chart.secondary.points[i].value, chart.secondary.unit);
+    for (const s of all) row.insertCell().textContent = fmt(s.points[i].value, s.unit);
   });
   const sources = el("ul", undefined, "mt-2 text-muted-foreground");
-  for (const s of [chart.primary, chart.secondary]) {
+  for (const s of all) {
     sources.append(el("li", `${s.label}, week 0: ${s.source}`));
   }
   details.append(table, sources);
@@ -312,13 +317,9 @@ function drawPanel(panel, chart, series, colorVar, releases, weeks, glyphs) {
 function drawChart(figure, chart, releases, weeks) {
   figure.querySelector("[data-role=title]").textContent = chart.title;
   figure.querySelector("[data-role=subtitle]").textContent = chart.subtitle;
-  const panels = [
-    ["primary", chart.primary, "--series-1"],
-    ["secondary", chart.secondary, "--series-2"],
-  ];
-  panels.forEach(([key, series, colorVar], i) => {
+  seriesOf(chart).forEach(({ key, series, slot }, i) => {
     const panel = figure.querySelector(`[data-series="${key}"]`);
-    if (panel) drawPanel(panel, chart, series, colorVar, releases, weeks, i === 0);
+    if (panel) drawPanel(panel, chart, series, `--series-${slot}`, releases, weeks, i === 0);
   });
   drawLegend(figure, chart);
   drawTable(figure, chart);

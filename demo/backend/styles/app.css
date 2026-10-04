@@ -120,8 +120,9 @@
 }
 
 /* Learning-loop charts (#8). Roles, not raw hex, in learning.js; values from
-   the dataviz reference palette (series 1 blue, series 2 orange; rollback uses
-   status-critical with an icon + label, never color alone). */
+   the dataviz reference palette in its fixed categorical order (series 1 blue,
+   2 orange, 3 aqua; a validated prefix in both modes). Rollback uses
+   status-critical with an icon + label, never color alone. */
 .learning-chart,
 .learning-tooltip {
   --chart-ink: #52514e;
@@ -129,6 +130,7 @@
   --chart-grid: #e8e7e3;
   --series-1: #2a78d6;
   --series-2: #eb6834;
+  --series-3: #1baf7a;
   --flag: #0b0b0b;
   --rollback: #d03b3b;
 }
@@ -147,6 +149,7 @@
   --chart-grid: #2e2e2c;
   --series-1: #3987e5;
   --series-2: #d95926;
+  --series-3: #199e70;
   --flag: #ffffff;
   --rollback: #e66767;
 }
@@ -262,6 +265,9 @@
 .learning-chart .swatch-2 .legend-key {
   background: var(--series-2);
 }
+.learning-chart .swatch-3 .legend-key {
+  background: var(--series-3);
+}
 .learning-chart .legend-rollback {
   color: var(--rollback);
 }
@@ -278,4 +284,7 @@
 }
 .learning-tooltip .swatch-2::before {
   background: var(--series-2);
+}
+.learning-tooltip .swatch-3::before {
+  background: var(--series-3);
 }
