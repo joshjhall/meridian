@@ -43,15 +43,33 @@
     }
   };
 
-  const place = ({ claim_id, stage, html }) => {
+  // Frames for a lane under the pointer wait here, newest per claim, and apply
+  // when the pointer leaves. Cards shuffling under the cursor made it flicker
+  // between hand and arrow and moved click targets mid-click.
+  const held = new Map();
+  let hovered = null;
+
+  const place = (data) => {
+    const { claim_id, stage, html } = data;
+    const target = lane(stage);
+    const old = document.getElementById(`card-${claim_id}`);
+    const fromLane = old?.closest("[data-lane]");
+    if (hovered && (target?.closest("[data-lane]") === hovered || fromLane === hovered)) {
+      held.set(claim_id, data);
+      return;
+    }
     // html is our own server-rendered (autoescaped) card, like any htmx swap.
     const template = document.createElement("template");
     template.innerHTML = html.trim();
     const card = template.content.firstElementChild;
-    const target = lane(stage);
     // An unknown stage leaves the card where it was rather than dropping it.
     if (!card || !target) return;
-    const old = document.getElementById(`card-${claim_id}`);
+    // Same lane: swap the card where it stands, so nothing below it reflows.
+    if (old && old.parentElement === target) {
+      old.replaceWith(card);
+      window.htmx?.process(card);
+      return;
+    }
     const from = old?.getBoundingClientRect();
     old?.remove();
     // Demo claims stay at the top of a lane so they're easy to follow.
@@ -70,10 +88,29 @@
     });
   };
 
-  const unplace = ({ claim_id }) => {
-    document.getElementById(`card-${claim_id}`)?.remove();
+  const unplace = (data) => {
+    const old = document.getElementById(`card-${data.claim_id}`);
+    if (hovered && old?.closest("[data-lane]") === hovered) {
+      held.set(data.claim_id, { ...data, removed: true });
+      return;
+    }
+    old?.remove();
     recount();
   };
+
+  const release = () => {
+    hovered = null;
+    const pending = [...held.values()];
+    held.clear();
+    for (const data of pending) (data.removed ? unplace : place)(data);
+  };
+
+  for (const section of road.querySelectorAll("[data-lane]")) {
+    section.addEventListener("pointerenter", () => {
+      hovered = section;
+    });
+    section.addEventListener("pointerleave", release);
+  }
 
   const counters = ({ counters: c }) => {
     tick(routed, c.routed);
@@ -98,6 +135,7 @@
     });
 
   const clear = () => {
+    held.clear();
     for (const cards of road.querySelectorAll("[data-cards]")) cards.replaceChildren();
     recount();
     tick(routed, 0);
