@@ -3,7 +3,9 @@
 {% macro admin_nav(current, viewer, nav_class="flex gap-2") %}
   <nav class="{{ nav_class }}" aria-label="Admin views">
     {% for path, label in [("/admin", "Pipeline monitor"), ("/admin/learning", "Learning loop"), ("/admin/queues", "Queues")] %}
-      <a class="{{ 'btn-sm' if path == current else 'btn-sm-ghost' }}"
+      <a class="btn"
+         data-size="sm"
+         data-variant="{{ 'primary' if path == current else 'ghost' }}"
          href="{{ path }}?view={{ viewer }}"
          {% if path == current %}aria-current="page"{% endif %}>{{ label }}</a>
     {% endfor %}

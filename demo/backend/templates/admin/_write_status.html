@@ -4,9 +4,10 @@
      data-write-status="{{ status }}"
      {% if status in ("pending", "retrying") %}hx-get="/admin/queues/claims/{{ claim_id | urlencode }}/write-status?key={{ key | urlencode }}" hx-trigger="load delay:500ms" hx-swap="outerHTML"{% endif %}>
   {% if status == "pending" %}
-    <span class="badge-secondary text-xs">Pending in ClaimsPro</span>
+    <span class="badge text-xs" data-variant="secondary">Pending in ClaimsPro</span>
   {% elif status == "retrying" %}
-    <span class="badge-secondary text-xs">Retrying ({{ progress.attempt }} of {{ max_attempts }} failed)</span>
+    <span class="badge text-xs"
+          data-variant="secondary">Retrying ({{ progress.attempt }} of {{ max_attempts }} failed)</span>
   {% elif status == "confirmed" %}
     <span class="badge text-xs">Confirmed in ClaimsPro</span>
   {% else %}

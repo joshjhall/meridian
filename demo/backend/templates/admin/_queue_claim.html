@@ -11,7 +11,8 @@
       data-review-tier="{{ qc.review_tier }}">
     <div class="flex items-center justify-between gap-2">
       <span class="font-mono font-semibold">{{ c.claim_id }}</span>
-      <span class="{{ {'breached': 'badge-destructive', 'at_risk': 'badge', 'on_track': 'badge-outline'}[qc.sla] }} text-xs">
+      <span class="badge text-xs"
+            data-variant="{{ {'breached': 'destructive', 'at_risk': 'primary', 'on_track': 'outline'}[qc.sla] }}">
         {{ format_left(qc.left) }}
       </span>
     </div>

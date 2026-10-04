@@ -33,10 +33,14 @@
     </dl>
     {{ admin_nav("/admin", viewer, "sign__role") }}
     <nav class="sign__role" aria-label="View as">
-      <a class="{{ 'btn-sm' if viewer == 'admin' else 'btn-sm-ghost' }}"
+      <a class="btn"
+         data-size="sm"
+         data-variant="{{ 'primary' if viewer == 'admin' else 'ghost' }}"
          href="?view=admin"
          {% if viewer == 'admin' %}aria-current="page"{% endif %}>Tribe admin</a>
-      <a class="{{ 'btn-sm' if viewer == 'manager' else 'btn-sm-ghost' }}"
+      <a class="btn"
+         data-size="sm"
+         data-variant="{{ 'primary' if viewer == 'manager' else 'ghost' }}"
          href="?view=manager"
          {% if viewer == 'manager' %}aria-current="page"{% endif %}>Manager</a>
     </nav>
@@ -55,8 +59,16 @@
           <option value="4">4 hours/s</option>
         </select>
       </label>
-      <button type="button" class="btn-sm-outline" id="pause">Pause feed</button>
-      <button type="button" class="btn-sm-outline" id="restart">Restart</button>
+      <button type="button"
+              class="btn"
+              data-variant="outline"
+              data-size="sm"
+              id="pause">Pause feed</button>
+      <button type="button"
+              class="btn"
+              data-variant="outline"
+              data-size="sm"
+              id="restart">Restart</button>
     </section>
   {% endif %}
   <div class="road" id="road" data-events-url="{{ events_url }}">
@@ -95,7 +107,8 @@
       </section>
       <footer>
         <button type="button"
-                class="btn-outline"
+                class="btn"
+                data-variant="outline"
                 onclick="this.closest('dialog').close()">Close</button>
       </footer>
     </div>
@@ -109,7 +122,8 @@
       </section>
       <footer>
         <button type="button"
-                class="btn-outline"
+                class="btn"
+                data-variant="outline"
                 onclick="this.closest('dialog').close()">Close</button>
       </footer>
     </div>

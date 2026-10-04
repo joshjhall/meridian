@@ -14,7 +14,9 @@
 {%- endmacro %}
 {% macro log_button(claim_id, section, action, label, item=none) -%}
   <button type="button"
-          class="btn-sm-outline"
+          class="btn"
+          data-variant="outline"
+          data-size="sm"
           hx-post="/panel/{{ claim_id }}/log?{{ {'section': section, 'action': action, 'item': item or ''} | urlencode }}"
           hx-swap="outerHTML">{{ label }}</button>
 {%- endmacro %}
@@ -23,7 +25,7 @@
   <header class="sign" id="header" data-sla="{{ h.sla_state }}">
     <div class="sign__id">
       <h1>{{ h.claim_id }}</h1>
-      {% if h.synthetic %}<span class="badge-outline sign__synthetic">Synthetic story</span>{% endif %}
+      {% if h.synthetic %}<span class="badge sign__synthetic" data-variant="outline">Synthetic story</span>{% endif %}
     </div>
     <ul class="chips" aria-label="Skills">
       {% for skill in h.skills %}<li class="chip">{{ skill }}</li>{% endfor %}

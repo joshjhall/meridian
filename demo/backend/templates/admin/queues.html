@@ -17,10 +17,14 @@
     </div>
     {{ admin_nav("/admin/queues", viewer) }}
     <nav class="flex gap-2" aria-label="View as">
-      <a class="{{ 'btn-sm' if viewer == 'admin' else 'btn-sm-ghost' }}"
+      <a class="btn"
+         data-size="sm"
+         data-variant="{{ 'primary' if viewer == 'admin' else 'ghost' }}"
          href="?view=admin"
          {% if viewer == 'admin' %}aria-current="page"{% endif %}>Tribe admin</a>
-      <a class="{{ 'btn-sm' if viewer == 'manager' else 'btn-sm-ghost' }}"
+      <a class="btn"
+         data-size="sm"
+         data-variant="{{ 'primary' if viewer == 'manager' else 'ghost' }}"
          href="?view=manager"
          {% if viewer == 'manager' %}aria-current="page"{% endif %}>Manager</a>
     </nav>
@@ -59,10 +63,12 @@
                 <h3 class="text-sm font-semibold">{{ a.name }}</h3>
                 <p class="text-muted-foreground text-xs">{{ a.id }} · {{ a.role }} · {{ a.tiers | join(", ") }}</p>
               </div>
-              <span class="badge-secondary" title="Open claims">Load <span data-load>{{ q.load }}</span></span>
+              <span class="badge"
+                    data-variant="secondary"
+                    title="Open claims">Load <span data-load>{{ q.load }}</span></span>
             </header>
             <div class="flex flex-wrap gap-1 px-3">
-              {% for s in a.skills %}<span class="badge-outline text-xs">{{ s }}</span>{% endfor %}
+              {% for s in a.skills %}<span class="badge text-xs" data-variant="outline">{{ s }}</span>{% endfor %}
             </div>
             <ol class="flex min-h-10 flex-col gap-1.5 px-3" data-claims>
               {% for qc in q.claims %}{{ queue_claim(qc) }}{% endfor %}

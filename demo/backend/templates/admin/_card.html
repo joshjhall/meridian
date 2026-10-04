@@ -21,7 +21,7 @@
     </span>
     {% if f.skills %}
       <span class="claim__skills">
-        {% for s in f.skills %}<span class="badge-outline">{{ s }}</span>{% endfor %}
+        {% for s in f.skills %}<span class="badge" data-variant="outline">{{ s }}</span>{% endfor %}
       </span>
     {% endif %}
     {% if f.regulated %}
