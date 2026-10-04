@@ -75,9 +75,15 @@
     load.textContent = String(Math.max(0, Number(load.textContent) + delta));
   };
 
+  // Queues are ordered by SLA due time, most overdue first (as queues.board
+  // renders them), so a moved card slots in by due time, not at the top.
   const move = (claim, queue) => {
     const from = claim.closest("[data-queue]");
-    queue.querySelector("[data-claims]").prepend(claim);
+    const list = queue.querySelector("[data-claims]");
+    const later = [...list.querySelectorAll("[data-claim]")].find(
+      (c) => c !== claim && c.dataset.due > claim.dataset.due,
+    );
+    list.insertBefore(claim, later ?? null);
     bumpLoad(from, -1);
     bumpLoad(queue, 1);
     return from;

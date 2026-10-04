@@ -8,7 +8,8 @@
       data-claim="{{ c.claim_id }}"
       data-needs-review="{{ 'true' if qc.needs_review else 'false' }}"
       data-review-reason="{{ (qc.review_reason or 'needs review') if qc.needs_review else '' }}"
-      data-review-tier="{{ qc.review_tier }}">
+      data-review-tier="{{ qc.review_tier }}"
+      data-due="{{ c.sla_due_at.isoformat() }}">
     <div class="flex items-center justify-between gap-2">
       <span class="font-mono font-semibold">{{ c.claim_id }}</span>
       <span class="badge text-xs"

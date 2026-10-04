@@ -107,6 +107,13 @@ def test_claims_are_ordered_by_sla_time_left(sim: ClaimsProSim):
             assert lefts == sorted(lefts)
 
 
+def test_queue_cards_carry_their_due_time_for_ordering(client: TestClient):
+    # queues.js slots a moved card in by data-due, so it lands where a reload would.
+    html = client.get("/admin/queues").text
+    dues = re.findall(r'data-due="([^"]+)"', html)
+    assert dues and all(re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d", d) for d in dues)
+
+
 def test_load_moves_with_a_transfer(client: TestClient, sim: ClaimsProSim):
     to = adjuster(Tier.T1, skip=owner(sim, SIMPLE))
     before = {q.adjuster.id: q.load for g in queues.board(sim, clock.now()) for q in g.queues}
