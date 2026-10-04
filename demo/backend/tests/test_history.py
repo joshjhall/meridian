@@ -179,7 +179,9 @@ def test_second_opinion_starts_between_its_measured_bounds_and_trends_down():
     assert lower < second.points[0].value < upper
     assert "28.9%" in second.source and "45.6%" in second.source
     assert "not a measurement" in second.source
-    assert second.points[-1].value <= second.target + 1
+    # Ends just under the proposed <20% SOW target.
+    assert second.target == 20
+    assert second.target - 1 < second.points[-1].value < second.target
     assert [p.week for p in second.points] == [p.week for p in charts()["routing"].primary.points]
 
 
