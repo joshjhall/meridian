@@ -145,6 +145,13 @@ def admin(request: Request, view: Viewer = "admin"):
     )
 
 
+# Learning-loop charts (#8) on their own page: the monitor's live card moves
+# repainted under the charts and made them hard to read.
+@app.get("/admin/learning", response_class=HTMLResponse)
+def admin_learning(request: Request, view: Viewer = "admin"):
+    return templates.TemplateResponse(request, "admin/learning.html", {"viewer": view})
+
+
 @app.get("/admin/claims/{claim_id}/trace", response_class=HTMLResponse)
 def admin_trace(request: Request, claim_id: str, upto: int | None = Query(None, ge=1)):
     # The card passes how many steps it has seen, so the trace never runs ahead

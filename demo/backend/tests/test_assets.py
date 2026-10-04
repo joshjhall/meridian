@@ -39,7 +39,7 @@ VENDORED = {
     "d3/d3.min.js": "CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i",
 }
 
-PAGES = ["/admin", "/admin/queues", "/panel"]
+PAGES = ["/admin", "/admin/learning", "/admin/queues", "/panel"]
 
 
 def sha384(path: Path) -> str:
@@ -92,8 +92,8 @@ def test_page_serves_every_vendored_asset_it_links(page):
         assert asset.content, url
 
 
-def test_admin_loads_the_vendored_d3():
-    assert "/static/vendor/d3/d3.min.js" in vendored_urls(client.get("/admin").text)
+def test_learning_page_loads_the_vendored_d3():
+    assert "/static/vendor/d3/d3.min.js" in vendored_urls(client.get("/admin/learning").text)
 
 
 @pytest.mark.parametrize(
@@ -125,7 +125,7 @@ def test_licences_ship_with_the_vendored_packages(licence):
 
 
 def test_d3_integrity_matches_the_local_file():
-    template = (TEMPLATES / "admin" / "monitor.html").read_text(encoding="utf-8")
+    template = (TEMPLATES / "admin" / "learning.html").read_text(encoding="utf-8")
     pinned = re.search(r'integrity="(sha384-[^"]+)"', template)
     assert pinned is not None
     assert pinned.group(1) == sha384(VENDOR / "d3" / "d3.min.js")

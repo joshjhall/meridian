@@ -104,8 +104,16 @@ def test_caption_marks_history_illustrative_and_axes_arbitrary():
     assert "scaled independently" in caption
 
 
-def test_admin_page_includes_learning_charts():
-    res = client.get("/admin")
+def test_monitor_leaves_learning_charts_to_their_own_page():
+    # Live card moves repainted under the charts, so they moved off /admin.
+    html = client.get("/admin").text
+    assert 'id="learning-loop"' not in html
+    assert "/static/learning.js" not in html
+    assert 'href="/admin/learning?view=admin"' in html
+
+
+def test_learning_page_includes_learning_charts():
+    res = client.get("/admin/learning")
     assert res.status_code == 200
     html = res.text
     assert 'id="learning-loop"' in html

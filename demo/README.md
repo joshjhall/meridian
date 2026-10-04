@@ -34,7 +34,8 @@ ruff, pyright, and djlint are pinned dev dependencies in `uv.lock` (add new Pyth
 
 Then open:
 
-- <http://localhost:8000/admin>: admin monitor (#6, #8, #9)
+- <http://localhost:8000/admin>: admin monitor (#6, #9)
+- <http://localhost:8000/admin/learning>: learning-loop charts (#8), on their own page so the live replay never repaints under them
 - <http://localhost:8000/admin/queues>: every adjuster's queue, with drag-to-move and ClaimsPro write status (#7). Like the rest of the demo it is unauthenticated: `?view=admin` only gates the fault toggle for the demo. The move and toggle POSTs need an `X-Meridian-Board` header, which blocks cross-site requests, but that is not authentication, so run it locally only.
 - <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10), deliberately unstyled
 - <http://localhost:8000/panel?claim=IS-CLM-2025004222>: side panel (#11)
@@ -85,7 +86,7 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 
 - `backend/models.py`: the shared contracts and **the only schema**: `Claim`, `Skill`, `Tier`, `Stage`, `Adjuster`, `PipelineEvent`, `AuditRecord`, `PanelSummary`.
 - `backend/fixtures.py`: `load_claim_fixtures()` and `load_roster()`, validated through the models.
-- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`, plus the replay's `/api/events` and `/api/replay`) and the pages (`/admin`, `/admin/queues`, `/claimspro/{id}`, `/panel`).
+- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`, plus the replay's `/api/events` and `/api/replay`) and the pages (`/admin`, `/admin/learning`, `/admin/queues`, `/claimspro/{id}`, `/panel`).
 - `backend/replay/`: the replay runner (#5). It plays the claims extract, in filed-date order, through the real pipeline on the demo clock, and streams the events to `/admin` over SSE at `/api/events`. Speed (simulated hours per second) and pause are set with `POST /api/replay`, a restart (optional seed) with `POST /api/replay/restart`. The sequence is a pure function of the seed, so a rehearsal matches the demo. Each pass writes to one ClaimsPro simulator; `replay.current_sim()` returns the served pass's simulator (its write log and alerts) for audit views. It is replaced on restart, so read it per request.
 - `backend/audit_view.py`: the expanded audit record (#9) behind `/admin`'s audit drawer and `/api/claims/{id}/audit`: the pipeline's five-field `AuditRecord` and events, the simulator's write history with retries, and review intervals on one timeline. It reads the replay's current pass (`replay.current_sim()`, per request): the run, writes and retries the operator watched, up to the demo clock. `audit_sim()` is the one place that picks the simulator; with no replay served it falls back to the shared one and runs the claim once.
 - `backend/pipeline/llm_signals.py` and `data/recorded/*.json`: the contained live LLM step (#4) and the recorded response for each demo claim. `pipeline/signals.py` is the hook the pipeline calls; `PROMPT_VERSION` there names the prompt and schema sent, with a content digest.

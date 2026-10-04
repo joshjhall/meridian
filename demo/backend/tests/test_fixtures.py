@@ -138,6 +138,7 @@ def test_cors_allows_only_extension_origins():
     [
         ("/", "Meridian demo"),
         ("/admin", "Claims pipeline"),
+        ("/admin/learning", "Learning loop"),
         ("/claimspro/IS-CLM-2025004222", "Bodily Injury"),
         ("/panel?claim=IS-CLM-2025004222", "IS-CLM-2025004222"),
     ],

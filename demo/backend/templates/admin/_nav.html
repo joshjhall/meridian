@@ -1,0 +1,11 @@
+{# Tabs shared by the admin pages. The live monitor and the learning charts are
+   separate pages so the replay's card moves never repaint under a chart. #}
+{% macro admin_nav(current, viewer, nav_class="flex gap-2") %}
+  <nav class="{{ nav_class }}" aria-label="Admin views">
+    {% for path, label in [("/admin", "Pipeline monitor"), ("/admin/learning", "Learning loop"), ("/admin/queues", "Queues")] %}
+      <a class="{{ 'btn-sm' if path == current else 'btn-sm-ghost' }}"
+         href="{{ path }}?view={{ viewer }}"
+         {% if path == current %}aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+{% endmacro %}

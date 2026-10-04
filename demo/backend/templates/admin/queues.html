@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "admin/_queue_claim.html" import queue_claim %}
+{% from "admin/_nav.html" import admin_nav %}
 {% block title %}Adjuster queues{% endblock %}
 {% block head %}
   <script src="/static/queues.js" defer></script>
@@ -14,12 +15,7 @@
         Drag a claim to another adjuster to move it. Each move is a ClaimsPro write, confirmed by a read back.
       </p>
     </div>
-    <nav class="flex gap-2" aria-label="Admin views">
-      <a class="btn-sm-ghost" href="/admin?view={{ viewer }}">Pipeline monitor</a>
-      <a class="btn-sm"
-         href="/admin/queues?view={{ viewer }}"
-         aria-current="page">Queues</a>
-    </nav>
+    {{ admin_nav("/admin/queues", viewer) }}
     <nav class="flex gap-2" aria-label="View as">
       <a class="{{ 'btn-sm' if viewer == 'admin' else 'btn-sm-ghost' }}"
          href="?view=admin"

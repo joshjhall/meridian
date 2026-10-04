@@ -1,13 +1,10 @@
 {% extends "base.html" %}
+{% from "admin/_nav.html" import admin_nav %}
 {% block title %}Pipeline monitor{% endblock %}
 {% block head %}
   <link rel="stylesheet" href="/static/fonts/fonts.css" />
   <link rel="stylesheet" href="/static/admin.css" />
   <script src="/static/admin.js" defer></script>
-  <script src="/static/vendor/d3/d3.min.js"
-          integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i"
-          defer></script>
-  <script src="/static/learning.js" defer></script>
 {% endblock %}
 {% block body_attrs %}class="monitor-body" data-viewer="{{ viewer }}"{% endblock %}
 {% block main_class %}monitor{% endblock %}
@@ -34,10 +31,7 @@
         </dd>
       </div>
     </dl>
-    <nav class="sign__role" aria-label="Admin views">
-      <a class="btn-sm" href="/admin?view={{ viewer }}" aria-current="page">Pipeline monitor</a>
-      <a class="btn-sm-ghost" href="/admin/queues?view={{ viewer }}">Queues</a>
-    </nav>
+    {{ admin_nav("/admin", viewer, "sign__role") }}
     <nav class="sign__role" aria-label="View as">
       <a class="{{ 'btn-sm' if viewer == 'admin' else 'btn-sm-ghost' }}"
          href="?view=admin"
@@ -92,7 +86,6 @@
       <span><code>{{ id[-4:] }}</code> {{ story | lower }}</span>
     {% endfor %}
   </footer>
-  {% include "admin/learning/charts.html" %}
   <dialog id="trace"
           class="dialog"
           aria-labelledby="trace-title"
