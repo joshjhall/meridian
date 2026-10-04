@@ -1,5 +1,6 @@
 import csv
 import re
+import statistics
 
 import pytest
 from fastapi.testclient import TestClient
@@ -125,10 +126,13 @@ def test_learning_page_includes_learning_charts():
     assert re.search(r'integrity="sha384-[A-Za-z0-9+/=]+"', d3_tag.group())
     assert 'data-chart="routing"' in html
     assert 'data-chart="intake"' in html
-    # Five single-axis plots: routing has three panels, intake two.
-    assert html.count('data-role="plot"') == 5
+    # Seven single-axis plots: routing has four panels, intake three.
+    assert html.count('data-role="plot"') == 7
     assert html.count('data-series="primary"') == html.count('data-series="secondary"') == 2
-    assert html.count('data-series="tertiary"') == 1
+    assert html.count('data-series="tertiary"') == 2
+    assert html.count('data-series="quaternary"') == 1
+    # The page header names the view; the charts section doesn't repeat it.
+    assert html.count(">Learning loop</h") == 1
 
 
 @pytest.mark.parametrize(
@@ -185,5 +189,54 @@ def test_second_opinion_starts_between_its_measured_bounds_and_trends_down():
     assert [p.week for p in second.points] == [p.week for p in charts()["routing"].primary.points]
 
 
-def test_intake_has_no_third_series():
-    assert charts()["intake"].tertiary is None
+def test_invalid_structured_fields_are_illustrative_and_fall_after_the_rules_ship():
+    # No baseline exists: the extract has filed_date but no loss date to check it against.
+    with (REPO / "reference" / "claims_processing.csv").open(newline="") as f:
+        columns = next(csv.reader(f))
+    assert "filed_date" in columns
+    assert not any("loss" in c or "event" in c for c in columns)
+
+    invalid = charts()["intake"].tertiary
+    assert invalid is not None
+    assert "not a measurement" in invalid.source
+    assert [p.week for p in invalid.points] == [p.week for p in charts()["intake"].primary.points]
+    assert invalid.points[-1].value == invalid.target
+    rules = next(r for r in load_history().releases if r.version == "intake-rules v1.0")
+    assert "intake" in rules.charts
+    assert "loss date after the filed date" in rules.notes
+    before, after = invalid.points[rules.week - 1].value, invalid.points[rules.week].value
+    assert after < before * 0.6  # the rules release is where the drop happens
+
+
+def test_learning_js_data_table_is_a_button():
+    js = (DATA.parent / "backend" / "static" / "learning.js").read_text()
+    assert 'el("button", "Data table"' in js
+    assert '"summary"' not in js
+
+
+def test_tier_time_open_starts_at_the_extracts_medians_and_ends_at_targets():
+    # handling_hours: wall-clock time open in an active status, the stand-in for effort.
+    with (REPO / "reference" / "claims_processing.csv").open(newline="") as f:
+        rows = list(csv.DictReader(f))
+    tiers = {"T1": "Simple", "T2": "Moderate", "T3": "Complex"}
+    lines = charts()["routing"].quaternary
+    assert lines is not None
+    assert lines.scale == "log" and lines.unit == "h"
+    assert [line.key for line in lines.lines] == list(tiers)
+    axis = [p.week for p in charts()["routing"].primary.points]
+    for line in lines.lines:
+        hours = sorted(
+            float(r["handling_hours"]) for r in rows if r["complexity"] == tiers[line.key]
+        )
+        assert line.points[0].value == pytest.approx(statistics.median(hours), abs=0.01)
+        assert [p.week for p in line.points] == axis
+        assert line.points[-1].value == line.target
+        assert line.points[-1].value < line.points[0].value / 3
+    t1, t2, t3 = (line.target for line in lines.lines)
+    assert t1 < 0.5 < t2 < t3  # T1 well under an hour; T3 can't get below ~12h
+    assert "not adjuster effort" in lines.source
+    assert "not measurements" in lines.source
+
+
+def test_intake_has_no_tier_lines():
+    assert charts()["intake"].quaternary is None
