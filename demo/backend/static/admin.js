@@ -1,7 +1,8 @@
 // Admin pipeline monitor (#6): moves claim cards between lanes as SSE frames
 // arrive from the replay runner (#5). The server renders each card; this file
-// only places it, animating the move with a View Transition where the browser
-// supports one. Speed and pause belong to the server's replay, shared by every
+// only places it, sliding the card from its old spot (FLIP, Web Animations).
+// Not View Transitions: the replay moves cards many times a second, and a page
+// mid-transition is a snapshot that swallows clicks, so the controls went dead. Speed and pause belong to the server's replay, shared by every
 // viewer, so the controls post to it and the page follows its `control` frames.
 
 (() => {
@@ -20,9 +21,6 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let source = null;
-  // Bumped on every clear, so a move queued behind a View Transition from
-  // before a reset can't put a stale card back on the board.
-  let generation = 0;
 
   const lane = (stage) => road.querySelector(`[data-lane="${stage}"] [data-cards]`);
 
@@ -53,25 +51,23 @@
     const target = lane(stage);
     // An unknown stage leaves the card where it was rather than dropping it.
     if (!card || !target) return;
-    // Same name before and after the move, so the browser animates it across lanes.
-    card.style.viewTransitionName = `claim-${claim_id}`;
-    document.getElementById(`card-${claim_id}`)?.remove();
+    const old = document.getElementById(`card-${claim_id}`);
+    const from = old?.getBoundingClientRect();
+    old?.remove();
     // Demo claims stay at the top of a lane so they're easy to follow.
     if (card.classList.contains("claim--pinned")) target.prepend(card);
     else target.append(card);
     window.htmx?.process(card);
     recount();
-  };
-
-  const move = (data) => {
-    const queuedIn = generation;
-    if (document.startViewTransition && !reduceMotion.matches && !document.hidden) {
-      document.startViewTransition(() => {
-        if (queuedIn === generation) place(data);
-      });
-    } else {
-      place(data);
-    }
+    if (!from || reduceMotion.matches || document.hidden) return;
+    const to = card.getBoundingClientRect();
+    const dx = from.left - to.left;
+    const dy = from.top - to.top;
+    if (!dx && !dy) return;
+    card.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
+      duration: 450,
+      easing: "cubic-bezier(0.3, 0.7, 0.2, 1)",
+    });
   };
 
   const unplace = ({ claim_id }) => {
@@ -102,7 +98,6 @@
     });
 
   const clear = () => {
-    generation += 1;
     for (const cards of road.querySelectorAll("[data-cards]")) cards.replaceChildren();
     recount();
     tick(routed, 0);
@@ -121,7 +116,7 @@
     };
     source.addEventListener("claim", (e) => {
       const data = JSON.parse(e.data);
-      move(data);
+      place(data);
       counters(data);
     });
     source.addEventListener("remove", (e) => {
