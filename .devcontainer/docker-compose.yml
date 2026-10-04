@@ -56,6 +56,10 @@ services:
       # The workspace mount is case-insensitive (macOS host), so `just` can see
       # a phantom `Justfile` beside the tracked `justfile` and refuse to run.
       JUST_JUSTFILE: /workspace/meridian/justfile
+    # Demo server (`just dev`). Published on the host's loopback only: the demo
+    # has no auth, and Zed does not auto-forward ports the way VS Code does.
+    ports:
+      - "127.0.0.1:8000:8000"
     init: true
     # CAP_SYS_ADMIN + /dev/fuse are the minimum for the bindfs FUSE overlay that
     # fixes macOS VirtioFS ownership on the workspace bind mount. It degrades to
