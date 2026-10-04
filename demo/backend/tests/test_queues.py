@@ -107,6 +107,13 @@ def test_claims_are_ordered_by_sla_time_left(sim: ClaimsProSim):
             assert lefts == sorted(lefts)
 
 
+def test_queue_cards_carry_their_due_time_for_ordering(client: TestClient):
+    # queues.js slots a moved card in by data-due, so it lands where a reload would.
+    html = client.get("/admin/queues").text
+    dues = re.findall(r'data-due="([^"]+)"', html)
+    assert dues and all(re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d", d) for d in dues)
+
+
 def test_load_moves_with_a_transfer(client: TestClient, sim: ClaimsProSim):
     to = adjuster(Tier.T1, skip=owner(sim, SIMPLE))
     before = {q.adjuster.id: q.load for g in queues.board(sim, clock.now()) for q in g.queues}
@@ -114,7 +121,13 @@ def test_load_moves_with_a_transfer(client: TestClient, sim: ClaimsProSim):
     transfer(client, SIMPLE, to)
     after = {q.adjuster.id: q.load for g in queues.board(sim, clock.now()) for q in g.queues}
     assert after[to] == before[to] + 1
-    assert after[src] == max(0, before[src] - 1)
+    assert after[src] == before[src] - 1
+
+
+def test_load_badge_counts_the_cards_in_each_queue(sim: ClaimsProSim):
+    for g in queues.board(sim, clock.now()):
+        for q in g.queues:
+            assert q.load == len(q.claims), q.adjuster.id
 
 
 @pytest.mark.parametrize(
@@ -155,6 +168,8 @@ def test_transfer_confirms_and_moves_the_claim(client: TestClient, sim: ClaimsPr
     assert res.status_code == 200
     assert 'data-write-status="confirmed"' in res.text
     assert "Confirmed in ClaimsPro" in res.text
+    # queues.js clears a settled badge after a few seconds; data-transient marks it.
+    assert re.search(r"<span[^>]*data-transient[^>]*>Confirmed in ClaimsPro", res.text)
     assert owner(sim, SIMPLE) == to
     statuses = [e.payload["write_status"] for e in sim.events(SIMPLE)]
     assert statuses == ["pending", "confirmed"]
@@ -189,6 +204,13 @@ def test_fault_toggle_shows_retries_then_failure_with_alert(client: TestClient, 
     res = transfer(client, SIMPLE, adjuster(Tier.T1, skip=src))
     assert 'data-write-status="failed"' in res.text
     assert "Failed after 3 attempts. Engineering and client IT notified." in res.text
+    # A brief badge on the returned card; the full alert is copied to the notice.
+    assert re.search(
+        r'<span[^>]*data-variant="destructive"[^>]*data-transient[^>]*>Error updating ClaimsPro',
+        res.text,
+    )
+    assert re.search(r'<div[^>]*class="alert[^"]*"[^>]*data-variant="destructive"', res.text)
+    assert "data-failure" in res.text
     assert owner(sim, SIMPLE) == src
     statuses = [e.payload["write_status"] for e in sim.events(SIMPLE)]
     assert statuses == ["pending", "retrying", "retrying", "failed"]

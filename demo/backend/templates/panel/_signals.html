@@ -15,15 +15,17 @@
   <div class="signals__head">
     <h3>Complexity signals</h3>
     {% if signals.fallback %}
-      <span class="badge-destructive" data-fallback="1">Fallback</span>
+      <span class="badge" data-variant="destructive" data-fallback="1">Fallback</span>
     {% elif signals.source == "llm" %}
       <span class="badge">Live</span>
     {% else %}
-      <span class="badge-secondary">{{ signals.source | capitalize }}</span>
+      <span class="badge" data-variant="secondary">{{ signals.source | capitalize }}</span>
     {% endif %}
     {% if live_available %}
       <button type="button"
-              class="btn-sm-outline"
+              class="btn"
+              data-variant="outline"
+              data-size="sm"
               hx-post="/claims/{{ claim_id }}/signals"
               hx-headers='{"X-Meridian-Panel": "1"}'
               hx-target="#signals-{{ claim_id }}"

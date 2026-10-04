@@ -49,7 +49,7 @@
       {% if r.human_reviewed %}
         <span class="badge">Yes</span>
       {% else %}
-        <span class="badge-secondary">Not yet</span>
+        <span class="badge" data-variant="secondary">Not yet</span>
       {% endif %}
     </dd>
   </dl>
@@ -120,11 +120,11 @@
   <dl class="audit__fields">
     <dt>Skills</dt>
     <dd>
-      {% for s in r.skills %}<span class="badge-outline">{{ s }}</span>{% endfor %}
+      {% for s in r.skills %}<span class="badge" data-variant="outline">{{ s }}</span>{% endfor %}
     </dd>
     <dt>Tier</dt>
     <dd>
-      {% if r.tier %}<span class="badge-outline">{{ r.tier }}</span>{% endif %}
+      {% if r.tier %}<span class="badge" data-variant="outline">{{ r.tier }}</span>{% endif %}
     </dd>
     <dt>Adjuster</dt>
     <dd>
@@ -143,12 +143,12 @@
       <dt>Complexity signals</dt>
       <dd class="audit__signals" data-signals-source="{{ sig.source }}">
         {% if sig.fallback %}
-          <span class="badge-destructive">Fallback</span>
+          <span class="badge" data-variant="destructive">Fallback</span>
           <span class="audit__note">{{ sig.fallback_reason }}; recorded response used</span>
         {% elif sig.source == "llm" %}
           <span class="badge">Live</span>
         {% else %}
-          <span class="badge-secondary">{{ sig.source | capitalize }}</span>
+          <span class="badge" data-variant="secondary">{{ sig.source | capitalize }}</span>
         {% endif %}
         {% if sig.llm_model %}<code data-version="llm">{{ sig.llm_model }}</code>{% endif %}
         {% if sig.latency_ms is not none %}<span class="audit__note">{{ sig.latency_ms }} ms</span>{% endif %}
@@ -157,7 +157,9 @@
         {% if live_available %}
           <div id="signals-{{ r.claim_id }}">
             <button type="button"
-                    class="btn-sm-outline"
+                    class="btn"
+                    data-variant="outline"
+                    data-size="sm"
                     hx-post="/claims/{{ r.claim_id }}/signals"
                     hx-headers='{"X-Meridian-Board": "1"}'
                     hx-target="#signals-{{ r.claim_id }}"
@@ -179,9 +181,9 @@
         {% if w.status == "confirmed" %}
           <span class="badge">Confirmed</span>
         {% elif w.status == "failed" %}
-          <span class="badge-destructive">Failed</span>
+          <span class="badge" data-variant="destructive">Failed</span>
         {% else %}
-          <span class="badge-secondary">{{ w.status | capitalize }}</span>
+          <span class="badge" data-variant="secondary">{{ w.status | capitalize }}</span>
         {% endif %}
         <span class="audit__note">{{ w.attempts[-1].payload.attempt }} attempt{{ "s" if w.attempts[-1].payload.attempt != 1 }}</span>
       </summary>

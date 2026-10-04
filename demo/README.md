@@ -34,7 +34,8 @@ ruff, pyright, and djlint are pinned dev dependencies in `uv.lock` (add new Pyth
 
 Then open:
 
-- <http://localhost:8000/admin>: admin monitor (#6, #8, #9)
+- <http://localhost:8000/admin>: admin monitor (#6, #9)
+- <http://localhost:8000/admin/learning>: learning-loop charts (#8), on their own page so the live replay never repaints under them
 - <http://localhost:8000/admin/queues>: every adjuster's queue, with drag-to-move and ClaimsPro write status (#7). Like the rest of the demo it is unauthenticated: `?view=admin` only gates the fault toggle for the demo. The move and toggle POSTs need an `X-Meridian-Board` header, which blocks cross-site requests, but that is not authentication, so run it locally only.
 - <http://localhost:8000/claimspro/IS-CLM-2025004222>: mock ClaimsPro (#10), deliberately unstyled
 - <http://localhost:8000/panel?claim=IS-CLM-2025004222>: side panel (#11)
@@ -85,7 +86,7 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 
 - `backend/models.py`: the shared contracts and **the only schema**: `Claim`, `Skill`, `Tier`, `Stage`, `Adjuster`, `PipelineEvent`, `AuditRecord`, `PanelSummary`.
 - `backend/fixtures.py`: `load_claim_fixtures()` and `load_roster()`, validated through the models.
-- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`, plus the replay's `/api/events` and `/api/replay`) and the pages (`/admin`, `/admin/queues`, `/claimspro/{id}`, `/panel`).
+- `backend/app.py`: the JSON API (`/api/health`, `/api/claims`, `/api/claims/{id}`, `/api/roster`, `/api/history`, plus the replay's `/api/events` and `/api/replay`) and the pages (`/admin`, `/admin/learning`, `/admin/queues`, `/claimspro/{id}`, `/panel`).
 - `backend/replay/`: the replay runner (#5). It plays the claims extract, in filed-date order, through the real pipeline on the demo clock, and streams the events to `/admin` over SSE at `/api/events`. Speed (simulated hours per second) and pause are set with `POST /api/replay`, a restart (optional seed) with `POST /api/replay/restart`. The sequence is a pure function of the seed, so a rehearsal matches the demo. Each pass writes to one ClaimsPro simulator; `replay.current_sim()` returns the served pass's simulator (its write log and alerts) for audit views. It is replaced on restart, so read it per request.
 - `backend/audit_view.py`: the expanded audit record (#9) behind `/admin`'s audit drawer and `/api/claims/{id}/audit`: the pipeline's five-field `AuditRecord` and events, the simulator's write history with retries, and review intervals on one timeline. It reads the replay's current pass (`replay.current_sim()`, per request): the run, writes and retries the operator watched, up to the demo clock. `audit_sim()` is the one place that picks the simulator; with no replay served it falls back to the shared one and runs the claim once.
 - `backend/pipeline/llm_signals.py` and `data/recorded/*.json`: the contained live LLM step (#4) and the recorded response for each demo claim. `pipeline/signals.py` is the hook the pipeline calls; `PROMPT_VERSION` there names the prompt and schema sent, with a content digest.
@@ -114,7 +115,7 @@ Why Python: Meridian's ML platform is Databricks with MLflow, which can trace La
 
 - **SLA:** 24 hours from receipt. Real claims use the "Received" timestamp in their `status_history.md`; synthetic claims use 09:00 on the filed date.
 - **Skills and tier** are assigned in pre-processing and stored as ClaimsPro custom fields.
-- **Roster is synthetic:** 95 adjusters. The extract pools them into 50 codes (`ADJ-101`–`ADJ-150`); the demo treats each code as one person and adds `ADJ-151`–`ADJ-195`. 79 work at T1–T2; 16 are T3 (12 seniors and 4 leads), all carrying Bodily Injury. The seed is 2025.
+- **Roster is synthetic:** 95 adjusters. The extract pools them into 50 codes (`ADJ-101`–`ADJ-150`); the demo treats each code as one person and adds `ADJ-151`–`ADJ-195`. 79 work at T1–T2; 16 are T3 (12 seniors and 4 leads), all carrying Bodily Injury. Five seniors leave T1 to the juniors: three work T2–T3 and two T3 only. Each adjuster's `current_load` is their open claims in the extract (the same claims the queues board shows), so the board's load badge always equals the cards in that queue and routing's lightest-load pick starts from the same count. The seed is 2025.
 - **Synthetic claims** (0375, 4518, 2043) carry `synthetic: true`. Their numbers are real extract rows; their stories are written for the demo.
 - **Review intervals are scripted** (`audit_view.REVIEWS`): nothing records reviews yet, so claim 4222 carries two non-contiguous intervals by its assigned senior and a lead's sign-off, timed from its assignment and shown as the demo clock reaches them; other claims show "Not reviewed yet". The pipeline events and writes are the replay's real ones.
 - **Claim 4222's medical summary** is hand-transcribed into `details.medical_summary`, because the PDF is a scan with no text layer.

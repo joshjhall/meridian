@@ -15,6 +15,18 @@ from models import EXCEPTION_LABELS, ExceptionReason, PipelineEvent, Stage
 # The lanes, left to right. The exceptions lane sits apart from the flow.
 LANES: list[Stage] = [s for s in Stage if s is not Stage.EXCEPTION]
 
+# Column headings: what is happening to the claims in a lane now. The stage values
+# stay past tense; they name events in the trace and the audit record.
+LANE_LABELS: dict[Stage, str] = {
+    Stage.RECEIVED: "Received",
+    Stage.VALIDATED: "Validating",
+    Stage.ENRICHED: "Enriching",
+    Stage.PRIORITIZED: "Prioritizing",
+    Stage.ASSIGNED: "Assigning",
+    Stage.WITH_ADJUSTER: "With adjuster",
+    Stage.EXCEPTION: "Requires manual review",
+}
+
 # The situation each fixture claim demonstrates, per panel_examples.md "Variety at a glance".
 STORIES: dict[str, str] = {
     "IS-CLM-2025000300": "Clean",
@@ -24,6 +36,10 @@ STORIES: dict[str, str] = {
     "IS-CLM-2025004518": "Disputed fault",
     "IS-CLM-2025002043": "Thin file",
 }
+
+# The demo claim opened to show several people handling one claim over separate
+# sessions; its card stays first in its lane (static/admin.js).
+LEAD_STORY = "IS-CLM-2025004222"
 
 # What the "routed to review" counter counts: the lanes a regulated claim must reach.
 REVIEW_LANES = {"regulatory_review", "senior_review"}

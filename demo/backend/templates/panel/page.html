@@ -5,8 +5,8 @@
 {% endblock title %}
 {% block head %}
   <link rel="stylesheet" href="/static/fonts/fonts.css" />
-  <link rel="stylesheet" href="/static/panel.css" />
-  <script src="/static/panel.js" defer></script>
+  <link rel="stylesheet" href="{{ asset('panel.css') }}" />
+  <script src="{{ asset('panel.js') }}" defer></script>
 {% endblock head %}
 {% block body_attrs %}
   class="panel-body" hx-headers='{"X-Meridian-Panel": "1"}'

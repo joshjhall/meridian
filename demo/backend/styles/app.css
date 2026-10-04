@@ -10,9 +10,119 @@
 @source not "../static/vendor";
 @source not "../tests";
 
+/* App bar over the admin pages (templates/admin/_nav.html): one thin strip
+   with the view tabs and the viewer toggle. Here, not in admin.css, because
+   every admin page loads app.css but only the monitor loads admin.css. */
+:root {
+  --appbar-h: 2.75rem;
+}
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: var(--appbar-h);
+  padding: 0 1rem;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  /* Same face on every page: the monitor sets its own body font (admin.css). */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.appbar__brand {
+  font-weight: 600;
+}
+
+.appbar__views {
+  display: flex;
+  align-self: stretch;
+  gap: 1.25rem;
+}
+
+/* Underline tabs: the current view is marked by a bar along the bottom edge. */
+.appbar__views a {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  color: var(--muted-foreground);
+}
+
+.appbar__views a:hover {
+  color: var(--foreground);
+}
+
+.appbar__views a[aria-current="page"] {
+  border-bottom-color: var(--foreground);
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.appbar__viewer {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+@media (max-width: 40rem) {
+  .appbar__brand {
+    display: none;
+  }
+}
+
+/* Queues board notice (static/queues.js): clears itself, a bar draining until it
+   does. The bar's animation is the timer; hovering the notice pauses both. */
+.notice {
+  position: relative;
+}
+
+.notice__close {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+}
+
+.notice__bar {
+  height: 3px;
+  margin-top: 0.25rem;
+  border-radius: 2px;
+  background: var(--destructive);
+  transform-origin: left;
+  animation-name: notice-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.notice:hover .notice__bar {
+  animation-play-state: paused;
+}
+
+/* Reduced motion: step down in tenths instead of a smooth drain. Never animation:
+   none here, or animationend never fires and the notice would never clear. */
+@media (prefers-reduced-motion: reduce) {
+  .notice__bar {
+    animation-timing-function: steps(10, end);
+  }
+}
+
+@keyframes notice-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 /* Learning-loop charts (#8). Roles, not raw hex, in learning.js; values from
-   the dataviz reference palette (series 1 blue, series 2 orange; rollback uses
-   status-critical with an icon + label, never color alone). */
+   the dataviz reference palette in its fixed categorical order (series 1 blue,
+   2 orange, 3 aqua; a validated prefix in both modes). Rollback uses
+   status-critical with an icon + label, never color alone. */
 .learning-chart,
 .learning-tooltip {
   --chart-ink: #52514e;
@@ -20,6 +130,7 @@
   --chart-grid: #e8e7e3;
   --series-1: #2a78d6;
   --series-2: #eb6834;
+  --series-3: #1baf7a;
   --flag: #0b0b0b;
   --rollback: #d03b3b;
 }
@@ -38,6 +149,7 @@
   --chart-grid: #2e2e2c;
   --series-1: #3987e5;
   --series-2: #d95926;
+  --series-3: #199e70;
   --flag: #ffffff;
   --rollback: #e66767;
 }
@@ -153,6 +265,9 @@
 .learning-chart .swatch-2 .legend-key {
   background: var(--series-2);
 }
+.learning-chart .swatch-3 .legend-key {
+  background: var(--series-3);
+}
 .learning-chart .legend-rollback {
   color: var(--rollback);
 }
@@ -169,4 +284,7 @@
 }
 .learning-tooltip .swatch-2::before {
   background: var(--series-2);
+}
+.learning-tooltip .swatch-3::before {
+  background: var(--series-3);
 }

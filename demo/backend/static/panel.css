@@ -393,6 +393,60 @@
   gap: 0.375rem;
 }
 
+/* Correct: an inline field on the card (panel.js opens it). */
+.item__correct {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.item__field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* A confirmed or corrected card: a done message, then gone. The bar along the
+   bottom edge is the timer (panel.js removes the card on animationend). */
+.item--resolved {
+  position: relative;
+  overflow: hidden;
+  border-left-color: var(--sign);
+}
+
+.item__done {
+  color: var(--sign);
+  font-weight: 600;
+}
+
+.item__bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--sign);
+  transform-origin: left;
+  animation: item-drain 5s linear forwards;
+}
+
+/* Reduced motion steps instead of draining; never animation: none, or
+   animationend never fires and the card would stay. */
+@media (prefers-reduced-motion: reduce) {
+  .item__bar {
+    animation-timing-function: steps(5, end);
+  }
+}
+
+@keyframes item-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 .logged {
   font-size: 0.8125rem;
   font-weight: 600;

@@ -1,11 +1,11 @@
 ---
 type: feedback
-title: Dual-axis charts are deliberate
-description: Demo learning-loop charts use dual y-axes on purpose, overriding the dataviz skill's no-dual-axis rule
+title: Learning-loop charts use one y-axis per plot
+description: The operator reversed the dual-axis choice for the #8 learning-loop charts; each series gets its own single-axis plot, paired in a box
 ---
 
-The operator chose dual y-axes for the issue #8 learning-loop charts (agreement % + avg hours; OCR accuracy + EDI drops), overriding the dataviz skill's "never dual-axis" rule.
+The issue #8 learning-loop charts (routing: agreement % + avg hours; intake: OCR accuracy + EDI drops) first used dual y-axes, at the operator's request. On 2026-10-03 the operator reversed this: they could read the dual axes, but lay people would be confused. Each chart is now a box with two stacked single-axis plots that share the week axis and the release flags.
 
-**Why:** The issue specifies it. The operator judged the skill's rule wrong for this case: the paired measures belong on one plot with the release flags.
+**Why:** the audience is lay stakeholders, and with two y-axes they have to work out which line belongs to which scale.
 
-**How to apply:** Don't re-raise the dual-axis question for these charts. Do caption that the scaling between the two axes is arbitrary. Label each axis with its own units and color-match each axis to its series.
+**How to apply:** don't bring dual y-axes back for these charts. The dataviz skill's "no dual axis" rule applies here as well. Keep the two measures of one chart in a shared box, on a shared x-axis and release flags.
