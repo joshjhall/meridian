@@ -47,7 +47,25 @@ from replay.api import router as replay_router
 HERE = Path(__file__).resolve().parent
 
 templates = Jinja2Templates(directory=HERE / "templates")
-templates.env.globals.update(format_left=queues.format_left, sentence=queues.sentence)
+
+
+def asset(path: str) -> str:
+    """URL for one of our own static files, versioned by its modification time.
+
+    StaticFiles sends no Cache-Control, so a browser may reuse a cached script
+    without revalidating; a changed file gets a new URL instead. Vendored
+    files keep plain URLs: their SRI pins are tested against them.
+    """
+    version = int((HERE / "static" / path).stat().st_mtime)
+    return f"/static/{path}?v={version}"
+
+
+templates.env.globals.update(
+    format_left=queues.format_left,
+    sentence=queues.sentence,
+    asset=asset,
+    lead_story=monitor.LEAD_STORY,
+)
 
 
 def render_card(view: monitor.ClaimView) -> str:
@@ -138,11 +156,19 @@ def admin(request: Request, view: Viewer = "admin"):
         {
             "viewer": view,
             "lanes": monitor.LANES,
+            "lane_labels": monitor.LANE_LABELS,
             "stories": monitor.STORIES,
             "pipeline_version": PIPELINE_VERSION,
             "events_url": "/api/events",
         },
     )
+
+
+# Learning-loop charts (#8) on their own page: the monitor's live card moves
+# repainted under the charts and made them hard to read.
+@app.get("/admin/learning", response_class=HTMLResponse)
+def admin_learning(request: Request, view: Viewer = "admin"):
+    return templates.TemplateResponse(request, "admin/learning.html", {"viewer": view})
 
 
 @app.get("/admin/claims/{claim_id}/trace", response_class=HTMLResponse)
@@ -402,12 +428,20 @@ def panel_log(
     Recorded in the correction log for the admin view; nothing is written to ClaimsPro.
     """
     get_claim_or_404(claim_id)
+    note = note.strip() if note else None
+    if action == "correct" and section == "needs-attention" and not note:
+        # A correction is only useful to the learning loop with the corrected value.
+        raise HTTPException(status_code=422, detail="a correction needs the corrected value")
     entry = panel.log_correction(
         CorrectionLogEntry(
             claim_id=claim_id, section=section, action=action, item=item, note=note, at=clock.now()
         )
     )
-    return templates.TemplateResponse(request, "panel/_logged.html", {"entry": entry})
+    # A confirmed or corrected attention item is resolved: the whole card is
+    # replaced with a done state, which panel.js removes after a few seconds.
+    done = section == "needs-attention" and action in ("confirm", "correct")
+    partial = "panel/_resolved.html" if done else "panel/_logged.html"
+    return templates.TemplateResponse(request, partial, {"entry": entry})
 
 
 @app.get("/api/corrections")

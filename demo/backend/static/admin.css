@@ -26,14 +26,15 @@
 .monitor {
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  min-height: 100dvh;
+  /* Fill the screen under the app bar (base.html). */
+  min-height: calc(100dvh - var(--appbar-h));
 }
 
 /* --- The sign --- */
 
 .sign {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   gap: 2rem;
   align-items: center;
   padding: 1.25rem 2rem;
@@ -114,23 +115,6 @@
   animation: tick 0.5s ease-out;
 }
 
-.sign__role {
-  display: flex;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border: 1px solid rgb(255 255 255 / 0.4);
-  border-radius: 0.5rem;
-}
-
-.sign__role a {
-  color: var(--sign-ink);
-}
-
-.sign__role a[aria-current="page"] {
-  background: var(--sign-ink);
-  color: var(--sign);
-}
-
 /* --- Admin console --- */
 
 .console {
@@ -159,8 +143,11 @@
   background: var(--marking);
 }
 
-.console .btn-sm-outline {
-  color: var(--marking);
+/* Same pair as the select: dark ink on a light chip. Basecoat's outline button
+   is light by default, so light text here made the buttons unreadable. */
+.console .btn[data-variant="outline"] {
+  background: var(--marking);
+  color: var(--asphalt);
 }
 
 /* --- The road --- */
@@ -297,7 +284,7 @@
   gap: 0.25rem;
 }
 
-.claim__skills .badge-outline {
+.claim__skills .badge {
   font-size: 0.6875rem;
 }
 
@@ -509,11 +496,6 @@
 }
 
 /* --- Motion --- */
-
-::view-transition-group(*) {
-  animation-duration: 0.45s;
-  animation-timing-function: cubic-bezier(0.3, 0.7, 0.2, 1);
-}
 
 @keyframes pulse {
   50% {

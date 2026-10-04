@@ -4,13 +4,22 @@
      data-write-status="{{ status }}"
      {% if status in ("pending", "retrying") %}hx-get="/admin/queues/claims/{{ claim_id | urlencode }}/write-status?key={{ key | urlencode }}" hx-trigger="load delay:500ms" hx-swap="outerHTML"{% endif %}>
   {% if status == "pending" %}
-    <span class="badge-secondary text-xs">Pending in ClaimsPro</span>
+    <span class="badge text-xs" data-variant="secondary">Pending in ClaimsPro</span>
   {% elif status == "retrying" %}
-    <span class="badge-secondary text-xs">Retrying ({{ progress.attempt }} of {{ max_attempts }} failed)</span>
+    <span class="badge text-xs"
+          data-variant="secondary">Retrying ({{ progress.attempt }} of {{ max_attempts }} failed)</span>
   {% elif status == "confirmed" %}
-    <span class="badge text-xs">Confirmed in ClaimsPro</span>
+    {# queues.js removes this after a few seconds: a settled move needs no badge. #}
+    <span class="badge text-xs" data-transient>Confirmed in ClaimsPro</span>
   {% else %}
-    <div class="alert-destructive text-xs" role="alert">
+    {# queues.js puts the card back with its owner, shows this for a few seconds,
+       and copies the full message into the board's notice. #}
+    <span class="badge text-xs" data-variant="destructive" data-transient>Error updating ClaimsPro</span>
+    <div class="alert text-xs"
+         data-variant="destructive"
+         role="alert"
+         data-failure
+         hidden>
       {% if progress.attempt %}
         <h4>Failed after {{ progress.attempt }} attempts. Engineering and client IT notified.</h4>
       {% else %}

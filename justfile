@@ -46,20 +46,23 @@ venv-link:
     ln -sfn "$target" "$link"
     echo "venv-link: $link -> $target"
 
-# API and pages on http://localhost:8000, rebuilding CSS as templates change
+# API and pages on http://localhost:8000, rebuilding CSS as templates change.
+# Binds 0.0.0.0 so the published devcontainer port reaches the host.
+# --timeout-graceful-shutdown: a reload waits for open connections to close, and
+# the monitor's SSE stream never does, so without a cap the server hung on reload.
 [working-directory('demo/backend')]
 dev: css
     #!/usr/bin/env bash
     set -euo pipefail
     trap 'kill 0' INT TERM EXIT
     {{ tailwind }} --watch=always &
-    uv run uvicorn app:app --reload --port 8000 &
+    uv run uvicorn app:app --reload --timeout-graceful-shutdown 2 --host 0.0.0.0 --port 8000 &
     wait
 
 # API and pages only, without the Tailwind watcher
 [working-directory('demo/backend')]
 serve: install
-    uv run uvicorn app:app --reload --port 8000
+    uv run uvicorn app:app --reload --timeout-graceful-shutdown 2 --host 0.0.0.0 --port 8000
 
 # Run the backend test suite; extra args go to pytest (e.g. `just test -k roster`)
 [working-directory('demo/backend')]

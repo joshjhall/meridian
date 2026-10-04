@@ -64,6 +64,27 @@ def test_roster_shape():
     assert sum(1 for a in roster if Tier.T3 not in a.tiers) == 79
 
 
+def test_some_seniors_specialise_and_leave_t1_to_juniors():
+    roster = load_roster()
+    no_t1 = [a for a in roster if Tier.T1 not in a.tiers]
+    assert all(a.role == "senior" for a in no_t1)
+    assert Counter(tuple(a.tiers) for a in no_t1) == {
+        (Tier.T2, Tier.T3): 3,
+        (Tier.T3,): 2,
+    }
+
+
+def test_roster_load_is_each_adjusters_open_claims():
+    # The queues board shows the same claims, so its load badge and the
+    # router's lightest-load pick start from one count.
+    from claimspro_sim.store import seed_claims
+
+    open_claims = Counter(c.adjuster_id for c in seed_claims())
+    assert {a.id: a.current_load for a in load_roster()} == {
+        a.id: open_claims[a.id] for a in load_roster()
+    }
+
+
 def test_roster_covers_all_extract_adjuster_ids():
     with (REPO / "reference" / "claims_processing.csv").open(newline="") as f:
         extract_ids = {r["adjuster_id"] for r in csv.DictReader(f)}
@@ -138,6 +159,7 @@ def test_cors_allows_only_extension_origins():
     [
         ("/", "Meridian demo"),
         ("/admin", "Claims pipeline"),
+        ("/admin/learning", "Learning loop"),
         ("/claimspro/IS-CLM-2025004222", "Bodily Injury"),
         ("/panel?claim=IS-CLM-2025004222", "IS-CLM-2025004222"),
     ],

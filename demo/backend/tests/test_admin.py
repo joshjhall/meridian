@@ -161,3 +161,22 @@ def test_card_escapes_feed_text():
 
 def test_trace_unknown_claim_is_404(replay):
     assert client.get("/admin/claims/IS-CLM-0000000000/trace").status_code == 404
+
+
+def test_lane_headings_say_what_is_happening_now():
+    html = client.get("/admin").text
+    for label in (
+        "Received",
+        "Validating",
+        "Enriching",
+        "Prioritizing",
+        "Assigning",
+        "With adjuster",
+        "Requires manual review",
+    ):
+        assert re.search(rf"<h2[^>]*>\s*{label} <span class=\"lane__count\"", html), label
+    assert "Waiting for a person" not in html
+
+
+def test_every_stage_has_a_lane_label():
+    assert set(monitor.LANE_LABELS) == set(Stage)

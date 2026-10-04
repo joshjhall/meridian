@@ -326,6 +326,49 @@ def test_this_is_wrong_goes_to_the_correction_log(client):
     assert [e["item"] for e in only] == ["Policy number"]
 
 
+ATTENTION = "/panel/IS-CLM-2025002993/log?section=needs-attention&item=Policy+number"
+
+
+def test_confirming_an_attention_item_resolves_the_card(client):
+    res = client.post(f"{ATTENTION}&action=confirm")
+    assert res.status_code == 200
+    assert "data-resolved" in res.text and 'class="item__bar"' in res.text
+    assert "Confirmed policy number" in res.text
+    assert [e["action"] for e in client.get("/api/corrections").json()] == ["confirm"]
+
+
+def test_correcting_an_attention_item_logs_the_new_value(client):
+    res = client.post(f"{ATTENTION}&action=correct&note=++CA-88123-18++")
+    assert res.status_code == 200
+    assert "Updated policy number to <strong>CA-88123-18</strong>" in res.text
+    [entry] = client.get("/api/corrections").json()
+    assert (entry["action"], entry["item"], entry["note"]) == (
+        "correct",
+        "Policy number",
+        "CA-88123-18",
+    )
+
+
+@pytest.mark.parametrize("note", ["", "+++"])
+def test_a_correction_without_a_value_is_refused(client, note):
+    assert client.post(f"{ATTENTION}&action=correct&note={note}").status_code == 422
+    assert panel.corrections() == []
+
+
+def test_attention_cards_offer_an_inline_correct_form(client):
+    html = client.get("/panel?claim=IS-CLM-2025002993").text
+    assert "data-open-correct" in html and "data-save-correct" in html
+    assert "data-cancel-correct" in html and "data-correct-input" in html
+    # The suggestion prefills the field, so a small fix is a small edit.
+    inputs = re.findall(r"<input[^>]*data-correct-input[^>]*>", html)
+    assert any('value="CA-CA-88123-18"' in i for i in inputs)
+
+
+def test_other_log_buttons_keep_the_short_confirmation(client):
+    res = client.post("/panel/IS-CLM-2025000300/log?section=panel&action=flag")
+    assert "data-resolved" not in res.text
+
+
 @pytest.mark.parametrize(
     "query",
     [

@@ -7,6 +7,8 @@ import re
 from datetime import timedelta
 from pathlib import Path
 
+import audit_view
+import monitor
 import pytest
 from fastapi.testclient import TestClient
 
@@ -80,6 +82,31 @@ def test_arrivals_follow_filed_date_order():
     for a in extract:
         if not a.dropped:
             assert a.claim.received_at == a.at  # type: ignore[union-attr]
+
+
+def test_lead_story_arrives_first_with_a_full_multi_person_record():
+    # It opens the demo: on the board from the first seconds, its audit record
+    # complete (two sessions by the assignee, a lead's sign-off) soon after.
+    fixtures = [a for a in itertools.islice(arrivals(), 400) if a.claim_id in FIXTURES]
+    assert fixtures[0].claim_id == monitor.LEAD_STORY
+    sim = schedule.PassSim()
+    for _ in itertools.islice(events(sim=sim), 200):
+        pass
+    audit = audit_view.claim_audit(sim, monitor.LEAD_STORY, now=DEMO_START + timedelta(hours=7))
+    reviews = [t for t in audit.timeline if t.kind == "review"]
+    assert all(t.end is not None for t in reviews)
+    actors = [t.actor for t in reviews]
+    assert len(actors) == 3 and actors[0] == actors[1] != actors[2]
+    first_end = reviews[0].end
+    assert first_end is not None and first_end < reviews[1].start  # two separate sessions
+    assert any(t.label == "Closed" for t in audit.timeline)
+
+
+def test_only_the_lead_story_card_is_marked_lead():
+    lead = monitor.ClaimView(monitor.LEAD_STORY, Stage.WITH_ADJUSTER, True, "Hard judgment")
+    other = monitor.ClaimView("IS-CLM-2025000300", Stage.WITH_ADJUSTER, True, "Clean")
+    assert "data-lead" in render_card(lead)
+    assert "data-lead" not in render_card(other)
 
 
 def test_fixtures_arrive_within_the_first_minute_at_default_speed(first_events):

@@ -7,17 +7,14 @@ validates it here first, so a blocked move never reaches ClaimsPro.
 import threading
 import uuid
 import weakref
-from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from functools import cache
 from typing import Any
 
 from claimspro_sim import ClaimsProSim, reliable_write
 from claimspro_sim.faults import SoapOperation
 from claimspro_sim.reliable import SIM_VERSION
-from claimspro_sim.store import seed_claims
 from fixtures import load_claim_fixtures, load_roster
 from models import TIER_LABELS, Adjuster, Claim, PipelineEvent, SlaState, Stage, Tier
 from pipeline.assign import SENIOR_ROLES
@@ -202,17 +199,6 @@ class TierGroup:
     queues: list[Queue]
 
 
-@cache
-def _seeded_counts() -> Counter[str]:
-    return Counter(c.adjuster_id for c in seed_claims())
-
-
-def load_for(adjuster: Adjuster, open_here: int) -> int:
-    # The roster's load covers all of an adjuster's work; the simulator holds a
-    # sample of it, so moves shift the roster figure by the net change here.
-    return max(0, adjuster.current_load + open_here - _seeded_counts()[adjuster.id])
-
-
 def queue_claim(claim: Claim, now: datetime) -> QueueClaim:
     regulation = regulatory_check(claim)
     return QueueClaim(
@@ -236,7 +222,9 @@ def board(sim: ClaimsProSim, now: datetime) -> list[TierGroup]:
     for adjuster in sorted(load_roster(), key=lambda a: a.id):
         claims = sorted(by_adjuster.get(adjuster.id, []), key=lambda q: q.left)
         groups[top_tier(adjuster)].queues.append(
-            Queue(adjuster, load_for(adjuster, len(claims)), claims)
+            # Load is the open claims in this queue: the badge always matches the
+            # cards, and the roster's current_load is this same count at seed time.
+            Queue(adjuster, len(claims), claims)
         )
     return [g for g in groups.values() if g.queues]
 

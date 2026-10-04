@@ -1,0 +1,13 @@
+{# Swapped in for a "Needs attention" card once it is confirmed or corrected.
+   panel.js removes it when the bar has drained (its animation is the timer). #}
+<li class="item item--resolved" data-resolved>
+  <p class="item__done" role="status">
+    {%- if entry.action == "correct" -%}
+      Updated {{ entry.item | lower }} to <strong>{{ entry.note }}</strong>
+    {%- else -%}
+      Confirmed {{ entry.item | lower }}
+    {%- endif %}
+  </p>
+  <p class="item__kind">Saved to the correction log at {{ entry.at.strftime("%H:%M") }}</p>
+  <div class="item__bar" aria-hidden="true"></div>
+</li>

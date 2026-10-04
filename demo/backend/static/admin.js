@@ -1,7 +1,8 @@
 // Admin pipeline monitor (#6): moves claim cards between lanes as SSE frames
 // arrive from the replay runner (#5). The server renders each card; this file
-// only places it, animating the move with a View Transition where the browser
-// supports one. Speed and pause belong to the server's replay, shared by every
+// only places it, sliding the card from its old spot (FLIP, Web Animations).
+// Not View Transitions: the replay moves cards many times a second, and a page
+// mid-transition is a snapshot that swallows clicks, so the controls went dead. Speed and pause belong to the server's replay, shared by every
 // viewer, so the controls post to it and the page follows its `control` frames.
 
 (() => {
@@ -20,11 +21,15 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let source = null;
-  // Bumped on every clear, so a move queued behind a View Transition from
-  // before a reset can't put a stale card back on the board.
-  let generation = 0;
 
   const lane = (stage) => road.querySelector(`[data-lane="${stage}"] [data-cards]`);
+
+  // Lanes in pipeline order; exception is last, a claim can stop there from any stage.
+  const ORDER = [...road.querySelectorAll("[data-lane]")].map((s) => s.dataset.lane);
+  // A card never steps back: a frame older than the card's stage is stale (a
+  // held frame released late, or one delivered out of order) and is dropped.
+  // Without this, cards stuck in an earlier lane, usually "prioritizing".
+  const stale = (old, stage) => old && ORDER.indexOf(stage) < ORDER.indexOf(old.dataset.stage);
 
   const setLive = (state, text) => {
     live.dataset.state = state;
@@ -45,39 +50,80 @@
     }
   };
 
-  const place = ({ claim_id, stage, html }) => {
+  // Frames for a lane under the pointer wait here, newest per claim, and apply
+  // when the pointer leaves. Cards shuffling under the cursor made it flicker
+  // between hand and arrow and moved click targets mid-click.
+  const held = new Map();
+  let hovered = null;
+
+  const place = (data) => {
+    const { claim_id, stage, html } = data;
+    const target = lane(stage);
+    const old = document.getElementById(`card-${claim_id}`);
+    if (stale(old, stage)) return;
+    const fromLane = old?.closest("[data-lane]");
+    if (hovered && (target?.closest("[data-lane]") === hovered || fromLane === hovered)) {
+      held.set(claim_id, data);
+      return;
+    }
     // html is our own server-rendered (autoescaped) card, like any htmx swap.
     const template = document.createElement("template");
     template.innerHTML = html.trim();
     const card = template.content.firstElementChild;
-    const target = lane(stage);
     // An unknown stage leaves the card where it was rather than dropping it.
     if (!card || !target) return;
-    // Same name before and after the move, so the browser animates it across lanes.
-    card.style.viewTransitionName = `claim-${claim_id}`;
-    document.getElementById(`card-${claim_id}`)?.remove();
-    // Demo claims stay at the top of a lane so they're easy to follow.
-    if (card.classList.contains("claim--pinned")) target.prepend(card);
-    else target.append(card);
+    // Same lane: swap the card where it stands, so nothing below it reflows.
+    if (old && old.parentElement === target) {
+      old.replaceWith(card);
+      window.htmx?.process(card);
+      return;
+    }
+    const from = old?.getBoundingClientRect();
+    old?.remove();
+    // Demo claims stay at the top of a lane so they're easy to follow; the lead
+    // demo claim (data-lead) stays above them, so it is always the first card.
+    const lead = target.querySelector("[data-lead]");
+    if (card.dataset.lead !== undefined) target.prepend(card);
+    else if (card.classList.contains("claim--pinned")) {
+      if (lead) lead.after(card);
+      else target.prepend(card);
+    } else target.append(card);
     window.htmx?.process(card);
     recount();
+    if (!from || reduceMotion.matches || document.hidden) return;
+    const to = card.getBoundingClientRect();
+    const dx = from.left - to.left;
+    const dy = from.top - to.top;
+    if (!dx && !dy) return;
+    card.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
+      duration: 450,
+      easing: "cubic-bezier(0.3, 0.7, 0.2, 1)",
+    });
   };
 
-  const move = (data) => {
-    const queuedIn = generation;
-    if (document.startViewTransition && !reduceMotion.matches && !document.hidden) {
-      document.startViewTransition(() => {
-        if (queuedIn === generation) place(data);
-      });
-    } else {
-      place(data);
+  const unplace = (data) => {
+    const old = document.getElementById(`card-${data.claim_id}`);
+    if (hovered && old?.closest("[data-lane]") === hovered) {
+      held.set(data.claim_id, { ...data, removed: true });
+      return;
     }
-  };
-
-  const unplace = ({ claim_id }) => {
-    document.getElementById(`card-${claim_id}`)?.remove();
+    old?.remove();
     recount();
   };
+
+  const release = () => {
+    hovered = null;
+    const pending = [...held.values()];
+    held.clear();
+    for (const data of pending) (data.removed ? unplace : place)(data);
+  };
+
+  for (const section of road.querySelectorAll("[data-lane]")) {
+    section.addEventListener("pointerenter", () => {
+      hovered = section;
+    });
+    section.addEventListener("pointerleave", release);
+  }
 
   const counters = ({ counters: c }) => {
     tick(routed, c.routed);
@@ -87,7 +133,13 @@
   const control = (status) => {
     simNow.textContent = status.sim_now.replace("T", " ").slice(0, 16);
     simNow.dateTime = status.sim_now;
-    if (speed) speed.value = String(status.speed);
+    if (speed) {
+      // Show the nearest named speed, so a value set elsewhere never blanks the select.
+      const nearest = [...speed.options].reduce((a, b) =>
+        Math.abs(b.value - status.speed) < Math.abs(a.value - status.speed) ? b : a,
+      );
+      speed.value = nearest.value;
+    }
     if (pause) pause.textContent = status.paused ? "Resume feed" : "Pause feed";
     if (status.paused) setLive("paused", "Paused");
     else if (source?.readyState === EventSource.OPEN) setLive("live", "Live");
@@ -102,7 +154,7 @@
     });
 
   const clear = () => {
-    generation += 1;
+    held.clear();
     for (const cards of road.querySelectorAll("[data-cards]")) cards.replaceChildren();
     recount();
     tick(routed, 0);
@@ -121,7 +173,7 @@
     };
     source.addEventListener("claim", (e) => {
       const data = JSON.parse(e.data);
-      move(data);
+      place(data);
       counters(data);
     });
     source.addEventListener("remove", (e) => {
