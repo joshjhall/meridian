@@ -24,6 +24,13 @@
 
   const lane = (stage) => road.querySelector(`[data-lane="${stage}"] [data-cards]`);
 
+  // Lanes in pipeline order; exception is last, a claim can stop there from any stage.
+  const ORDER = [...road.querySelectorAll("[data-lane]")].map((s) => s.dataset.lane);
+  // A card never steps back: a frame older than the card's stage is stale (a
+  // held frame released late, or one delivered out of order) and is dropped.
+  // Without this, cards stuck in an earlier lane, usually "prioritizing".
+  const stale = (old, stage) => old && ORDER.indexOf(stage) < ORDER.indexOf(old.dataset.stage);
+
   const setLive = (state, text) => {
     live.dataset.state = state;
     live.textContent = text;
@@ -53,6 +60,7 @@
     const { claim_id, stage, html } = data;
     const target = lane(stage);
     const old = document.getElementById(`card-${claim_id}`);
+    if (stale(old, stage)) return;
     const fromLane = old?.closest("[data-lane]");
     if (hovered && (target?.closest("[data-lane]") === hovered || fromLane === hovered)) {
       held.set(claim_id, data);
@@ -120,7 +128,13 @@
   const control = (status) => {
     simNow.textContent = status.sim_now.replace("T", " ").slice(0, 16);
     simNow.dateTime = status.sim_now;
-    if (speed) speed.value = String(status.speed);
+    if (speed) {
+      // Show the nearest named speed, so a value set elsewhere never blanks the select.
+      const nearest = [...speed.options].reduce((a, b) =>
+        Math.abs(b.value - status.speed) < Math.abs(a.value - status.speed) ? b : a,
+      );
+      speed.value = nearest.value;
+    }
     if (pause) pause.textContent = status.paused ? "Resume feed" : "Pause feed";
     if (status.paused) setLive("paused", "Paused");
     else if (source?.readyState === EventSource.OPEN) setLive("live", "Live");
