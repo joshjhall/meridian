@@ -55,7 +55,9 @@ dev: css
     #!/usr/bin/env bash
     set -euo pipefail
     trap 'kill 0' INT TERM EXIT
-    {{ tailwind }} --watch=always &
+    # --minify like `just css`, so the watcher writes the committed build byte for
+    # byte and git status stays clean while the demo runs.
+    {{ tailwind }} --minify --watch=always &
     uv run uvicorn app:app --reload --timeout-graceful-shutdown 2 --host 0.0.0.0 --port 8000 &
     wait
 
