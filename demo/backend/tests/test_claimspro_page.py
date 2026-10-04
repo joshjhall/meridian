@@ -92,7 +92,7 @@ def test_custom_fields_read_not_yet_saved_while_a_write_is_pending(client, sim):
     sim.store.set_write_status(claim_id, "pending")
     html = client.get(f"/claimspro/{claim_id}").text
     fields = custom_fields_block(html)
-    assert fields.count(NOT_SAVED) == 5  # every written field; SLA due is derived
+    assert fields.count(NOT_SAVED) == 6  # every written field; SLA due is derived
     assert "T1 standard" not in fields
 
 
@@ -106,6 +106,7 @@ def test_custom_fields_for_a_never_written_claim():
         "Routing reason",
         "SLA due",
         "Brief status",
+        "Intake",
         "Last save",
     ]
     assert dict(rows)["Last save"] == EMPTY

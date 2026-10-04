@@ -21,9 +21,9 @@
       {{ header(s, sla_label, sla_used, tier_labels) }}
       {% if s.leads_with_attention %}
         {{ needs_attention(s) }}
-        {{ what_matters(s) }}
+        {{ what_matters(s, intake_complete) }}
       {% else %}
-        {{ what_matters(s) }}
+        {{ what_matters(s, intake_complete) }}
         {{ needs_attention(s) }}
       {% endif %}
       {% if signals %}

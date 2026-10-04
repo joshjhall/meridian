@@ -23,7 +23,9 @@ PAYLOAD_KEYS: dict[str, frozenset[str]] = {
     "TransferWorkItem": frozenset({"to_adjuster_id"}),
     "AddNote": frozenset({"text", "author"}),
 }
-CUSTOM_FIELDS = frozenset({"skills", "tier", "routing_reason", "review_lane", "brief_status"})
+CUSTOM_FIELDS = frozenset(
+    {"skills", "tier", "routing_reason", "review_lane", "brief_status", "intake_status"}
+)
 
 
 def intent(op: SoapOperation, claim_id: str, payload: dict[str, Any]) -> str:
