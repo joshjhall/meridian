@@ -41,10 +41,12 @@
       <label>
         Replay speed
         <select id="speed" class="select">
-          <option value="0.5">½ hour/s</option>
-          <option value="1" selected>1 hour/s</option>
-          <option value="2">2 hours/s</option>
-          <option value="4">4 hours/s</option>
+          {# Relative names, not hours per second: how long a real claim takes depends
+             on how many model calls it makes, so the replay claims no real-time ratio. #}
+          <option value="0.5">Slow</option>
+          <option value="1" selected>Regular</option>
+          <option value="4">Fast</option>
+          <option value="12">Ludicrous</option>
         </select>
       </label>
       <button type="button"
@@ -65,7 +67,7 @@
                data-lane="{{ stage }}"
                aria-labelledby="lane-{{ stage }}">
         <h2 id="lane-{{ stage }}">
-          {{ stage.replace('_', ' ') | capitalize }} <span class="lane__count" data-count>0</span>
+          {{ lane_labels[stage] }} <span class="lane__count" data-count>0</span>
         </h2>
         <div class="lane__cards" data-cards></div>
       </section>
@@ -74,7 +76,7 @@
              data-lane="exception"
              aria-labelledby="lane-exception">
       <h2 id="lane-exception">
-        Waiting for a person <span class="lane__count" data-count>0</span>
+        {{ lane_labels["exception"] }} <span class="lane__count" data-count>0</span>
       </h2>
       <p class="lane__note">Anything that fails safe stops here instead of entering ClaimsPro.</p>
       <div class="lane__cards" data-cards></div>

@@ -151,6 +151,7 @@ def admin(request: Request, view: Viewer = "admin"):
         {
             "viewer": view,
             "lanes": monitor.LANES,
+            "lane_labels": monitor.LANE_LABELS,
             "stories": monitor.STORIES,
             "pipeline_version": PIPELINE_VERSION,
             "events_url": "/api/events",
