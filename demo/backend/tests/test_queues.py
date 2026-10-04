@@ -161,6 +161,8 @@ def test_transfer_confirms_and_moves_the_claim(client: TestClient, sim: ClaimsPr
     assert res.status_code == 200
     assert 'data-write-status="confirmed"' in res.text
     assert "Confirmed in ClaimsPro" in res.text
+    # queues.js clears a settled badge after a few seconds; data-transient marks it.
+    assert re.search(r"<span[^>]*data-transient[^>]*>Confirmed in ClaimsPro", res.text)
     assert owner(sim, SIMPLE) == to
     statuses = [e.payload["write_status"] for e in sim.events(SIMPLE)]
     assert statuses == ["pending", "confirmed"]
@@ -195,6 +197,13 @@ def test_fault_toggle_shows_retries_then_failure_with_alert(client: TestClient, 
     res = transfer(client, SIMPLE, adjuster(Tier.T1, skip=src))
     assert 'data-write-status="failed"' in res.text
     assert "Failed after 3 attempts. Engineering and client IT notified." in res.text
+    # A brief badge on the returned card; the full alert is copied to the notice.
+    assert re.search(
+        r'<span[^>]*data-variant="destructive"[^>]*data-transient[^>]*>Error updating ClaimsPro',
+        res.text,
+    )
+    assert re.search(r'<div[^>]*class="alert[^"]*"[^>]*data-variant="destructive"', res.text)
+    assert "data-failure" in res.text
     assert owner(sim, SIMPLE) == src
     statuses = [e.payload["write_status"] for e in sim.events(SIMPLE)]
     assert statuses == ["pending", "retrying", "retrying", "failed"]

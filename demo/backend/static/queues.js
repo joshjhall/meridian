@@ -33,7 +33,8 @@
 
   const blocked = (reason) => {
     const alert = document.createElement("div");
-    alert.className = "alert-destructive";
+    alert.className = "alert";
+    alert.dataset.variant = "destructive";
     alert.setAttribute("role", "alert");
     const title = document.createElement("h4");
     title.textContent = "Move blocked";
@@ -118,15 +119,36 @@
     window.htmx.process(status);
   });
 
+  // How long a settled write's badge stays on the card before it goes.
+  const BADGE_MS = 4000;
+
+  const fadeOut = (chip) => {
+    setTimeout(() => {
+      // A later move may have replaced the chip; only clear the one we timed.
+      if (chip.isConnected) chip.replaceChildren();
+    }, BADGE_MS);
+  };
+
   // When a write settles: unlock the claim, and put a failed move back where
   // ClaimsPro still has it. The chip swaps itself out, so scan the moves in flight.
   document.addEventListener("htmx:afterSettle", () => {
     for (const claim of document.querySelectorAll("[data-in-flight]")) {
-      const state = claim.querySelector("[data-write-status]")?.dataset.writeStatus;
+      const chip = claim.querySelector("[data-write-status]");
+      const state = chip?.dataset.writeStatus;
       if (state !== "confirmed" && state !== "failed") continue;
       delete claim.dataset.inFlight;
-      const origin = document.querySelector(`[data-queue="${claim.dataset.from}"]`);
-      if (state === "failed" && origin) move(claim, origin);
+      if (state === "failed") {
+        const origin = document.querySelector(`[data-queue="${claim.dataset.from}"]`);
+        if (origin) move(claim, origin);
+        // The badge on the card is brief; the full message stays in the notice.
+        const failure = chip.querySelector("[data-failure]");
+        if (failure) {
+          const copy = failure.cloneNode(true);
+          copy.hidden = false;
+          notice.replaceChildren(copy);
+        }
+      }
+      fadeOut(chip);
     }
   });
 
