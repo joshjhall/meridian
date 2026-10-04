@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% from "admin/_nav.html" import admin_nav %}
+{% from "admin/_nav.html" import app_bar %}
 {% block title %}Pipeline monitor{% endblock %}
 {% block head %}
   <link rel="stylesheet" href="/static/fonts/fonts.css" />
-  <link rel="stylesheet" href="/static/admin.css" />
-  <script src="/static/admin.js" defer></script>
+  <link rel="stylesheet" href="{{ asset('admin.css') }}" />
+  <script src="{{ asset('admin.js') }}" defer></script>
 {% endblock %}
 {% block body_attrs %}class="monitor-body" data-viewer="{{ viewer }}"{% endblock %}
+{% block appbar %}{{ app_bar("/admin", viewer) }}{% endblock %}
 {% block main_class %}monitor{% endblock %}
 {% block content %}
   <header class="sign">
@@ -31,19 +32,6 @@
         </dd>
       </div>
     </dl>
-    {{ admin_nav("/admin", viewer, "sign__role") }}
-    <nav class="sign__role" aria-label="View as">
-      <a class="btn"
-         data-size="sm"
-         data-variant="{{ 'primary' if viewer == 'admin' else 'ghost' }}"
-         href="?view=admin"
-         {% if viewer == 'admin' %}aria-current="page"{% endif %}>Tribe admin</a>
-      <a class="btn"
-         data-size="sm"
-         data-variant="{{ 'primary' if viewer == 'manager' else 'ghost' }}"
-         href="?view=manager"
-         {% if viewer == 'manager' %}aria-current="page"{% endif %}>Manager</a>
-    </nav>
   </header>
   {# Admin-only controls are left out of the page for managers, not hidden:
      this is where access control sits in the real build. #}

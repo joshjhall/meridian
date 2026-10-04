@@ -10,6 +10,71 @@
 @source not "../static/vendor";
 @source not "../tests";
 
+/* App bar over the admin pages (templates/admin/_nav.html): one thin strip
+   with the view tabs and the viewer toggle. Here, not in admin.css, because
+   every admin page loads app.css but only the monitor loads admin.css. */
+:root {
+  --appbar-h: 2.75rem;
+}
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: var(--appbar-h);
+  padding: 0 1rem;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  /* Same face on every page: the monitor sets its own body font (admin.css). */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.appbar__brand {
+  font-weight: 600;
+}
+
+.appbar__views {
+  display: flex;
+  align-self: stretch;
+  gap: 1.25rem;
+}
+
+/* Underline tabs: the current view is marked by a bar along the bottom edge. */
+.appbar__views a {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  color: var(--muted-foreground);
+}
+
+.appbar__views a:hover {
+  color: var(--foreground);
+}
+
+.appbar__views a[aria-current="page"] {
+  border-bottom-color: var(--foreground);
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.appbar__viewer {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+@media (max-width: 40rem) {
+  .appbar__brand {
+    display: none;
+  }
+}
+
 /* Learning-loop charts (#8). Roles, not raw hex, in learning.js; values from
    the dataviz reference palette (series 1 blue, series 2 orange; rollback uses
    status-critical with an icon + label, never color alone). */

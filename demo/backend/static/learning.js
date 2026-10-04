@@ -1,13 +1,11 @@
-// Learning-loop charts (#8): two dual-axis charts sharing a week axis and
-// release flags, drawn with D3 from GET /api/history.
-//
-// Dual y-axes are a deliberate choice for this view. Each axis is labeled with
-// its own unit and colored to match its series, and the caption says the
-// scaling between the two axes is arbitrary.
+// Learning-loop charts (#8), drawn with D3 from GET /api/history. Each chart
+// box holds its two series as stacked single-axis panels on a shared week
+// axis, with the release flags on both: one y-axis per plot, so lay readers
+// never have to match a line to the right axis.
 
 const W = 720;
-const H = 320;
-const M = { top: 44, right: 64, bottom: 36, left: 56 };
+const H = 220;
+const M = { top: 30, right: 24, bottom: 32, left: 56 };
 const FLAG_Y = 14;
 
 const tooltip = () => document.getElementById("learning-tooltip");
@@ -53,29 +51,19 @@ function yScale(series) {
     .range([H - M.bottom, M.top]);
 }
 
-function drawAxisY(svg, scale, series, side, colorVar) {
-  const isLeft = side === "left";
-  const axis = (isLeft ? d3.axisLeft : d3.axisRight)(scale)
-    .ticks(5)
-    .tickFormat((v) => `${v}${series.unit}`);
-  const g = svg
-    .append("g")
-    .attr("class", `axis axis-${side}`)
-    .attr("transform", `translate(${isLeft ? M.left : W - M.right},0)`)
-    .call(axis);
-  // Inline style, not the fill attribute, so the color-match beats the ink rule in app.css.
-  g.selectAll("text").style("fill", `var(${colorVar})`);
-  g.select(".domain").style("stroke", `var(${colorVar})`);
-  // Title runs along its axis, outside the tick labels and clear of the flag row.
-  const tx = isLeft ? M.left - 44 : W - M.right + 52;
-  const ty = (M.top + H - M.bottom) / 2;
+function drawAxisY(svg, scale, series) {
   svg
-    .append("text")
-    .attr("class", "axis-title")
-    .style("fill", `var(${colorVar})`)
-    .attr("text-anchor", "middle")
-    .attr("transform", `translate(${tx},${ty}) rotate(${isLeft ? -90 : 90})`)
-    .text(`${series.label} (${series.unit})`);
+    .append("g")
+    .attr("class", "axis axis-left")
+    .attr("transform", `translate(${M.left},0)`)
+    .call(
+      d3
+        .axisLeft(scale)
+        .ticks(4)
+        .tickFormat((v) => `${v}${series.unit}`),
+    )
+    .select(".domain")
+    .remove();
 }
 
 function drawTarget(svg, x, scale, series, colorVar) {
@@ -147,9 +135,10 @@ function drawStartLabel(svg, x, scale, series) {
     .text(`Start ${fmt(first.value, series.unit)}`);
 }
 
-// Every release is flagged on both charts (shared flags); a release aimed at
-// the other chart is drawn muted so the reader sees what changed where.
-function drawFlags(svg, x, releases, chartId) {
+// Every release is flagged on every panel (shared flags); a release aimed at
+// the other chart is drawn muted so the reader sees what changed where. Only
+// the top panel of a box shows the glyphs; the one below repeats the rules.
+function drawFlags(svg, x, releases, chartId, glyphs) {
   const g = svg.append("g").attr("class", "flags");
   for (const r of releases) {
     const isRollback = r.kind === "rollback";
@@ -163,14 +152,16 @@ function drawFlags(svg, x, releases, chartId) {
     flag
       .append("line")
       .attr("class", "flag-rule")
-      .attr("y1", FLAG_Y)
+      .attr("y1", glyphs ? FLAG_Y : M.top)
       .attr("y2", H - M.bottom);
-    flag
-      .append("text")
-      .attr("class", "flag-glyph")
-      .attr("y", FLAG_Y)
-      .attr("text-anchor", "middle")
-      .text(isRollback ? "↺" : "▼");
+    if (glyphs) {
+      flag
+        .append("text")
+        .attr("class", "flag-glyph")
+        .attr("y", FLAG_Y)
+        .attr("text-anchor", "middle")
+        .text(isRollback ? "↺" : "▼");
+    }
     // Generous hit target: the whole rule, not just the glyph.
     flag
       .append("rect")
@@ -243,9 +234,7 @@ function drawLegend(figure, chart) {
   ].map(([s, cls, mark]) => {
     const item = el("span", undefined, `legend-item ${cls} legend-${mark}`);
     item.append(el("span", undefined, "legend-key"));
-    item.append(
-      el("span", `${s.label} (${s.unit}, ${s === chart.primary ? "left" : "right"} axis)`),
-    );
+    item.append(el("span", `${s.label} (${s.unit})`));
     return item;
   });
   const flagKey = el("span", "▼ release", "legend-item legend-flag");
@@ -276,22 +265,19 @@ function drawTable(figure, chart) {
   figure.querySelector("section").append(details);
 }
 
-function drawChart(figure, chart, releases, weeks) {
-  figure.querySelector("[data-role=title]").textContent = chart.title;
-  figure.querySelector("[data-role=subtitle]").textContent = chart.subtitle;
-  const svg = d3.select(figure.querySelector("[data-role=plot]"));
-  svg.attr(
-    "aria-label",
-    `${chart.title}: ${chart.primary.label} and ${chart.secondary.label} by week`,
-  );
+// One single-axis panel: one series, its target, flags and the shared crosshair.
+function drawPanel(panel, chart, series, colorVar, releases, weeks, glyphs) {
+  panel.querySelector("[data-role=series-title]").textContent = `${series.label} (${series.unit})`;
+  panel.querySelector("[data-role=series-title]").style.color = `var(${colorVar})`;
+  const svg = d3.select(panel.querySelector("[data-role=plot]"));
+  svg.attr("aria-label", `${chart.title}: ${series.label} by week`);
 
   const x = d3
     .scaleLinear()
     .domain(weeks)
     .range([M.left + 12, W - M.right - 12]);
   const band = (x.range()[1] - x.range()[0]) / (weeks[1] - weeks[0]);
-  const yL = yScale(chart.primary);
-  const yR = yScale(chart.secondary);
+  const y = yScale(series);
 
   svg
     .append("g")
@@ -299,8 +285,8 @@ function drawChart(figure, chart, releases, weeks) {
     .attr("transform", `translate(${M.left},0)`)
     .call(
       d3
-        .axisLeft(yL)
-        .ticks(5)
+        .axisLeft(y)
+        .ticks(4)
         .tickSize(-(W - M.left - M.right))
         .tickFormat(""),
     );
@@ -314,21 +300,26 @@ function drawChart(figure, chart, releases, weeks) {
         .ticks(weeks[1] / 4)
         .tickFormat((w) => `Wk ${w}`),
     );
-  drawAxisY(svg, yL, chart.primary, "left", "--series-1");
-  drawAxisY(svg, yR, chart.secondary, "right", "--series-2");
-
-  // Draw order: bars behind, lines on top, flags above everything.
-  const ordered = [
-    [chart.secondary, yR, "--series-2"],
-    [chart.primary, yL, "--series-1"],
-  ].sort(([a], [b]) => (a.mark === "bar" ? -1 : b.mark === "bar" ? 1 : 0));
-  for (const [series, scale, color] of ordered) {
-    drawTarget(svg, x, scale, series, color);
-    drawSeries(svg, x, scale, series, color, band);
-    drawStartLabel(svg, x, scale, series);
-  }
+  drawAxisY(svg, y, series);
+  drawTarget(svg, x, y, series, colorVar);
+  drawSeries(svg, x, y, series, colorVar, band);
+  drawStartLabel(svg, x, y, series);
   drawCrosshair(svg, x, chart);
-  drawFlags(svg, x, releases, chart.id);
+  // Flags above everything so their hover wins over the crosshair.
+  drawFlags(svg, x, releases, chart.id, glyphs);
+}
+
+function drawChart(figure, chart, releases, weeks) {
+  figure.querySelector("[data-role=title]").textContent = chart.title;
+  figure.querySelector("[data-role=subtitle]").textContent = chart.subtitle;
+  const panels = [
+    ["primary", chart.primary, "--series-1"],
+    ["secondary", chart.secondary, "--series-2"],
+  ];
+  panels.forEach(([key, series, colorVar], i) => {
+    const panel = figure.querySelector(`[data-series="${key}"]`);
+    if (panel) drawPanel(panel, chart, series, colorVar, releases, weeks, i === 0);
+  });
   drawLegend(figure, chart);
   drawTable(figure, chart);
 }

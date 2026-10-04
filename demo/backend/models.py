@@ -517,7 +517,7 @@ class HistorySeries(BaseModel):
 
 
 class HistoryChart(BaseModel):
-    """One chart with two series on independent y-axes (left: primary)."""
+    """One chart box: two series, each drawn on its own single-axis plot (primary on top)."""
 
     id: str
     title: str

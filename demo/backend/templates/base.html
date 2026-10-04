@@ -7,7 +7,7 @@
     {# Order matters: Basecoat (Tailwind theme, preflight, components) first,
        then our Tailwind utilities build (just css). #}
     <link rel="stylesheet" href="/static/vendor/basecoat/basecoat.cdn.min.css" />
-    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="stylesheet" href="{{ asset('app.css') }}" />
     <script src="/static/vendor/basecoat/all.min.js" defer></script>
     <script src="/static/vendor/htmx/htmx.min.js" defer></script>
     <script>
@@ -18,6 +18,7 @@
     {% block head %}{% endblock %}
   </head>
   <body{% block body_attrs %}{% endblock %}>
+    {% block appbar %}{% endblock %}
     <main class="{% block main_class %}mx-auto max-w-5xl p-6{% endblock %}">
       {% block content %}{% endblock %}
     </main>

@@ -1,13 +1,25 @@
-{# Tabs shared by the admin pages. The live monitor and the learning charts are
-   separate pages so the replay's card moves never repaint under a chart. #}
-{% macro admin_nav(current, viewer, nav_class="flex gap-2") %}
-  <nav class="{{ nav_class }}" aria-label="Admin views">
-    {% for path, label in [("/admin", "Pipeline monitor"), ("/admin/learning", "Learning loop"), ("/admin/queues", "Queues")] %}
-      <a class="btn"
-         data-size="sm"
-         data-variant="{{ 'primary' if path == current else 'ghost' }}"
-         href="{{ path }}?view={{ viewer }}"
-         {% if path == current %}aria-current="page"{% endif %}>{{ label }}</a>
-    {% endfor %}
-  </nav>
+{# Thin app bar over the admin pages. The pipeline monitor and the learning
+   loop are two views of one admin/manager interface, so the bar carries the
+   view tabs and the viewer toggle; each page keeps its own heading below.
+   The views are separate pages so the replay's card moves never repaint
+   under a chart. #}
+{% macro app_bar(current, viewer) %}
+  <header class="appbar">
+    <a class="appbar__brand" href="/">Meridian claims</a>
+    <nav class="appbar__views" aria-label="Admin views">
+      {% for path, label in [("/admin", "Pipeline monitor"), ("/admin/learning", "Learning loop"), ("/admin/queues", "Queues")] %}
+        <a href="{{ path }}?view={{ viewer }}"
+           {% if path == current %}aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <nav class="appbar__viewer" aria-label="View as">
+      {% for value, label in [("admin", "Tribe admin"), ("manager", "Manager")] %}
+        <a class="btn"
+           data-size="sm"
+           data-variant="{{ 'secondary' if viewer == value else 'ghost' }}"
+           href="?view={{ value }}"
+           {% if viewer == value %}aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+  </header>
 {% endmacro %}

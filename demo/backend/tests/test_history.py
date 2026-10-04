@@ -97,11 +97,11 @@ def test_releases_name_known_charts_and_have_notes():
     } <= versions
 
 
-def test_caption_marks_history_illustrative_and_axes_arbitrary():
+def test_caption_marks_history_illustrative_and_one_axis_per_plot():
     caption = load_history().caption
     assert "Illustrative" in caption
     assert "targets" in caption
-    assert "scaled independently" in caption
+    assert "own plot and y-axis" in caption
 
 
 def test_monitor_leaves_learning_charts_to_their_own_page():
@@ -125,6 +125,9 @@ def test_learning_page_includes_learning_charts():
     assert re.search(r'integrity="sha384-[A-Za-z0-9+/=]+"', d3_tag.group())
     assert 'data-chart="routing"' in html
     assert 'data-chart="intake"' in html
+    # Four single-axis plots: each box splits its two series into two panels.
+    assert html.count('data-role="plot"') == 4
+    assert html.count('data-series="primary"') == html.count('data-series="secondary"') == 2
 
 
 @pytest.mark.parametrize(

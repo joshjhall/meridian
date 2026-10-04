@@ -1,5 +1,5 @@
 {
-  "caption": "Illustrative history: mocked data, not measurements. Week 0 values come from the cited sources; end points are targets. The two y-axes on each chart are scaled independently, so where the line and the second series cross means nothing.",
+  "caption": "Illustrative history: mocked data, not measurements. Week 0 values come from the cited sources; end points are targets. Each measure has its own plot and y-axis; plots in one box share the week axis and release flags.",
   "charts": [
     {
       "id": "routing",

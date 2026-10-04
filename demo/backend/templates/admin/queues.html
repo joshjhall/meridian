@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% from "admin/_queue_claim.html" import queue_claim %}
-{% from "admin/_nav.html" import admin_nav %}
+{% from "admin/_nav.html" import app_bar %}
 {% block title %}Adjuster queues{% endblock %}
 {% block head %}
-  <script src="/static/queues.js" defer></script>
+  <script src="{{ asset('queues.js') }}" defer></script>
 {% endblock %}
 {% block body_attrs %}data-viewer="{{ viewer }}"{% endblock %}
+{% block appbar %}{{ app_bar("/admin/queues", viewer) }}{% endblock %}
 {% block main_class %}mx-auto max-w-[120rem] p-6{% endblock %}
 {% block content %}
   <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -15,19 +16,6 @@
         Drag a claim to another adjuster to move it. Each move is a ClaimsPro write, confirmed by a read back.
       </p>
     </div>
-    {{ admin_nav("/admin/queues", viewer) }}
-    <nav class="flex gap-2" aria-label="View as">
-      <a class="btn"
-         data-size="sm"
-         data-variant="{{ 'primary' if viewer == 'admin' else 'ghost' }}"
-         href="?view=admin"
-         {% if viewer == 'admin' %}aria-current="page"{% endif %}>Tribe admin</a>
-      <a class="btn"
-         data-size="sm"
-         data-variant="{{ 'primary' if viewer == 'manager' else 'ghost' }}"
-         href="?view=manager"
-         {% if viewer == 'manager' %}aria-current="page"{% endif %}>Manager</a>
-    </nav>
   </header>
   {# Admin-only controls are left out of the page for managers, not hidden;
      the route checks the role too. #}

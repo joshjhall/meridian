@@ -1,13 +1,14 @@
 {% extends "base.html" %}
-{% from "admin/_nav.html" import admin_nav %}
+{% from "admin/_nav.html" import app_bar %}
 {% block title %}Learning loop{% endblock %}
 {% block head %}
   <script src="/static/vendor/d3/d3.min.js"
           integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i"
           defer></script>
-  <script src="/static/learning.js" defer></script>
+  <script src="{{ asset('learning.js') }}" defer></script>
 {% endblock %}
 {% block body_attrs %}data-viewer="{{ viewer }}"{% endblock %}
+{% block appbar %}{{ app_bar("/admin/learning", viewer) }}{% endblock %}
 {% block content %}
   <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
@@ -16,7 +17,6 @@
         How routing and intake accuracy move release by release. Static: the live replay is on the pipeline monitor.
       </p>
     </div>
-    {{ admin_nav("/admin/learning", viewer) }}
   </header>
   {% include "admin/learning/charts.html" %}
 {% endblock %}
