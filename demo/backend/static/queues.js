@@ -31,6 +31,32 @@
   // Every POST carries this header; the server refuses any without it (CSRF guard).
   const post = (url) => fetch(url, { method: "POST", headers: { "X-Meridian-Board": "1" } });
 
+  // The notice clears itself after NOTICE_S, with a bar draining as it counts down.
+  // The bar's CSS animation is the timer (animationend clears it), so the two can't
+  // drift. Hovering pauses it, so a reader is never cut off mid-sentence.
+  const NOTICE_S = 30;
+
+  const showNotice = (alert) => {
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "btn notice__close";
+    close.dataset.variant = "ghost";
+    close.dataset.size = "sm";
+    close.setAttribute("aria-label", "Dismiss");
+    close.textContent = "×";
+    close.addEventListener("click", () => notice.replaceChildren());
+    const bar = document.createElement("div");
+    bar.className = "notice__bar";
+    bar.style.animationDuration = `${NOTICE_S}s`;
+    bar.addEventListener("animationend", () => {
+      if (wrap.isConnected) notice.replaceChildren();
+    });
+    const wrap = document.createElement("div");
+    wrap.className = "notice";
+    wrap.append(alert, close, bar);
+    notice.replaceChildren(wrap);
+  };
+
   const blocked = (reason) => {
     const alert = document.createElement("div");
     alert.className = "alert";
@@ -41,7 +67,7 @@
     const body = document.createElement("section");
     body.textContent = reason;
     alert.append(title, body);
-    notice.replaceChildren(alert);
+    showNotice(alert);
   };
 
   const bumpLoad = (queue, delta) => {
@@ -104,7 +130,10 @@
     const html = await res.text();
     if (res.status === 409) {
       // Our own server-rendered (autoescaped) partial with the reason.
-      notice.innerHTML = html;
+      const template = document.createElement("template");
+      template.innerHTML = html.trim();
+      const alert = template.content.firstElementChild;
+      if (alert) showNotice(alert);
       return;
     }
     if (!res.ok) {
@@ -145,7 +174,7 @@
         if (failure) {
           const copy = failure.cloneNode(true);
           copy.hidden = false;
-          notice.replaceChildren(copy);
+          showNotice(copy);
         }
       }
       fadeOut(chip);

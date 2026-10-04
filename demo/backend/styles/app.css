@@ -75,6 +75,50 @@
   }
 }
 
+/* Queues board notice (static/queues.js): clears itself, a bar draining until it
+   does. The bar's animation is the timer; hovering the notice pauses both. */
+.notice {
+  position: relative;
+}
+
+.notice__close {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+}
+
+.notice__bar {
+  height: 3px;
+  margin-top: 0.25rem;
+  border-radius: 2px;
+  background: var(--destructive);
+  transform-origin: left;
+  animation-name: notice-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.notice:hover .notice__bar {
+  animation-play-state: paused;
+}
+
+/* Reduced motion: step down in tenths instead of a smooth drain. Never animation:
+   none here, or animationend never fires and the notice would never clear. */
+@media (prefers-reduced-motion: reduce) {
+  .notice__bar {
+    animation-timing-function: steps(10, end);
+  }
+}
+
+@keyframes notice-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 /* Learning-loop charts (#8). Roles, not raw hex, in learning.js; values from
    the dataviz reference palette (series 1 blue, series 2 orange; rollback uses
    status-critical with an icon + label, never color alone). */
