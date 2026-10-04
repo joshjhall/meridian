@@ -47,7 +47,20 @@ from replay.api import router as replay_router
 HERE = Path(__file__).resolve().parent
 
 templates = Jinja2Templates(directory=HERE / "templates")
-templates.env.globals.update(format_left=queues.format_left, sentence=queues.sentence)
+
+
+def asset(path: str) -> str:
+    """URL for one of our own static files, versioned by its modification time.
+
+    StaticFiles sends no Cache-Control, so a browser may reuse a cached script
+    without revalidating; a changed file gets a new URL instead. Vendored
+    files keep plain URLs: their SRI pins are tested against them.
+    """
+    version = int((HERE / "static" / path).stat().st_mtime)
+    return f"/static/{path}?v={version}"
+
+
+templates.env.globals.update(format_left=queues.format_left, sentence=queues.sentence, asset=asset)
 
 
 def render_card(view: monitor.ClaimView) -> str:

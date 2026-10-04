@@ -129,3 +129,15 @@ def test_d3_integrity_matches_the_local_file():
     pinned = re.search(r'integrity="(sha384-[^"]+)"', template)
     assert pinned is not None
     assert pinned.group(1) == sha384(VENDOR / "d3" / "d3.min.js")
+
+
+@pytest.mark.parametrize(
+    ("page", "own"),
+    [("/admin", "admin.js"), ("/admin/learning", "learning.js"), ("/admin/queues", "queues.js")],
+)
+def test_own_scripts_carry_a_version_so_browsers_refetch_changes(page, own):
+    # StaticFiles sends no Cache-Control, so a stale cached script kept running
+    # after a fix; the ?v= stamp gives every change a new URL.
+    html = client.get(page).text
+    assert re.search(rf'src="/static/{re.escape(own)}\?v=\d+"', html)
+    assert re.search(r'href="/static/app\.css\?v=\d+"', html)
