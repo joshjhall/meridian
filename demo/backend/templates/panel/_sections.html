@@ -177,14 +177,52 @@
             {% if item.sources %}
               <p class="item__srcs">{% for ref in item.sources %}{{ source_link(ref, cid) }}{% endfor %}</p>
             {% endif %}
-            <div class="item__actions">
-              {% if item.kind == "missing" %}
-                {{ log_button(cid, "needs-attention", "request", "Request it", item.label) }}
-              {% else %}
-                {{ log_button(cid, "needs-attention", "confirm", "Confirm suggested" if item.suggested else "Confirm", item.label) }}
-                {{ log_button(cid, "needs-attention", "correct", "Correct", item.label) }}
-              {% endif %}
-            </div>
+            {% if item.kind == "missing" %}
+              <div class="item__actions">{{ log_button(cid, "needs-attention", "request", "Request it", item.label) }}</div>
+            {% else %}
+              {# Confirm and Save swap the whole card for a done state that panel.js
+                 removes after a few seconds; Correct opens the inline form first. #}
+              {% set url = "/panel/" ~ cid ~ "/log?" ~ ({'section': 'needs-attention', 'item': item.label} | urlencode) %}
+              <div class="item__actions" data-actions>
+                <button type="button"
+                        class="btn"
+                        data-variant="outline"
+                        data-size="sm"
+                        hx-post="{{ url }}&action=confirm"
+                        hx-target="closest .item"
+                        hx-swap="outerHTML">{{ "Confirm suggested" if item.suggested else "Confirm" }}</button>
+                <button type="button"
+                        class="btn"
+                        data-variant="outline"
+                        data-size="sm"
+                        data-open-correct>Correct</button>
+              </div>
+              <div class="item__correct" data-correct hidden>
+                <label class="item__field">
+                  <span>Correct value for {{ item.label | lower }}</span>
+                  <input type="text"
+                         class="input"
+                         name="note"
+                         maxlength="500"
+                         value="{{ item.suggested or '' }}"
+                         data-correct-input />
+                </label>
+                <div class="item__actions">
+                  <button type="button"
+                          class="btn"
+                          data-size="sm"
+                          hx-post="{{ url }}&action=correct"
+                          hx-target="closest .item"
+                          hx-swap="outerHTML"
+                          data-save-correct>Save</button>
+                  <button type="button"
+                          class="btn"
+                          data-variant="ghost"
+                          data-size="sm"
+                          data-cancel-correct>Cancel</button>
+                </div>
+              </div>
+            {% endif %}
           </li>
         {% endfor %}
       </ul>

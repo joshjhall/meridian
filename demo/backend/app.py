@@ -428,12 +428,20 @@ def panel_log(
     Recorded in the correction log for the admin view; nothing is written to ClaimsPro.
     """
     get_claim_or_404(claim_id)
+    note = note.strip() if note else None
+    if action == "correct" and section == "needs-attention" and not note:
+        # A correction is only useful to the learning loop with the corrected value.
+        raise HTTPException(status_code=422, detail="a correction needs the corrected value")
     entry = panel.log_correction(
         CorrectionLogEntry(
             claim_id=claim_id, section=section, action=action, item=item, note=note, at=clock.now()
         )
     )
-    return templates.TemplateResponse(request, "panel/_logged.html", {"entry": entry})
+    # A confirmed or corrected attention item is resolved: the whole card is
+    # replaced with a done state, which panel.js removes after a few seconds.
+    done = section == "needs-attention" and action in ("confirm", "correct")
+    partial = "panel/_resolved.html" if done else "panel/_logged.html"
+    return templates.TemplateResponse(request, partial, {"entry": entry})
 
 
 @app.get("/api/corrections")
