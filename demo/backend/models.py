@@ -519,8 +519,33 @@ class HistorySeries(BaseModel):
     points: list[HistoryPoint]
 
 
+class HistoryLine(BaseModel):
+    """One line of a multi-line plot: one group (a tier), with its own target."""
+
+    key: str
+    label: str
+    target: float
+    target_label: str
+    points: list[HistoryPoint]
+
+
+class HistoryLineSet(BaseModel):
+    """Several lines of one measure on a single shared y-axis: same unit, same scale.
+
+    Log scale when the lines sit orders of magnitude apart, so each line's
+    proportional change reads at the same slope.
+    """
+
+    key: str
+    label: str
+    unit: str
+    scale: Literal["linear", "log"] = "linear"
+    source: str
+    lines: list[HistoryLine] = Field(min_length=2)
+
+
 class HistoryChart(BaseModel):
-    """One chart box: two or three series, each on its own single-axis plot, top down."""
+    """One chart box: two to four plots, each with a single y-axis, top down."""
 
     id: str
     title: str
@@ -528,6 +553,7 @@ class HistoryChart(BaseModel):
     primary: HistorySeries
     secondary: HistorySeries
     tertiary: HistorySeries | None = None
+    quaternary: HistoryLineSet | None = None
 
     @property
     def series(self) -> list[HistorySeries]:

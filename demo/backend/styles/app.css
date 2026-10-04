@@ -131,6 +131,11 @@
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
+  /* Tiers are ordered, so one blue ramp light→dark (steps 250/450/650),
+     validated --ordinal; never the categorical slots. */
+  --tier-1: #86b6ef;
+  --tier-2: #2a78d6;
+  --tier-3: #104281;
   --flag: #0b0b0b;
   --rollback: #d03b3b;
 }
@@ -150,6 +155,10 @@
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
+  /* Dark: the light end sits on the far side (steps 100/350/550). */
+  --tier-1: #cde2fb;
+  --tier-2: #5598e7;
+  --tier-3: #1c5cab;
   --flag: #ffffff;
   --rollback: #e66767;
 }
@@ -268,6 +277,15 @@
 .learning-chart .swatch-3 .legend-key {
   background: var(--series-3);
 }
+.learning-chart .swatch-tier-1 .legend-key {
+  background: var(--tier-1);
+}
+.learning-chart .swatch-tier-2 .legend-key {
+  background: var(--tier-2);
+}
+.learning-chart .swatch-tier-3 .legend-key {
+  background: var(--tier-3);
+}
 .learning-chart .legend-rollback {
   color: var(--rollback);
 }
@@ -287,4 +305,13 @@
 }
 .learning-tooltip .swatch-3::before {
   background: var(--series-3);
+}
+.learning-tooltip .swatch-tier-1::before {
+  background: var(--tier-1);
+}
+.learning-tooltip .swatch-tier-2::before {
+  background: var(--tier-2);
+}
+.learning-tooltip .swatch-tier-3::before {
+  background: var(--tier-3);
 }
