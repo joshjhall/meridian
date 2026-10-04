@@ -37,6 +37,10 @@ STORIES: dict[str, str] = {
     "IS-CLM-2025002043": "Thin file",
 }
 
+# The demo claim opened to show several people handling one claim over separate
+# sessions; its card stays first in its lane (static/admin.js).
+LEAD_STORY = "IS-CLM-2025004222"
+
 # What the "routed to review" counter counts: the lanes a regulated claim must reach.
 REVIEW_LANES = {"regulatory_review", "senior_review"}
 

@@ -80,9 +80,14 @@
     }
     const from = old?.getBoundingClientRect();
     old?.remove();
-    // Demo claims stay at the top of a lane so they're easy to follow.
-    if (card.classList.contains("claim--pinned")) target.prepend(card);
-    else target.append(card);
+    // Demo claims stay at the top of a lane so they're easy to follow; the lead
+    // demo claim (data-lead) stays above them, so it is always the first card.
+    const lead = target.querySelector("[data-lead]");
+    if (card.dataset.lead !== undefined) target.prepend(card);
+    else if (card.classList.contains("claim--pinned")) {
+      if (lead) lead.after(card);
+      else target.prepend(card);
+    } else target.append(card);
     window.htmx?.process(card);
     recount();
     if (!from || reduceMotion.matches || document.hidden) return;

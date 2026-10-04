@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from monitor import LEAD_STORY
+
 from claimspro_sim import ClaimsProSim, FaultConfig
 from clock import DEMO_START
 from fixtures import claim_from_row, extract_rows, load_claim_fixtures, load_roster
@@ -32,6 +34,9 @@ STEP = timedelta(minutes=15)
 # Simulated hours at which the six demo claims arrive: all on screen inside the
 # first minute at the default 1 simulated hour per second.
 FIXTURE_AT_H = (1, 7, 14, 22, 31, 41)
+# monitor.LEAD_STORY arrives first, so its audit record (two sessions by the
+# assigned adjuster, then a lead's sign-off) is complete within seconds of the
+# demo starting.
 OUTAGE_RATE = 0.03  # claims whose routing write meets a ClaimsPro outage
 EDI_DROP_RATE = 0.05  # Fax/EDI rows arriving with a required field dropped
 DROPPABLE = ("state", "claim_amount_usd", "claim_type")
@@ -83,7 +88,8 @@ def arrivals(seed: int = SEED) -> Iterator[Arrival]:
     timed.sort(key=lambda t: t[0])  # stable: same-minute rows keep file order
 
     pinned = []
-    for hours, fx in zip(FIXTURE_AT_H, fixtures.values(), strict=True):
+    ordered = sorted(fixtures.values(), key=lambda fx: fx.claim.claim_id != LEAD_STORY)
+    for hours, fx in zip(FIXTURE_AT_H, ordered, strict=True):
         at = DEMO_START + timedelta(hours=hours)
         # Keep each fixture's SLA story: shift its receipt by as much as its arrival.
         claim = fx.claim.model_copy(

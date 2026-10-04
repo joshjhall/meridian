@@ -60,7 +60,12 @@ def asset(path: str) -> str:
     return f"/static/{path}?v={version}"
 
 
-templates.env.globals.update(format_left=queues.format_left, sentence=queues.sentence, asset=asset)
+templates.env.globals.update(
+    format_left=queues.format_left,
+    sentence=queues.sentence,
+    asset=asset,
+    lead_story=monitor.LEAD_STORY,
+)
 
 
 def render_card(view: monitor.ClaimView) -> str:

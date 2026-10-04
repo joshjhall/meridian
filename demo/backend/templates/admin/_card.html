@@ -5,6 +5,7 @@
   <button type="button"
           id="card-{{ view.claim_id }}"
           class="claim{% if view.pinned %} claim--pinned{% endif %}"
+          {% if view.claim_id == lead_story %}data-lead{% endif %}
           data-stage="{{ view.stage }}"
           data-sla="{{ f.sla or '' }}"
           {# Demo claims open their audit record (#9); background traffic keeps the trace. #}
