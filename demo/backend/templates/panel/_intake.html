@@ -1,0 +1,3 @@
+{# Swapped in for the fast-lane block once the intake write has been tried. #}
+{% from "panel/_sections.html" import fast_lane %}
+{{ fast_lane(claim_id, "done" if saved else "failed", at) }}

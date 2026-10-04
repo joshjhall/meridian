@@ -234,6 +234,15 @@
   border-radius: 0.25rem;
 }
 
+.fast-lane--done {
+  color: var(--sign);
+}
+
+.fast-lane--failed {
+  background: var(--late-wash);
+  color: var(--late);
+}
+
 /* --- Key facts --- */
 
 .facts {

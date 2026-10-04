@@ -131,6 +131,7 @@ def custom_field_rows(claim: Claim, now: datetime) -> list[tuple[str, str]]:
         ("Review lane", claim.review_lane and claim.review_lane.replace("_", " ")),
         ("Routing reason", claim.routing_reason),
         ("Brief status", claim.brief_status),
+        ("Intake", claim.intake_status),
     ]
     pending = claim.write_status == "pending"
     rows = [(label, NOT_SAVED if pending else (value or EMPTY)) for label, value in written]

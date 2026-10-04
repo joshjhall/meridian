@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 import clock
 import queues
-from claimspro_sim import ClaimsProSim, FaultConfig
+from claimspro_sim import ClaimsProSim, FaultConfig, reliable_write
 from claimspro_sim.api import Sim
 from claimspro_sim.api import router as claimspro_router
 from fixtures import load_claim_fixtures, load_history, load_roster
@@ -377,9 +377,12 @@ def claimspro(
 
 
 @app.get("/panel", response_class=HTMLResponse)
-def panel_page(request: Request, claim: str | None = Query(None, pattern=r"^IS-CLM-\d{10}$")):
+def panel_page(
+    request: Request, sim: Sim, claim: str | None = Query(None, pattern=r"^IS-CLM-\d{10}$")
+):
     now = clock.now()
     summary = panel.build_summary(claim, now) if claim else None
+    stored = sim.store.get(claim) if claim else None
     sla_label, sla_used = panel.sla_left(summary, now) if summary else ("", 0.0)
     return templates.TemplateResponse(
         request,
@@ -393,6 +396,7 @@ def panel_page(request: Request, claim: str | None = Query(None, pattern=r"^IS-C
             "claim_ids": list(load_claim_fixtures()),
             "signals": panel.recorded_signals(claim) if claim and summary else None,
             "live_available": llm_signals.live_available(),
+            "intake_complete": stored is not None and stored.intake_status == "complete",
         },
     )
 
@@ -442,6 +446,40 @@ def panel_log(
     done = section == "needs-attention" and action in ("confirm", "correct")
     partial = "panel/_resolved.html" if done else "panel/_logged.html"
     return templates.TemplateResponse(request, partial, {"entry": entry})
+
+
+@app.post(
+    "/panel/{claim_id}/intake",
+    response_class=HTMLResponse,
+    dependencies=[Depends(require_panel_request)],
+)
+def panel_intake(request: Request, sim: Sim, claim_id: str):
+    """The fast lane's one click: a person marks intake complete on the ClaimsPro record.
+
+    Only the intake custom field is written; the claim's disposition is never touched.
+    """
+    summary = panel.build_summary(claim_id, clock.now())
+    if summary is None or sim.store.get(claim_id) is None:
+        raise HTTPException(status_code=404, detail=f"unknown claim {claim_id}")
+    if not summary.fast_lane:
+        raise HTTPException(status_code=409, detail="not a fast-lane claim")
+    result = reliable_write(
+        sim, "UpdateCustomFields", claim_id, {"fields": {"intake_status": "complete"}}
+    )
+    entry = panel.log_correction(
+        CorrectionLogEntry(
+            claim_id=claim_id,
+            section="what-matters",
+            action="confirm",
+            item="fast lane",
+            at=clock.now(),
+        )
+    )
+    return templates.TemplateResponse(
+        request,
+        "panel/_intake.html",
+        {"saved": result.status == "confirmed", "at": entry.at, "claim_id": claim_id},
+    )
 
 
 @app.get("/api/corrections")

@@ -75,6 +75,7 @@ Complexity = Literal["Simple", "Moderate", "Complex"]
 Disposition = Literal["Paid in Full", "Partial Payment", "Denied", "Settled", "Pending Review"]
 ReviewLane = Literal["fast_lane", "standard_review", "regulatory_review", "senior_review"]
 BriefStatus = Literal["pending", "ready", "failed"]
+IntakeStatus = Literal["complete"]
 AdjusterRole = Literal["adjuster", "senior", "lead"]
 SlaState = Literal["on_track", "at_risk", "breached"]
 # A reliable write's progress (pipeline events) and its outcome stored on the claim.
@@ -117,6 +118,8 @@ class Claim(BaseModel):
     routing_reason: str | None = None
     review_lane: ReviewLane | None = None
     brief_status: BriefStatus | None = None
+    # Set when a person confirms a fast-lane claim's intake from the panel.
+    intake_status: IntakeStatus | None = None
     # Outcome of the latest reliable write (#2); "pending" means not yet saved.
     write_status: ClaimWriteStatus | None = None
 

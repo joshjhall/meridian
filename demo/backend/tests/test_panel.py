@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 import clock
 from app import app
-from claimspro_sim import ClaimsProSim
+from claimspro_sim import ClaimsProSim, FaultConfig
 from claimspro_sim.api import get_sim
 from fixtures import DATA, load_claim_fixtures
 from models import CorrectionLogEntry, OcrCheck, OcrWord, PanelSummary, SourceRef
@@ -23,13 +23,17 @@ EXTENSION = DATA.parent / "extension"
 
 
 @pytest.fixture
-def client():
-    sim = ClaimsProSim(
+def sim():
+    return ClaimsProSim(
         (f.claim for f in load_claim_fixtures().values()),
         sleep=lambda _s: None,
         now=lambda: NOW,
         rng=random.Random(7),
     )
+
+
+@pytest.fixture
+def client(sim):
     app.dependency_overrides[get_sim] = lambda: sim
     panel.clear_corrections()
     yield TestClient(app, headers={"X-Meridian-Panel": "1"})
@@ -362,6 +366,59 @@ def test_attention_cards_offer_an_inline_correct_form(client):
     # The suggestion prefills the field, so a small fix is a small edit.
     inputs = re.findall(r"<input[^>]*data-correct-input[^>]*>", html)
     assert any('value="CA-CA-88123-18"' in i for i in inputs)
+
+
+def test_fast_lane_offers_the_button_without_explaining_it(client):
+    lane = client.get("/panel?claim=IS-CLM-2025000300").text
+    start = lane.index('<div class="fast-lane"')
+    block = lane[start : lane.index("</section>", start)]
+    assert text(block).strip() == "Confirm intake is complete"
+    assert 'hx-post="/panel/IS-CLM-2025000300/intake"' in block
+
+
+def test_confirming_intake_completes_it_on_the_claimspro_record(client, sim):
+    claim_id = "IS-CLM-2025000300"
+    before = sim.store.get(claim_id)
+    assert before is not None
+    res = client.post(f"/panel/{claim_id}/intake")
+    assert res.status_code == 200
+    assert "Intake complete" in res.text and "fast-lane--done" in res.text
+    claim = sim.store.get(claim_id)
+    assert claim is not None
+    assert claim.intake_status == "complete"
+    assert claim.disposition == before.disposition  # a person still decides the claim
+    # The record shows it, and a reloaded panel shows done instead of the button.
+    page = client.get(f"/claimspro/{claim_id}").text
+    assert re.search(r"Intake</th>\s*<td>complete</td>", page)
+    panel_html = client.get(f"/panel?claim={claim_id}").text
+    assert "Intake complete" in panel_html
+    assert f"/panel/{claim_id}/intake" not in panel_html
+    # The click still reaches the learning loop.
+    assert [(e.section, e.action, e.item) for e in panel.corrections(claim_id)] == [
+        ("what-matters", "confirm", "fast lane")
+    ]
+
+
+def test_a_failed_intake_save_says_so_and_offers_a_retry(client, sim):
+    sim.faults.set({"UpdateCustomFields": FaultConfig(failure_rate=1, mode="fault")})
+    res = client.post("/panel/IS-CLM-2025000300/intake")
+    assert "didn't save" in res.text and "Try again" in res.text
+    claim = sim.store.get("IS-CLM-2025000300")
+    assert claim is not None and claim.intake_status is None
+
+
+def test_intake_is_confirmed_only_for_fast_lane_claims(client):
+    others = [c for c in SIX if not summary(c).fast_lane]
+    assert others
+    for claim_id in others:
+        assert 'id="fast-lane"' not in client.get(f"/panel?claim={claim_id}").text
+        assert client.post(f"/panel/{claim_id}/intake").status_code == 409
+    assert client.post("/panel/IS-CLM-0000000000/intake").status_code == 404
+
+
+def test_intake_needs_the_panel_header(client):
+    res = client.post("/panel/IS-CLM-2025000300/intake", headers={"X-Meridian-Panel": ""})
+    assert res.status_code == 403
 
 
 def test_other_log_buttons_keep_the_short_confirmation(client):

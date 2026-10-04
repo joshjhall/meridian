@@ -46,7 +46,29 @@
     <p class="sign__reason">{{ h.routing_reason }}</p>
   </header>
 {% endmacro %}
-{% macro what_matters(s) %}
+{# The fast lane's one click: "open" offers it, "done" shows the saved record,
+   "failed" says ClaimsPro didn't take it and offers a retry. #}
+{% macro fast_lane(claim_id, state, at=none) %}
+  <div class="fast-lane{% if state != 'open' %} fast-lane--{{ state }}{% endif %}"
+       id="fast-lane">
+    {% if state == "done" %}
+      <p role="status">
+        <strong>Intake complete</strong>
+        {%- if at %}, saved to ClaimsPro at {{ at.strftime("%H:%M") }}{% endif %}
+      </p>
+    {% else %}
+      {% if state == "failed" %}<p role="alert">ClaimsPro didn't save it. Nothing changed on the record.</p>{% endif %}
+      <button type="button"
+              class="btn"
+              data-variant="outline"
+              data-size="sm"
+              hx-post="/panel/{{ claim_id }}/intake"
+              hx-target="#fast-lane"
+              hx-swap="outerHTML">{{ "Try again" if state == "failed" else "Confirm intake is complete" }}</button>
+    {% endif %}
+  </div>
+{% endmacro %}
+{% macro what_matters(s, intake_complete=false) %}
   <section class="lane" id="what-matters" aria-labelledby="h-what-matters">
     <h2 id="h-what-matters">What matters</h2>
     <ul class="points">
@@ -57,11 +79,10 @@
         </li>
       {% endfor %}
     </ul>
-    {% if s.fast_lane %}
-      <div class="fast-lane" id="fast-lane">
-        <p>Fast lane: one click from a person moves it on. Nothing happens automatically.</p>
-        {{ log_button(s.header.claim_id, "what-matters", "confirm", "Confirm intake is complete", "fast lane") }}
-      </div>
+    {% if intake_complete %}
+      {{ fast_lane(s.header.claim_id, "done") }}
+    {% elif s.fast_lane %}
+      {{ fast_lane(s.header.claim_id, "open") }}
     {% endif %}
   </section>
 {% endmacro %}
