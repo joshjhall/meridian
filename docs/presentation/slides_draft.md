@@ -172,13 +172,14 @@ Not direct users but affected: claimants (faster, better-explained outcomes) and
 |---|---|---|---|
 | **Routing: claim arrives → queue → adjuster** | *Change:* round-robin becomes ordered and matched; routes on both flags | Replay the extract: simulated queue wait vs actual; 0 regulated claims unrouted; adjusters agree with the route on sampled claims | **O:** Claims reach the right adjuster without waiting. **KR:** simple-claim median cycle <24h (today 34.7h; 34% under 24h); 0 regulated claims without a review step; escalations to senior review down X% |
 | **Preparation: claim opened → ready to decide** | *Create:* pre-processing results in custom fields (v1); the side-panel summary and table of contents (v2) | Adjuster task test on sample claims: time to first decision, fields re-keyed, "I trust this" rating; extraction accuracy vs adjuster-corrected values | **O:** Adjusters decide, not reassemble. **KR:** handling minutes per claim down X%; second opinions down (26% needed today); brief accuracy ≥ agreed bar on audited sample |
-| **Correction: adjuster disagrees → system learns** | *Create:* the learning loop | Corrections take one action; a rule fix finds the similar claims in bulk (the 85) | **O:** The system gets more right each month, visibly. **KR:** correction rate trending down; drift alerts reviewed within a week; no silent rule changes |
+| **Correction: adjuster disagrees → system learns** | *Create:* the learning loop | Corrections take one action; a rule fix finds the similar claims in bulk (the 85) | **O:** The system gets more right each month, visibly. **KR:** correction rate trending down; drift alerts reviewed within a week; no silent rule changes; fax OCR errors reaching ClaimsPro down X% |
 
 **Speaker notes:**
 
 - X% targets are placeholders, agreed in the scope document with Sandra and Michael; the baselines are real and from the extract.
 - Change management (Nikolina): pilot with one team and the adjusters who shaped it; nothing takes a decision away from them; the old score comes off the screen only once the new routing has earned trust (M6).
 - Every production measure needs a baseline agreed before launch, or month 3 becomes an argument about numbers.
+- OCR KR: the ~78% accuracy baseline is Meridian's own figure, unverified. Measuring it needs OCR output linked to the source images and adjuster corrections captured (D3). Each adjuster fix to an extracted field is a correction the loop learns from; the 2022 OCR engine itself stays as is.
 
 ---
 
